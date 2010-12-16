@@ -33,7 +33,7 @@ for Python 2.7
 requires bonjour for Mac, Windows, Linux
 requieres pybonjour http://code.google.com/p/pybonjour/
 requieres dnspython http://www.dnspython.org/
-requieres netaddr http://code.google.com/p/netaddr/
+requieres netaddr https://github.com/drkjam/netaddr/
 
 """
 import time
@@ -626,12 +626,10 @@ def get_ip(hostname):
     time.sleep(0.2)
     if ipv4:
         for ip in ipv4:
-            #print '[*]\tA', hostname, ip
             found_ip_add.append(["A",hostname,ip])
     ipv6 = get_aaaa(hostname)
     if ipv6:
         for ip in ipv6:
-            #print '[*]\tAAAA', hostname, ip
             found_ip_add.append(["AAAA",hostname,ip])
     return found_ip_add
 
