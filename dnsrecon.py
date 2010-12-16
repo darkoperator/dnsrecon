@@ -5,6 +5,8 @@
 # TODO:
 # 1. Implement whois query of all records, do uniq and perform reverse look up on them.
 # 2. Implement saving to file results.
+# 3. Finish zone transfer parsing.
+# 4. Implement TLD bruteforce.
 
 #    Copyright (C) 2010  Carkis Perez
 #
@@ -59,6 +61,7 @@ from random import Random
 from threading import Thread
 from threading import Lock
 from time import sleep
+
 
 
 # Global Variables for Bruteforce Threads
@@ -532,6 +535,40 @@ def get_srv(host):
         return record
     return record
 
+def brute_tlds(domain):
+    # tlds taken from http://data.iana.org/TLD/tlds-alpha-by-domain.txt
+    gtld = ['co','com','net','biz','org']
+    tlds = ['ac', 'ad', 'aeaero', 'af', 'ag', 'ai', 'al', 'am', 'an', 'ao', 'aq', 'ar',
+    'arpa', 'as', 'asia', 'at', 'au', 'aw', 'ax', 'az', 'ba', 'bb', 'bd', 'be', 'bf', 'bg',
+    'bh', 'bi', 'biz', 'bj', 'bm', 'bn', 'bo', 'br', 'bs', 'bt', 'bv', 'bw', 'by', 'bzca',
+    'cat', 'cc', 'cd', 'cf', 'cg', 'ch', 'ci', 'ck', 'cl', 'cm', 'cn', 'co', 'com', 'coop',
+    'cr', 'cu', 'cv', 'cx', 'cy', 'cz', 'de', 'dj', 'dk', 'dm', 'do', 'dz', 'ec', 'edu', 'ee',
+    'eg', 'er', 'es', 'et', 'eu', 'fi', 'fj', 'fk', 'fm', 'fo', 'fr', 'ga', 'gb', 'gd', 'ge',
+    'gf', 'gg', 'gh', 'gi', 'gl', 'gm', 'gn', 'gov', 'gp', 'gq', 'gr', 'gs', 'gt', 'gu', 'gw',
+    'gy', 'hk', 'hm', 'hn', 'hr', 'ht', 'hu', 'id', 'ie', 'il', 'im', 'in', 'info', 'int',
+    'io', 'iq', 'ir', 'is', 'it', 'je', 'jm', 'jo', 'jobs', 'jp', 'ke', 'kg', 'kh', 'ki', 'km',
+    'kn', 'kp', 'kr', 'kw', 'ky', 'kz', 'la', 'lb', 'lc', 'li', 'lk', 'lr', 'ls', 'lt', 'lu',
+    'lv', 'ly', 'ma', 'mc', 'md', 'me', 'mg', 'mh', 'mil', 'mk', 'ml', 'mm', 'mn', 'mo',
+    'mobi', 'mp', 'mq', 'mr', 'ms', 'mt', 'mu', 'museum', 'mv', 'mw', 'mx', 'my', 'mz', 'na',
+    'name', 'nc', 'ne', 'net', 'nf', 'ng', 'ni', 'nl', 'no', 'np', 'nr', 'nu', 'nz', 'om',
+    'org', 'pa', 'pe', 'pf', 'pg', 'ph', 'pk', 'pl', 'pm', 'pn', 'pr', 'pro', 'ps', 'pt', 'pw',
+    'py', 'qa', 're', 'ro', 'rs', 'ru', 'rw', 'sa', 'sb', 'sc', 'sd', 'se', 'sg', 'sh', 'si',
+    'sj', 'sk', 'sl', 'sm', 'sn', 'so', 'sr', 'st', 'su', 'sv', 'sy', 'sz', 'tc', 'td', 'tel',
+    'tf', 'tg', 'th', 'tj', 'tk', 'tl', 'tm', 'tn', 'to', 'tp', 'tr', 'travel', 'tt', 'tv',
+    'tw', 'tz', 'ua', 'ug', 'uk', 'us', 'uy', 'uz', 'va', 'vc', 've', 'vg', 'vi', 'vn', 'vu',
+    'wf', 'ws', 'ye', 'yt', 'za', 'zm', 'zw']
+ 
+    domain_main = domain.split(".")[0]
+    for t in tlds:
+        pool.add_task(get_ip, domain_main + "." + t)
+        for g in gtld:
+            pool.add_task(get_ip, domain_main+ "." + g + "." + t)
+    # Wait for threads to finish.
+    pool.wait_completion()
+    # Process the output of the threads.
+    for rcd_found in brtdata:
+        for rcd in rcd_found:
+            print "[*]\t"," ".join(rcd)
 
 def brute_srv(domain):
     """
@@ -984,6 +1021,8 @@ def usage():
     print "                                      servers for a given domain, testing all with"
     print "                                      file containing the domains and a given Record"
     print "                                      Type.\n"
+    print "                              tld     Will remove the TLD of given domain and test against"
+    print "                                      all TLD's registered in IANA\n"
     print "  -x, --axfr                  Perform AXFR with the standard enumeration."
     print "  -g, --google                Perform Google enumeration with the standard enumeration."
     #print "  -w, --do_whois              Do deep whois record analisys and reverse lookup of IP"
@@ -1020,19 +1059,19 @@ ip_range_pattern = '([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})-([0-9]{1,3}
 # Define options
 options, remainder = getopt.getopt(sys.argv[1:], 'hd:c:n:f:D:t:xT:gwr:',
                                    ['help',
-                                   'domain',
-                                   'cidr',
-                                   'name_server',
-                                   'output_file',
-                                   'dictionary',
-                                   'type',
+                                   'domain=',
+                                   'cidr=',
+                                   'name_server=',
+                                   'output_file=',
+                                   'dictionary=',
+                                   'type=',
                                    'axfr',
-                                   'cache_type',
+                                   'cache_type=',
                                    'google',
                                    'do_whois',
-                                   'range',
-                                   'lifetime',
-                                   'threads'])
+                                   'range=',
+                                   'lifetime=',
+                                   'threads='])
 for opt, arg in options:
     if opt in ('-t','--type'):
         type = arg
@@ -1104,6 +1143,9 @@ if type is not None:
             elif r == 'mdns':
                 print '[*] Enumerating most common mDNS Resords on Subnet'
                 mdns_enum()
+            elif r == 'tld':
+                print "[*] Performing TLD Bruteforce Enumeration against", domain
+                brute_tlds(domain)
             elif r == "snoop":
                 print "[*] Performing Cache Snooping against NS Server:", ns_server
             else:
