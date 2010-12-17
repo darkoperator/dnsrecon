@@ -481,7 +481,7 @@ def get_spf(domain):
             spf_record.append(['SPF', name])
             print '[*]', 'SPF', name
     except:
-        return None
+        spf_record.append(['SPF', "none"])
     
     return spf_record
 
@@ -493,7 +493,7 @@ def get_txt(domain):
     try:
         answers = res.query(domain, 'TXT')
         for rdata in answers:
-            name = rdata.strings
+            name = "".join(rdata.strings)
             print '[*]\t', 'TXT', name
             txt_record.append(['TXT', name])
     except:
@@ -677,7 +677,7 @@ def brute_reverse(ip_list):
     
     for rcd_found in brtdata:
         for rcd in rcd_found:
-            found_records.append(rcd)
+            found_records.append(" ".join(rcd))
             print "[*]\t"," ".join(rcd)
     
     return rcd
@@ -998,24 +998,50 @@ def general_enum(domain, do_axfr,do_google):
     it will also perform a Google Search and scrape the results for hostnames and
     perform an A and AAA query against them.
     """
+    # Variable to collect all results
+    collected_results = []
+    
+    # Check if wildcards are enabled on the target domain 
     check_wildcard(domain)
+    
+    # Perform test for Zone Transfer againsta all NS servers of a Domain
     if do_axfr is not None:
         zone_transfer(domain)
+        
+    # Enumetaye SOA Record
     found_soa_record = get_soa(domain)
     print '[*]\t', found_soa_record[0], found_soa_record[1], found_soa_record[2]
+    collected_results.append([found_soa_record[0], found_soa_record[1], found_soa_record[2]])
+    
+    # Enumerate Name Servers
     for ns_rcrd in get_ns(domain):
         print '[*]\t', ns_rcrd[0], ns_rcrd[1], ns_rcrd[2]
+        collected_results.append([ns_rcrd[0], ns_rcrd[1], ns_rcrd[2]])
+        
+    # Enumerate MX Records
     for mx_rcrd in get_mx(domain):
         print '[*]\t', mx_rcrd[0], mx_rcrd[1], mx_rcrd[2]
-    get_spf(domain)
-    get_txt(domain)
+        collected_results.append([mx_rcrd[0], mx_rcrd[1], mx_rcrd[2]])
+    
+    # Enumerate SFP and TXT Records for the target domain    
+    collected_results.append(get_spf(domain))
+    collected_results.append(get_txt(domain))
+    
+    # Enumerate A Record for the targeted Domain
     for a_rcrd in get_ip(domain):
         print '[*]\t', a_rcrd[0], a_rcrd[1], a_rcrd[2]
+        collected_results.append([a_rcrd[0], a_rcrd[1], a_rcrd[2]])
+        
+    # Enumerate SRV Records for the targeted Domain
     print '[*] Enumerating SRV Records'
-    brute_srv(domain)
+    collected_results.append(brute_srv(domain))
+    
+    # Do Google Search enumeration if selected
     if do_google is not None:
         print '[*] Performing Google Search Enumeration'
-        goo_result_process(scrape_google(domain))
+        collected_results.append(goo_result_process(scrape_google(domain)))
+    
+    return collected_results
 
 
 def usage():
@@ -1027,7 +1053,7 @@ def usage():
     print "  -r, --range       <range>   IP Range for reverse lookup bruteforce (first-last)."
     print "  -n, --name_server <name>    Domain server to use, if none is given the SOA of the"
     print "                              target will be used"
-    print "  -f, --output_file <file>    File to save found records."
+    #print "  -f, --output_file <file>    File to save found records."
     print "  -D, --dictionary  <file>    Dictionary file of subdomain and hostnames to use for"
     print "                              bruteforce."
     print "  -t, --type        <types>   Specify the type of enumeration to perform:"
@@ -1071,7 +1097,6 @@ dict = None
 type = None
 xfr = None
 goo = None
-cache_type = None
 deep_whois = None
 thread_num = 10
 request_timeout = 1.0
@@ -1169,7 +1194,7 @@ if type is not None:
             elif r == 'std':
                 if domain is not None:
                     print "[*] Performing General Enumeration of Domain:",domain
-                    general_enum(domain, xfr, goo)
+                    found_results = general_enum(domain, xfr, goo)
                 else:
                     print '[-] No Domain to target specified!'
                     exit(1)
