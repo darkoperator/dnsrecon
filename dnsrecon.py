@@ -429,12 +429,14 @@ def get_ns(domain):
         ipv4_answers = res.query(name, 'A')
         for ardata in ipv4_answers:
             ns_srvs.append(['NS', name[:-1], ardata.address])
+            
     try:
         for rdata in answers:
             name = rdata.target.to_text()
             ipv6_answers = res.query(name, 'AAAA')
             for ardata in ipv6_answers:
                 ns_srvs.append(['NS', name[:-1], ardata.address])
+                
         return ns_srvs
     except:
         return ns_srvs
@@ -452,12 +454,14 @@ def get_soa(domain):
         ipv4_answers = res.query(name, 'A')
         for ardata in ipv4_answers:
             soa_records.extend(['SOA', name[:-1], ardata.address])
+            
     try:
         for rdata in answers:
             name = rdata.mname.to_text()
             ipv4_answers = res.query(name, 'AAAA')
             for ardata in ipv4_answers:
                 soa_records.extend(['SOA', name[:-1], ardata.address])
+                
         return soa_records
     except:
         return soa_records
@@ -468,27 +472,34 @@ def get_spf(domain):
     Function for SPF Record resolving returns the string with the SPF definition.
     Prints the string for the SPF Record and Returns the string
     """
+    spf_record = []
+    
     try:
         answers = res.query(domain, 'SPF')
         for rdata in answers:
             name = rdata.strings
+            spf_record.append(['SPF', name])
             print '[*]', 'SPF', name
     except:
         return None
-
+    
+    return spf_record
 
 def get_txt(domain):
     """
     Function for TXT Record resolving returns the string.
     """
+    txt_record = []
     try:
         answers = res.query(domain, 'TXT')
         for rdata in answers:
             name = rdata.strings
             print '[*]\t', 'TXT', name
+            txt_record.append(['TXT', name])
     except:
         return None
-
+    
+    return txt_record
 
 def check_wildcard(domain_trg):
     """
@@ -498,11 +509,13 @@ def check_wildcard(domain_trg):
     test_name = ''.join(Random().sample(string.letters + string.digits,
                         12)) + '.' + domain_trg
     ips = get_a(test_name)
+    
     if len(ips) > 0:
         print '[-] Wildard resolution is enabled on this domain'
         print '[-] It is resolving to', ''.join(ips)
         print '[-] All queries will resolv to this address!!'
         wildcard = ''.join(ips)
+    
     return wildcard
 
 
@@ -560,19 +573,23 @@ def brute_tlds(domain):
     'tf', 'tg', 'th', 'tj', 'tk', 'tl', 'tm', 'tn', 'to', 'tp', 'tr', 'travel', 'tt', 'tv',
     'tw', 'tz', 'ua', 'ug', 'uk', 'us', 'uy', 'uz', 'va', 'vc', 've', 'vg', 'vi', 'vn', 'vu',
     'wf', 'ws', 'ye', 'yt', 'za', 'zm', 'zw']
- 
+    found_tlds = []
     domain_main = domain.split(".")[0]
+    
     for t in tlds:
         pool.add_task(get_ip, domain_main + "." + t)
         for g in gtld:
             pool.add_task(get_ip, domain_main+ "." + g + "." + t)
+    
     # Wait for threads to finish.
     pool.wait_completion()
+    
     # Process the output of the threads.
     for rcd_found in brtdata:
         for rcd in rcd_found:
             print "[*]\t"," ".join(rcd)
-
+            found_tlds.append(rcd)
+    return found_tlds
 
 def brute_srv(domain):
     """
@@ -632,13 +649,16 @@ def brute_srv(domain):
 
     for srvtype in srvrcd:
         pool.add_task(get_srv, srvtype + domain)
+    
     # Wait for threads to finish.
     pool.wait_completion()
+    
     # Make sure we clear the variable
     for rcd_found in brtdata:
         for rcd in rcd_found:
             srv.append(rcd)
             print "[*]\t", " ".join(rcd)
+    
     return srv
 
 
@@ -647,15 +667,20 @@ def brute_reverse(ip_list):
     Reverse lookup brite force for given CIDR example 192.168.1.1/24. Returns an
     Array of found records.
     """
+    found_records = []
+    
     # Resolv each IP in a separte thread.
     for x in ip_list:
         pool.add_task(get_ptr, x)
     # Wait for threads to finish.
     pool.wait_completion()
+    
     for rcd_found in brtdata:
         for rcd in rcd_found:
+            found_records.append(rcd)
             print "[*]\t"," ".join(rcd)
-
+    
+    return rcd
 
 def get_ip(hostname):
     """
@@ -669,9 +694,11 @@ def get_ip(hostname):
         for ip in ipv4:
             found_ip_add.append(["A",hostname,ip])
     ipv6 = get_aaaa(hostname)
+    
     if ipv6:
         for ip in ipv6:
             found_ip_add.append(["AAAA",hostname,ip])
+    
     return found_ip_add
 
 
@@ -679,6 +706,7 @@ def brute_domain(dict, dom):
     """
     Main Function for domain brute forcing
     """
+    found_hosts = []
     continue_brt = 'y'
     global brtdata
     # Check if wildcard resolution is enabled
@@ -686,7 +714,6 @@ def brute_domain(dict, dom):
     if check_wildcard(dom):
         continue_brt = raw_input('[*] Do you wish to continue? y/n ')
     if continue_brt == 'y':
-
         # Check if Dictionary file exists
 
         if os.path.isfile(dict):
@@ -697,57 +724,45 @@ def brute_domain(dict, dom):
             for line in f:
                 target = line.strip() + '.' + dom.strip()
                 pool.add_task(get_ip, target)
+                
         # Wait for threads to finish
         pool.wait_completion()
+        
         # Process the output of the threads.
         for rcd_found in brtdata:
             for rcd in rcd_found:
+                found_hosts.append(rcd)
                 print "[*]\t"," ".join(rcd)
+                
+    return found_hosts
 
 
-def in_cache(zone, rdata_type, ns):
+
+
+def in_cache(dict_file,ns):
     """
     Function for Cache Snooping, it will check a given NS server for specific
-    type of records for a given domain are in it's cache. Returns an Array with
-    records found, their type and NS server that was tested.
+    type of records for a given domain are in it's cache. 
     """
-    found_in_cache = []
-    if rdata_type == 'NS':
-        qtype = dns.rdatatype.NS
-    elif rdata_type == 'MX':
-        qtype = dns.rdatatype.MX
-    elif rdata_type == 'A':
-        qtype = dns.rdatatype.A
-    elif rdata_type == 'CNAME':
-        qtype = dns.rdatatype.CNAME
-    elif rdata_type == 'SOA':
-        qtype = dns.rdatatype.SOA
-    elif rdata_type == 'SOA':
-        qtype = dns.rdatatype.PRT
-    elif rdata_type == 'SOA':
-        qtype = dns.rdatatype.AAA
-    elif rdata_type == None:
-        qtype = dns.rdatatype.A
-    query = dns.message.make_query(zone, qtype, dns.rdataclass.IN)
-    query.flags ^= dns.flags.RD
-    answer = dns.query.udp(query, ns)
-    if len(answer.answer) > 0:
-        print '[*]', zone, 'Present in cache'
-        found_in_cache.append([qtype,zone,ns])
-    return found_in_cache
-
-
-def snoop_cache(ns,in_cache,dict):
-    """
-    Function to check each domain name in a given file and record type against a
-    target NS Server to verify if an entry exists in it's cache.
-    """
-     # Check if Dictionary file exists
-
-    if os.path.isfile(dict):
-        f = open(dict, 'r+')
-        for line in f:
-            in_cache(line,in_cache,ns)
+    found_records = []
+    f = open(dict_file, 'r+')
+    for zone in f:
+        dom_to_query = str.strip(zone)
+        query = dns.message.make_query(dom_to_query, dns.rdatatype.A, dns.rdataclass.IN)
+        query.flags ^= dns.flags.RD
+        answer = dns.query.udp(query,ns)
+        if len(answer.answer) > 0:
+            for an in answer.answer:
+                for rcd in an:
+                    if rcd.rdtype == 1:
+                        print "[*]\tName:",an.name, "TTL:",an.ttl, "Address:",rcd.address, "Type: A"
+                        found_records.append(["A",an.name,rcd.address,an.ttl])
+                    elif rcd.rdtype == 5:
+                        print "[*]\tName:",an.name, "TTL:",an.ttl,"Target:",rcd.target, "Type: CNAME"
+                        found_records.append(["CNAME",an.name,rcd.target,an.ttl])
+                    else:
+                        print ""
+    return found_records
 
 
 def mdns_browse(regtype):
@@ -970,6 +985,11 @@ def scrape_google(dom):
     return unique(filtered)
 
 
+def goo_result_process(found_hosts):
+    for sd in found_hosts:
+        for sdip in get_ip(sd):
+            print '[*]\t', sdip[0], sdip[1], sdip[2]
+
 def general_enum(domain, do_axfr,do_google):
     """
     Function for performing general enumeration of a domain. It gets SOA, NS, MX
@@ -989,14 +1009,13 @@ def general_enum(domain, do_axfr,do_google):
         print '[*]\t', mx_rcrd[0], mx_rcrd[1], mx_rcrd[2]
     get_spf(domain)
     get_txt(domain)
-    get_ip(domain)
+    for a_rcrd in get_ip(domain):
+        print '[*]\t', a_rcrd[0], a_rcrd[1], a_rcrd[2]
     print '[*] Enumerating SRV Records'
     brute_srv(domain)
     if do_google is not None:
         print '[*] Performing Google Search Enumeration'
-        for sd in scrape_google(domain):
-            for sdip in get_ip(sd):
-                print '[*]\t', sdip[0], sdip[1], sdip[2]
+        goo_result_process(scrape_google(domain))
 
 
 def usage():
@@ -1008,7 +1027,7 @@ def usage():
     print "  -r, --range       <range>   IP Range for reverse lookup bruteforce (first-last)."
     print "  -n, --name_server <name>    Domain server to use, if none is given the SOA of the"
     print "                              target will be used"
-    #print "  -f, --output_file <file>    File to save found records."
+    print "  -f, --output_file <file>    File to save found records."
     print "  -D, --dictionary  <file>    Dictionary file of subdomain and hostnames to use for"
     print "                              bruteforce."
     print "  -t, --type        <types>   Specify the type of enumeration to perform:"
@@ -1021,21 +1040,19 @@ def usage():
     print "                                      dictionary.\n"
     print "                              srv     To Enumerate common SRV Records for a given \n"
     print "                                      domain.\n"
-    print "                              axfr    Test all NS Servers in a domain for misconfigured\n"
+    print "                              axfr    Test all NS Servers in a domain for misconfigured"
     print "                                      zone transfers.\n"
+    print "                              goo     Perform Google search for subdomains and hosts.\n"
     print "                              snoop   To Perform a Cache Snooping against al NS "
     print "                                      servers for a given domain, testing all with"
-    print "                                      file containing the domains and a given Record"
-    print "                                      Type.\n"
+    print "                                      file containing the domains, file given with -D"
+    print "                                      option.\n"
     print "                              tld     Will remove the TLD of given domain and test against"
     print "                                      all TLD's registered in IANA\n"
     print "  -x, --axfr                  Perform AXFR with the standard enumeration."
     print "  -g, --google                Perform Google enumeration with the standard enumeration."
     #print "  -w, --do_whois              Do deep whois record analisys and reverse lookup of IP"
     #print "                              ranges found thru whois when doing standard query."
-    print "  -T, --cache_type  <type>    Type of record to perform Cache Snooping on, Dictionary"
-    print "                              and NS Server. File with hosts or domain is given with"
-    print "                              -D option\n"
     print "  --threads          <number> Number of threads to use in Range Reverse Lookup, Fordward"
     print "                              Lookup Bruteforce and SRV Record Enumeration"
     print "  --lifetime         <number> Time to wait for a server to response to a query."
@@ -1064,7 +1081,7 @@ ip_range_pattern = '([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})-([0-9]{1,3}
 
 
 # Define options
-options, remainder = getopt.getopt(sys.argv[1:], 'hd:c:n:f:D:t:xT:gwr:',
+options, remainder = getopt.getopt(sys.argv[1:], 'hd:c:n:f:D:t:xq:gwr:',
                                    ['help',
                                    'domain=',
                                    'cidr=',
@@ -1092,6 +1109,7 @@ for opt, arg in options:
     elif opt in ('-f','--output_file'):
         output_file = arg
     elif opt in ('-D','--dictionary'):
+        #Check if the doctionary file exists
         if os.path.isfile(arg):
             dict = arg
         else:
@@ -1099,8 +1117,8 @@ for opt, arg in options:
             exit(1)
     elif opt in ('-x','--axfr'):
         xfr = True
-    elif opt in ('-T','--cache_type'):
-        type = arg
+    elif opt in ('-q','--cache_type'):
+        cache_type = arg
     elif opt in ('-g','--google'):
         goo = True
     elif opt in ('-w','--do_whois'):
@@ -1158,8 +1176,12 @@ if type is not None:
             elif r == 'tld':
                 print "[*] Performing TLD Bruteforce Enumeration against", domain
                 brute_tlds(domain)
+            elif r == 'goo':
+                print "[*] Performing Google Search Enumeration against", domain
+                goo_result_process(scrape_google(domain))
             elif r == "snoop":
                 print "[*] Performing Cache Snooping against NS Server:", ns_server
+                in_cache(dict,ns_server)
             else:
                 print "[-] This type of scan is not in the list", r
                 usage()
