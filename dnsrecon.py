@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 #    DNSRecon
@@ -6,8 +6,7 @@
 # 1. Implement whois query of all records, do uniq and perform reverse look up on them.
 # 2. Implement saving to file results.
 # 3. Finish zone transfer parsing.
-# 4. Implement TLD bruteforce.
-
+#
 #    Copyright (C) 2010  Carkis Perez
 #
 #    This program is free software; you can redistribute it and/or modify
@@ -128,9 +127,12 @@ class ThreadPool:
 
         self.tasks.join()
 
+
 class AppURLopener(urllib.FancyURLopener):
 
     version = 'Mozilla/5.0 (compatible; Googlebot/2.1; + http://www.google.com/bot.html)'
+
+
 def unique(seq, idfun=repr):
     """
     Function to remove duplicates in an array. Retuns array with duplicates
@@ -535,6 +537,7 @@ def get_srv(host):
         return record
     return record
 
+
 def brute_tlds(domain):
     # tlds taken from http://data.iana.org/TLD/tlds-alpha-by-domain.txt
     gtld = ['co','com','net','biz','org']
@@ -569,6 +572,7 @@ def brute_tlds(domain):
     for rcd_found in brtdata:
         for rcd in rcd_found:
             print "[*]\t"," ".join(rcd)
+
 
 def brute_srv(domain):
     """
@@ -745,14 +749,15 @@ def snoop_cache(ns,in_cache,dict):
         for line in f:
             in_cache(line,in_cache,ns)
 
+
 def mdns_browse(regtype):
     """
     Function for resolving a specific mDNS record in the Local Subnet.
     """
     found_mdns_records = []
     domain = None
-    browse_timeout = 2
-    resolve_timeout = 2
+    browse_timeout = 1
+    resolve_timeout = 1
     results = []
     resolved = []
 
@@ -993,6 +998,7 @@ def general_enum(domain, do_axfr,do_google):
             for sdip in get_ip(sd):
                 print '[*]\t', sdip[0], sdip[1], sdip[2]
 
+
 def usage():
     print "Usage: dnsrecon.py <options>\n"
     print "Options:"
@@ -1056,6 +1062,7 @@ ip_list = []
 ip_range = None
 ip_range_pattern = '([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})-([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})'
 
+
 # Define options
 options, remainder = getopt.getopt(sys.argv[1:], 'hd:c:n:f:D:t:xT:gwr:',
                                    ['help',
@@ -1072,6 +1079,7 @@ options, remainder = getopt.getopt(sys.argv[1:], 'hd:c:n:f:D:t:xT:gwr:',
                                    'range=',
                                    'lifetime=',
                                    'threads='])
+# Parse options
 for opt, arg in options:
     if opt in ('-t','--type'):
         type = arg
@@ -1084,7 +1092,11 @@ for opt, arg in options:
     elif opt in ('-f','--output_file'):
         output_file = arg
     elif opt in ('-D','--dictionary'):
-        dict = arg
+        if os.path.isfile(arg):
+            dict = arg
+        else:
+            print "[-] File",arg,"does not exist!"
+            exit(1)
     elif opt in ('-x','--axfr'):
         xfr = True
     elif opt in ('-T','--cache_type'):
@@ -1153,9 +1165,12 @@ if type is not None:
                 usage()
         except dns.resolver.NXDOMAIN:
             print "[-] Could not resolve domain:",domain
+            exit(1)
         except dns.exception.Timeout:
             print "[-] A timeout error occured please make sure you can reach the target DNS Servers"
             print "[-] directly and requests are not being filtered. Increese the timeout from 1.0 second"
             print "[-] to a higher number with --lifetime <time> option."
+            exit(1)
+    exit(0)
 else:
     usage()
