@@ -872,7 +872,7 @@ def mdns_enum():
     Function for enumerating several know types of mDNS records in the local
     subnet.
     """
-
+    global brtdata
     mdns_types = [
         '_appletv-itunes._tcp',
         '_touch-able._tcp',
@@ -962,7 +962,7 @@ def mdns_enum():
             print "[*]\tPort:",e['port']
             print "[*]\tTXTRecord:",e['txtRecord'].replace("\n"," ")
             print "[*]"
-
+    brtdata = []
 
 def scrape_google(dom):
     """
