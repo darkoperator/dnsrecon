@@ -596,6 +596,8 @@ def brute_srv(domain):
     Bruteforce most common SRV records for a given Domain. Returns an Array with
     records found.
     """
+    global brtdata
+    brtdata = []
     srv = []
     srvrcd = [
         '_gc._tcp.',
@@ -668,7 +670,8 @@ def brute_reverse(ip_list):
     Array of found records.
     """
     found_records = []
-    
+    global brtdata
+    brtdata = []
     # Resolv each IP in a separte thread.
     for x in ip_list:
         pool.add_task(get_ptr, x)
@@ -679,8 +682,7 @@ def brute_reverse(ip_list):
         for rcd in rcd_found:
             found_records.append(" ".join(rcd))
             print "[*]\t"," ".join(rcd)
-    
-    return rcd
+    return found_records
 
 def get_ip(hostname):
     """
@@ -990,7 +992,7 @@ def goo_result_process(found_hosts):
         for sdip in get_ip(sd):
             print '[*]\t', sdip[0], sdip[1], sdip[2]
 
-def general_enum(domain, do_axfr,do_google):
+def general_enum(domain, do_axfr,do_google,do_spf):
     """
     Function for performing general enumeration of a domain. It gets SOA, NS, MX
     A, AAA and SRV records for a given domain.It Will first try a Zone Transfer
@@ -998,8 +1000,9 @@ def general_enum(domain, do_axfr,do_google):
     it will also perform a Google Search and scrape the results for hostnames and
     perform an A and AAA query against them.
     """
-    # Variable to collect all results
-    collected_results = []
+    # Var for SPF Record Range Reverse Lookup
+    found_spf_ranges = []
+    ip_spf_list = []
     
     # Check if wildcards are enabled on the target domain 
     check_wildcard(domain)
@@ -1011,37 +1014,43 @@ def general_enum(domain, do_axfr,do_google):
     # Enumetaye SOA Record
     found_soa_record = get_soa(domain)
     print '[*]\t', found_soa_record[0], found_soa_record[1], found_soa_record[2]
-    collected_results.append([found_soa_record[0], found_soa_record[1], found_soa_record[2]])
     
     # Enumerate Name Servers
     for ns_rcrd in get_ns(domain):
         print '[*]\t', ns_rcrd[0], ns_rcrd[1], ns_rcrd[2]
-        collected_results.append([ns_rcrd[0], ns_rcrd[1], ns_rcrd[2]])
         
     # Enumerate MX Records
     for mx_rcrd in get_mx(domain):
         print '[*]\t', mx_rcrd[0], mx_rcrd[1], mx_rcrd[2]
-        collected_results.append([mx_rcrd[0], mx_rcrd[1], mx_rcrd[2]])
-    
-    # Enumerate SFP and TXT Records for the target domain    
-    collected_results.append(get_spf(domain))
-    collected_results.append(get_txt(domain))
     
     # Enumerate A Record for the targeted Domain
     for a_rcrd in get_ip(domain):
         print '[*]\t', a_rcrd[0], a_rcrd[1], a_rcrd[2]
-        collected_results.append([a_rcrd[0], a_rcrd[1], a_rcrd[2]])
+        
+    # Enumerate SFP and TXT Records for the target domain
+    if do_spf is not None:
+        text_data = get_spf(domain)[0]
+        text_data += get_txt(domain)[0]
+        # Process ipv4 SPF records of found
+        found_spf_ranges.extend(re.findall('([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}/\d*)',"".join(text_data)))
+        if len(found_spf_ranges) > 0:
+            print "[*] Performing Reverse Lookup of SPF ipv4 Ranges"
+            for c in found_spf_ranges:
+                ip = IPNetwork(c)
+                ip_list = list(ip)
+                for i in ip_list:
+                    ip_spf_list.append(str(i))
+            brute_reverse(unique(ip_spf_list))
+        
         
     # Enumerate SRV Records for the targeted Domain
     print '[*] Enumerating SRV Records'
-    collected_results.append(brute_srv(domain))
+    brute_srv(domain)
     
     # Do Google Search enumeration if selected
     if do_google is not None:
         print '[*] Performing Google Search Enumeration'
-        collected_results.append(goo_result_process(scrape_google(domain)))
-    
-    return collected_results
+        goo_result_process(scrape_google(domain))
 
 
 def usage():
@@ -1076,6 +1085,8 @@ def usage():
     print "                              tld     Will remove the TLD of given domain and test against"
     print "                                      all TLD's registered in IANA\n"
     print "  -x, --axfr                  Perform AXFR with the standard enumeration."
+    print "  -s, --do_spf                Perform Reverse Lookup of ipv4 ranges in the SPF Record of the"
+    print "                              targeted domain with the standard enumeration."
     print "  -g, --google                Perform Google enumeration with the standard enumeration."
     #print "  -w, --do_whois              Do deep whois record analisys and reverse lookup of IP"
     #print "                              ranges found thru whois when doing standard query."
@@ -1087,183 +1098,195 @@ def usage():
 
 # Main
 #-------------------------------------------------------------------------------
-
-# Option Variables
-domain = None
-cidr = None
-ns_server = None
-output_file = None
-dict = None
-type = None
-xfr = None
-goo = None
-deep_whois = None
-thread_num = 10
-request_timeout = 1.0
-ip_list = []
-ip_range = None
-ip_range_pattern = '([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})-([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})'
-
-
-# Define options
-options, remainder = getopt.getopt(sys.argv[1:], 'hd:c:n:f:D:t:xq:gwr:',
-                                   ['help',
-                                   'domain=',
-                                   'cidr=',
-                                   'name_server=',
-                                   'output_file=',
-                                   'dictionary=',
-                                   'type=',
-                                   'axfr',
-                                   'google',
-                                   'do_whois',
-                                   'range=',
-                                   'lifetime=',
-                                   'threads='])
-# Parse options
-for opt, arg in options:
+def main():
+    # Option Variables
+    domain = None
+    cidr = None
+    ns_server = None
+    output_file = None
+    dict = None
+    type = None
+    xfr = None
+    goo = None
+    spf_enum = None
+    deep_whois = None
+    thread_num = 10
+    request_timeout = 1.0
+    ip_list = []
+    ip_range = None
+    ip_range_pattern = '([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})-([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})'
     
-    if opt in ('-t','--type'):
-        type = arg
+    # Global Vars
+    global res
+    global pool
+    
+    # Define options
+    options, remainder = getopt.getopt(sys.argv[1:], 'hd:c:n:f:D:t:xq:gwr:s',
+                                       ['help',
+                                       'domain=',
+                                       'cidr=',
+                                       'name_server=',
+                                       'output_file=',
+                                       'dictionary=',
+                                       'type=',
+                                       'axfr',
+                                       'google',
+                                       'do_whois',
+                                       'range=',
+                                       'do_spf',
+                                       'lifetime=',
+                                       'threads='])
+    # Parse options
+    for opt, arg in options:
         
-    elif opt in ('-d','--domain'):
-        domain = arg
-        
-    elif opt in ('-c','--cidr'):
-        ip_list.extend(expand_cidr(arg))
-        
-    elif opt in ('-n','--name_server'):
-        ns_server = arg
-        
-    elif opt in ('-f','--output_file'):
-        output_file = arg
-        
-    elif opt in ('-D','--dictionary'):
-        #Check if the doctionary file exists
-        if os.path.isfile(arg):
-            dict = arg
-        else:
-            print "[-] File",arg,"does not exist!"
-            exit(1)
+        if opt in ('-t','--type'):
+            type = arg
             
-    elif opt in ('-x','--axfr'):
-        xfr = True
-        
-    elif opt in ('-g','--google'):
-        goo = True
-        
-    elif opt in ('-w','--do_whois'):
-        deep_whois = True
-        
-    elif opt in ('-r','--range'):
-        ip_range = re.findall(ip_range_pattern,arg)
-        ip_list.extend(expand_range(ip_range[0][0],ip_range[0][1]))
-        
-    elif opt in ('--theads'):
-        thread_num = int(arg)
-        
-    elif opt in ('--lifetime'):
-        request_timeout = float(arg)
-        
-    elif opt in ('-h'):
+        elif opt in ('-d','--domain'):
+            domain = arg
+            
+        elif opt in ('-c','--cidr'):
+            ip_list.extend(expand_cidr(arg))
+            
+        elif opt in ('-n','--name_server'):
+            ns_server = arg
+            
+        elif opt in ('-f','--output_file'):
+            output_file = arg
+            
+        elif opt in ('-D','--dictionary'):
+            #Check if the doctionary file exists
+            if os.path.isfile(arg):
+                dict = arg
+            else:
+                print "[-] File",arg,"does not exist!"
+                exit(1)
+                
+        elif opt in ('-x','--axfr'):
+            xfr = True
+            
+        elif opt in ('-g','--google'):
+            goo = True
+            
+        elif opt in ('-w','--do_whois'):
+            deep_whois = True
+            
+        elif opt in ('-s','--do_spf'):
+            spf_enum = True
+            
+        elif opt in ('-r','--range'):
+            ip_range = re.findall(ip_range_pattern,arg)
+            ip_list.extend(expand_range(ip_range[0][0],ip_range[0][1]))
+            
+        elif opt in ('--theads'):
+            thread_num = int(arg)
+            
+        elif opt in ('--lifetime'):
+            request_timeout = float(arg)
+            
+        elif opt in ('-h'):
+            usage()
+            
+    # Setting the number of threads to 10
+    pool = ThreadPool(thread_num)
+    
+    if type is not None:
+        # We use system DNS for 1st query for SOA Record
+        if ns_server:
+            print "[*] Changing to server: ", ns_server
+            res = dns.resolver.Resolver(configure=False)
+            res.nameservers = [ns_server]
+        else:
+            res = dns.resolver.Resolver(configure=True)
+        # Set timing
+        res.timeout = request_timeout
+        res.lifetime = request_timeout
+        for r in type.split(','):
+            try:
+                if r == 'axfr':
+                    if domain is not None:
+                        print '[*] Testing NS Servers for Zone Transfer'
+                        zone_transfer(domain)
+                    else:
+                        print '[-] No Domain to target specified!'
+                        exit(1)
+                    
+                elif r == 'std':
+                    if domain is not None:
+                        print "[*] Performing General Enumeration of Domain:",domain
+                        found_results = general_enum(domain, xfr, goo, spf_enum)
+                    else:
+                        print '[-] No Domain to target specified!'
+                        exit(1)
+                    
+                elif r == 'rvl':
+                    if len(ip_list) > 0:
+                        print '[*] Reverse Lookup of a Range'
+                        brute_reverse(ip_list)
+                    else:
+                        print '[-] Failed CIDR or Range is Required for type rvl'
+                        
+                elif r == 'brt':
+                    if (dict is not None) and (domain is not None):
+                        print '[*] Performing host and subdomain bruteforce against', \
+                            domain
+                        brute_domain(dict, domain)
+                    else:
+                        print '[-] No Dictionary file specified!'
+                        exit(1)
+                        
+                elif r == 'srv':
+                    if domain is not None:
+                        print '[*] Enumerating Common SRV Records against', \
+                            domain
+                        brute_srv(domain)
+                    else:
+                        print '[-] No Domain to target specified!'
+                        exit(1)
+                    
+                elif r == 'mdns':
+                    print '[*] Enumerating most common mDNS Resords on Subnet'
+                    mdns_enum()
+                    
+                elif r == 'tld':
+                    if domain is not None:
+                        print "[*] Performing TLD Bruteforce Enumeration against", domain
+                        brute_tlds(domain)
+                    else:
+                        print '[-] No Domain to target specified!'
+                        exit(1)
+                        
+                elif r == 'goo':
+                    if domain is not None:
+                        print "[*] Performing Google Search Enumeration against", domain
+                        goo_result_process(scrape_google(domain))
+                    else:
+                        print '[-] No Domain to target specified!'
+                        exit(1)
+                        
+                elif r == "snoop":
+                    if (dict is not None) and (ns_server is not None):
+                        print "[*] Performing Cache Snooping against NS Server:", ns_server
+                        in_cache(dict,ns_server)
+                    else:
+                        print '[-] No Domain or Name Server to target specified!'
+                        exit(1)
+                    
+                else:
+                    print "[-] This type of scan is not in the list", r
+                    usage()
+                    
+            except dns.resolver.NXDOMAIN:
+                print "[-] Could not resolve domain:",domain
+                exit(1)
+            except dns.exception.Timeout:
+                print "[-] A timeout error occured please make sure you can reach the target DNS Servers"
+                print "[-] directly and requests are not being filtered. Increese the timeout from 1.0 second"
+                print "[-] to a higher number with --lifetime <time> option."
+                exit(1)
+        exit(0)
+    else:
         usage()
         
-# Setting the number of threads to 10
-pool = ThreadPool(thread_num)
-if type is not None:
-    # We use system DNS for 1st query for SOA Record
-    if ns_server:
-        print "[*] Changing to server: ", ns_server
-        res = dns.resolver.Resolver(configure=False)
-        res.nameservers = [ns_server]
-    else:
-        res = dns.resolver.Resolver(configure=True)
-    # Set timing
-    res.timeout = request_timeout
-    res.lifetime = request_timeout
-    for r in type.split(','):
-        try:
-            if r == 'axfr':
-                if domain is not None:
-                    print '[*] Testing NS Servers for Zone Transfer'
-                    zone_transfer(domain)
-                else:
-                    print '[-] No Domain to target specified!'
-                    exit(1)
-                
-            elif r == 'std':
-                if domain is not None:
-                    print "[*] Performing General Enumeration of Domain:",domain
-                    found_results = general_enum(domain, xfr, goo)
-                else:
-                    print '[-] No Domain to target specified!'
-                    exit(1)
-                
-            elif r == 'rvl':
-                if len(ip_list) > 0:
-                    print '[*] Reverse Lookup of a Range'
-                    brute_reverse(ip_list)
-                else:
-                    print '[-] Failed CIDR or Range is Required for type rvl'
-                    
-            elif r == 'brt':
-                if (dict is not None) and (domain is not None):
-                    print '[*] Performing host and subdomain bruteforce against', \
-                        domain
-                    brute_domain(dict, domain)
-                else:
-                    print '[-] No Dictionary file specified!'
-                    exit(1)
-                    
-            elif r == 'srv':
-                if domain is not None:
-                    print '[*] Enumerating Common SRV Records against', \
-                        domain
-                    brute_srv(domain)
-                else:
-                    print '[-] No Domain to target specified!'
-                    exit(1)
-                
-            elif r == 'mdns':
-                print '[*] Enumerating most common mDNS Resords on Subnet'
-                mdns_enum()
-                
-            elif r == 'tld':
-                if domain is not None:
-                    print "[*] Performing TLD Bruteforce Enumeration against", domain
-                    brute_tlds(domain)
-                else:
-                    print '[-] No Domain to target specified!'
-                    exit(1)
-                    
-            elif r == 'goo':
-                if domain is not None:
-                    print "[*] Performing Google Search Enumeration against", domain
-                    goo_result_process(scrape_google(domain))
-                else:
-                    print '[-] No Domain to target specified!'
-                    exit(1)
-                    
-            elif r == "snoop":
-                if (dict is not None) and (ns_server is not None):
-                    print "[*] Performing Cache Snooping against NS Server:", ns_server
-                    in_cache(dict,ns_server)
-                else:
-                    print '[-] No Domain or Name Server to target specified!'
-                    exit(1)
-                
-            else:
-                print "[-] This type of scan is not in the list", r
-                usage()
-                
-        except dns.resolver.NXDOMAIN:
-            print "[-] Could not resolve domain:",domain
-            exit(1)
-        except dns.exception.Timeout:
-            print "[-] A timeout error occured please make sure you can reach the target DNS Servers"
-            print "[-] directly and requests are not being filtered. Increese the timeout from 1.0 second"
-            print "[-] to a higher number with --lifetime <time> option."
-            exit(1)
-    exit(0)
-else:
-    usage()
+if __name__ == "__main__":
+    main()
