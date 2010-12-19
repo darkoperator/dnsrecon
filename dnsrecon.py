@@ -7,7 +7,7 @@
 # 2. Implement saving to file results.
 # 3. Finish zone transfer parsing.
 #
-#    Copyright (C) 2010  Carkis Perez
+#    Copyright (C) 2010  Carlos Perez
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -63,7 +63,7 @@ from time import sleep
 
 
 
-# Global Variables for Bruteforce Threads
+# Global Variables for Brute force Threads
 
 brtdata = []
 lck = Lock()
@@ -135,7 +135,7 @@ class AppURLopener(urllib.FancyURLopener):
 
 def unique(seq, idfun=repr):
     """
-    Function to remove duplicates in an array. Retuns array with duplicates
+    Function to remove duplicates in an array. Returns array with duplicates
     removed.
     """
     seen = {}
@@ -164,7 +164,7 @@ def get_whois(ip_addrs):
 
 def whois(target,whois_srv):
     """
-    Performs a whois query againsta arin.net for a given IP, Domain or Host as a
+    Performs a whois query against a arin.net for a given IP, Domain or Host as a
     string and returns the answer of the query.
     """
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -182,7 +182,7 @@ def whois(target,whois_srv):
 
 def get_whois_nets(data):
     """
-    Parses whois data and extracs the Network Ranges returning an array of lists
+    Parses whois data and extracts the Network Ranges returning an array of lists
     where each list has the starting and ending IP of the found range.
     """
     patern = '([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}) - ([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})'
@@ -349,7 +349,7 @@ def zone_transfer(dmain_trg):
 
 def get_cname(host_trg):
     """
-    Function for CNAME Record resolving. Retuns the hostnames for a given alias.
+    Function for CNAME Record resolving. Returns the hostnames for a given alias.
     Returns array with value.
     """
     host_name = []
@@ -391,7 +391,7 @@ def get_aaaa(host_trg):
 
 def get_mx(domain):
     """
-    Function for MX Record resolving. Returns all MX records. Retuns also the IP
+    Function for MX Record resolving. Returns all MX records. Returns also the IP
     address of the host both in IPv4 and IPv6. Returns an Array
     """
     mx_records = []
@@ -419,7 +419,7 @@ def get_mx(domain):
 
 def get_ns(domain):
     """
-    Function for NS Record resolving. Returns all NS records. Retuns also the IP
+    Function for NS Record resolving. Returns all NS records. Returns also the IP
     address of the host both in IPv4 and IPv6. Returns an Array.
     """
     ns_srvs = []
@@ -444,7 +444,7 @@ def get_ns(domain):
 
 def get_soa(domain):
     """
-    Function for SOA Record resolving. Returns all SOA records. Retuns also the IP
+    Function for SOA Record resolving. Returns all SOA records. Returns also the IP
     address of the host both in IPv4 and IPv6. Returns an Array.
     """
     soa_records = []
@@ -503,7 +503,7 @@ def get_txt(domain):
 
 def check_wildcard(domain_trg):
     """
-    Function for checking if Wilcard resolution is configured for a Domain
+    Function for checking if Wildcard resolution is configured for a Domain
     """
     wildcard = None
     test_name = ''.join(Random().sample(string.letters + string.digits,
@@ -511,9 +511,9 @@ def check_wildcard(domain_trg):
     ips = get_a(test_name)
     
     if len(ips) > 0:
-        print '[-] Wildard resolution is enabled on this domain'
+        print '[-] Wildcard resolution is enabled on this domain'
         print '[-] It is resolving to', ''.join(ips)
-        print '[-] All queries will resolv to this address!!'
+        print '[-] All queries will resolve to this address!!'
         wildcard = ''.join(ips)
     
     return wildcard
@@ -593,7 +593,7 @@ def brute_tlds(domain):
 
 def brute_srv(domain):
     """
-    Bruteforce most common SRV records for a given Domain. Returns an Array with
+    Brute-force most common SRV records for a given Domain. Returns an Array with
     records found.
     """
     global brtdata
@@ -666,13 +666,13 @@ def brute_srv(domain):
 
 def brute_reverse(ip_list):
     """
-    Reverse lookup brite force for given CIDR example 192.168.1.1/24. Returns an
+    Reverse look-up brute force for given CIDR example 192.168.1.1/24. Returns an
     Array of found records.
     """
     found_records = []
     global brtdata
     brtdata = []
-    # Resolv each IP in a separte thread.
+    # Resolve each IP in a separate thread.
     for x in ip_list:
         pool.add_task(get_ptr, x)
     # Wait for threads to finish.
@@ -721,7 +721,7 @@ def brute_domain(dict, dom):
         if os.path.isfile(dict):
             f = open(dict, 'r+')
 
-            # Thread bruteforce.
+            # Thread brute-force.
 
             for line in f:
                 target = line.strip() + '.' + dom.strip()
@@ -966,7 +966,7 @@ def mdns_enum():
 
 def scrape_google(dom):
     """
-    Function for enumerating subdomains and hosts by scrapping google.
+    Function for enumerating sub-domains and hosts by scrapping Google.
     """
     results = []
     filtered = []
@@ -997,21 +997,21 @@ def general_enum(domain, do_axfr,do_google,do_spf):
     Function for performing general enumeration of a domain. It gets SOA, NS, MX
     A, AAA and SRV records for a given domain.It Will first try a Zone Transfer
     if not successfull it will try indivifual record type enumeration. If chosen
-    it will also perform a Google Search and scrape the results for hostnames and
+    it will also perform a Google Search and scrape the results for host names and
     perform an A and AAA query against them.
     """
-    # Var for SPF Record Range Reverse Lookup
+    # Var for SPF Record Range Reverse Look-up
     found_spf_ranges = []
     ip_spf_list = []
     
     # Check if wildcards are enabled on the target domain 
     check_wildcard(domain)
     
-    # Perform test for Zone Transfer againsta all NS servers of a Domain
+    # Perform test for Zone Transfer against all NS servers of a Domain
     if do_axfr is not None:
         zone_transfer(domain)
         
-    # Enumetaye SOA Record
+    # Enumerate SOA Record
     found_soa_record = get_soa(domain)
     print '[*]\t', found_soa_record[0], found_soa_record[1], found_soa_record[2]
     
@@ -1034,7 +1034,7 @@ def general_enum(domain, do_axfr,do_google,do_spf):
         # Process ipv4 SPF records of found
         found_spf_ranges.extend(re.findall('([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}/\d*)',"".join(text_data)))
         if len(found_spf_ranges) > 0:
-            print "[*] Performing Reverse Lookup of SPF ipv4 Ranges"
+            print "[*] Performing Reverse Look-up of SPF ipv4 Ranges"
             for c in found_spf_ranges:
                 ip = IPNetwork(c)
                 ip_list = list(ip)
@@ -1058,40 +1058,40 @@ def usage():
     print "Options:"
     print "  -h, --help                  Show this help message and exit"
     print "  -d, --domain      <domain>  Domain to Target for enumeration."
-    print "  -c, --cidr        <range>   CIDR for reverse lookup bruteforce (range/bitmask)."
-    print "  -r, --range       <range>   IP Range for reverse lookup bruteforce (first-last)."
+    print "  -c, --cidr        <range>   CIDR for reverse look-up brute force (range/bitmask)."
+    print "  -r, --range       <range>   IP Range for reverse look-up brute force (first-last)."
     print "  -n, --name_server <name>    Domain server to use, if none is given the SOA of the"
     print "                              target will be used"
     #print "  -f, --output_file <file>    File to save found records."
-    print "  -D, --dictionary  <file>    Dictionary file of subdomain and hostnames to use for"
-    print "                              bruteforce."
+    print "  -D, --dictionary  <file>    Dictionary file of sub-domain and hostnames to use for"
+    print "                              brute force."
     print "  -t, --type        <types>   Specify the type of enumeration to perform:"
     print "                              mdns    To Enumerate local subnet with mDNS.\n"
     print "                              std     To Enumerate general record types, enumerates."
     print "                                      SOA, NS, A, AAAA, MX and SRV if AXRF on the"
     print "                                      NS Servers fail.\n"
     print "                              rvl     To Reverse Look Up a given CIDR IP range.\n"
-    print "                              brt     To Bruteforce Domains and Hosts using a given"
+    print "                              brt     To Brute force Domains and Hosts using a given"
     print "                                      dictionary.\n"
     print "                              srv     To Enumerate common SRV Records for a given \n"
     print "                                      domain.\n"
     print "                              axfr    Test all NS Servers in a domain for misconfigured"
     print "                                      zone transfers.\n"
-    print "                              goo     Perform Google search for subdomains and hosts.\n"
-    print "                              snoop   To Perform a Cache Snooping against al NS "
+    print "                              goo     Perform Google search for sub-domains and hosts.\n"
+    print "                              snoop   To Perform a Cache Snooping against all NS "
     print "                                      servers for a given domain, testing all with"
     print "                                      file containing the domains, file given with -D"
     print "                                      option.\n"
     print "                              tld     Will remove the TLD of given domain and test against"
     print "                                      all TLD's registered in IANA\n"
     print "  -x, --axfr                  Perform AXFR with the standard enumeration."
-    print "  -s, --do_spf                Perform Reverse Lookup of ipv4 ranges in the SPF Record of the"
+    print "  -s, --do_spf                Perform Reverse Look-up of ipv4 ranges in the SPF Record of the"
     print "                              targeted domain with the standard enumeration."
     print "  -g, --google                Perform Google enumeration with the standard enumeration."
-    #print "  -w, --do_whois              Do deep whois record analisys and reverse lookup of IP"
+    #print "  -w, --do_whois              Do deep whois record analysis and reverse look-up of IP"
     #print "                              ranges found thru whois when doing standard query."
-    print "  --threads          <number> Number of threads to use in Range Reverse Lookup, Fordward"
-    print "                              Lookup Bruteforce and SRV Record Enumeration"
+    print "  --threads          <number> Number of threads to use in Range Reverse Look-up, Forward"
+    print "                              Look-up Brute force and SRV Record Enumeration"
     print "  --lifetime         <number> Time to wait for a server to response to a query."
     exit(0)
 
@@ -1155,7 +1155,7 @@ def main():
             output_file = arg
             
         elif opt in ('-D','--dictionary'):
-            #Check if the doctionary file exists
+            #Check if the dictionary file exists
             if os.path.isfile(arg):
                 dict = arg
             else:
@@ -1221,14 +1221,14 @@ def main():
                     
                 elif r == 'rvl':
                     if len(ip_list) > 0:
-                        print '[*] Reverse Lookup of a Range'
+                        print '[*] Reverse Look-up of a Range'
                         brute_reverse(ip_list)
                     else:
                         print '[-] Failed CIDR or Range is Required for type rvl'
                         
                 elif r == 'brt':
                     if (dict is not None) and (domain is not None):
-                        print '[*] Performing host and subdomain bruteforce against', \
+                        print '[*] Performing host and subdomain brute force against', \
                             domain
                         brute_domain(dict, domain)
                     else:
@@ -1245,12 +1245,12 @@ def main():
                         exit(1)
                     
                 elif r == 'mdns':
-                    print '[*] Enumerating most common mDNS Resords on Subnet'
+                    print '[*] Enumerating most common mDNS Records on Subnet'
                     mdns_enum()
                     
                 elif r == 'tld':
                     if domain is not None:
-                        print "[*] Performing TLD Bruteforce Enumeration against", domain
+                        print "[*] Performing TLD Brute force Enumeration against", domain
                         brute_tlds(domain)
                     else:
                         print '[-] No Domain to target specified!'
@@ -1280,8 +1280,8 @@ def main():
                 print "[-] Could not resolve domain:",domain
                 exit(1)
             except dns.exception.Timeout:
-                print "[-] A timeout error occured please make sure you can reach the target DNS Servers"
-                print "[-] directly and requests are not being filtered. Increese the timeout from 1.0 second"
+                print "[-] A timeout error occurred please make sure you can reach the target DNS Servers"
+                print "[-] directly and requests are not being filtered. Increase the timeout from 1.0 second"
                 print "[-] to a higher number with --lifetime <time> option."
                 exit(1)
         exit(0)
