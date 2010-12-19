@@ -242,45 +242,45 @@ def zone_transfer(dmain_trg):
             for (name, rdataset) in \
                 zone.iterate_rdatasets(dns.rdatatype.SOA):
                 for rdata in rdataset:
-                    print '[*]', '\tSOA', rdata.mname.to_text()
+                    print '[*]\t', 'SOA', rdata.mname.to_text()
 
             for (name, rdataset) in \
                 zone.iterate_rdatasets(dns.rdatatype.NS):
                 for rdata in rdataset:
-                    print '[*]', '\tNS', rdata.target.to_text()
+                    print '[*]\t', 'NS', rdata.target.to_text()
 
             for (name, rdataset) in \
                 zone.iterate_rdatasets(dns.rdatatype.TXT):
                 for rdata in rdataset:
-                    print '[*]', '\tTXT', ''.join(rdata.strings)
+                    print '[*]\t', 'TXT', ''.join(rdata.strings)
 
             for (name, rdataset) in \
                 zone.iterate_rdatasets(dns.rdatatype.SPF):
                 for rdata in rdataset:
-                    print '[*]', '\tSPF', ''.join(rdata.strings)
+                    print '[*]\t', 'SPF', ''.join(rdata.strings)
 
             for (name, rdataset) in \
                 zone.iterate_rdatasets(dns.rdatatype.MX):
                 for rdata in rdataset:
-                    print '[*]', '\tMX', str(name) + '.' + dmain_trg, \
+                    print '[*]\t', 'MX', str(name) + '.' + dmain_trg, \
                         rdata.exchange.to_text()
 
             for (name, rdataset) in \
                 zone.iterate_rdatasets(dns.rdatatype.AAAA):
                 for rdata in rdataset:
-                    print '[*]', '\tAAAA', str(name) + '.' + dmain_trg, \
+                    print '[*]\t', 'AAAA', str(name) + '.' + dmain_trg, \
                         rdata.address
 
             for (name, rdataset) in \
                 zone.iterate_rdatasets(dns.rdatatype.A):
                 for rdata in rdataset:
-                    print '[*]', '\tA', str(name) + '.' + dmain_trg, \
+                    print '[*]\t', 'A', str(name) + '.' + dmain_trg, \
                         rdata.address
 
             for (name, rdataset) in \
                 zone.iterate_rdatasets(dns.rdatatype.CNAME):
                 for rdata in rdataset:
-                    print '[*]', '\tCNAME', str(name) + '.'\
+                    print '[*]\t', 'CNAME', str(name) + '.'\
                          + dmain_trg, rdata.target.to_text()
 
             for (name, rdataset) in \
@@ -292,55 +292,88 @@ def zone_transfer(dmain_trg):
             for (name, rdataset) in \
                 zone.iterate_rdatasets(dns.rdatatype.HINFO):
                 for rdata in rdataset:
-                    print '[*]', '\tHINFO', str(name) + '.' + dmain_trg, \
-                    rdata.cpu, rdata.os
+                    print '[*]\t', 'HINFO', rdata.cpu, rdata.os
 
-#
-#            for (name, rdataset) in \
-#                zone.iterate_rdatasets(dns.rdatatype.WKS):
-#                for rdata in rdataset:
-#                    print '[*]', '\tWKS', str(name) + '.' + dmain_trg
-#
-#            for (name, rdataset) in \
-#                zone.iterate_rdatasets(dns.rdatatype.RP):
-#                for rdata in rdataset:
-#                    print '[*]', '\tRP', str(name) + '.' + dmain_trg
-#
-#            for (name, rdataset) in \
-#                zone.iterate_rdatasets(dns.rdatatype.AFSDB):
-#                for rdata in rdataset:
-#                    print '[*]', '\tAFSDB', str(name) + '.' + dmain_trg
-#
-#            for (name, rdataset) in \
-#                zone.iterate_rdatasets(dns.rdatatype.X25):
-#                for rdata in rdataset:
-#                    print '[*]', '\tX25', str(name) + '.' + dmain_trg
-#
-#            for (name, rdataset) in \
-#                zone.iterate_rdatasets(dns.rdatatype.ISDN):
-#                for rdata in rdataset:
-#                    print '[*]', '\tISDN', str(name) + '.' + dmain_trg
+            for (name, rdataset) in \
+                zone.iterate_rdatasets(dns.rdatatype.WKS):
+                for rdata in rdataset:
+                    print '[*]\t', 'WKS', rdata.address, rdata.bitmap, rdata.protocol
+
+            for (name, rdataset) in \
+                zone.iterate_rdatasets(dns.rdatatype.RP):
+                for rdata in rdataset:
+                    print '[*]\t', 'RP', rdata.mbox, rdata.txt
+
+            for (name, rdataset) in \
+                zone.iterate_rdatasets(dns.rdatatype.AFSDB):
+                for rdata in rdataset:
+                    print '[*]\t', 'AFSDB', rdata.subtype, rdata.hostname
+
+            for (name, rdataset) in \
+                zone.iterate_rdatasets(dns.rdatatype.X25):
+                for rdata in rdataset:
+                    print '[*]', '\tX25', rdata.address
+
+            for (name, rdataset) in \
+                zone.iterate_rdatasets(dns.rdatatype.ISDN):
+                for rdata in rdataset:
+                    print '[*]\t', 'ISDN', rdata.address
 #
 #            for (name, rdataset) in \
 #                zone.iterate_rdatasets(dns.rdatatype.RT):
 #                for rdata in rdataset:
-#                    print '[*]', '\tRT', str(name) + '.' + dmain_trg
+#                    print '[*]\t', 'RT', str(name) + '.' + dmain_trg
 #
 #            for (name, rdataset) in \
 #                zone.iterate_rdatasets(dns.rdatatype.NSAP):
 #                for rdata in rdataset:
-#                    print '[*]', '\tNSAP', str(name) + '.' + dmain_trg
+#                    print '[*]\t', 'NSAP', str(name) + '.' + dmain_trg
 #
 #            for (name, rdataset) in \
 #                zone.iterate_rdatasets(dns.rdatatype.NSAP_PTR):
 #                for rdata in rdataset:
-#                    print '[*]', '\tNSAP_PTR', str(name) + '.'\
+#                    print '[*]\t', 'NSAP_PTR', str(name) + '.'\
 #                         + dmain_trg
 #
 #            for (name, rdataset) in \
 #                zone.iterate_rdatasets(dns.rdatatype.SIG):
 #                for rdata in rdataset:
-#                    print '[*]', '\tSIG', str(name) + '.' + dmain_trg
+#                    print '[*]\t', 'SIG', str(name) + '.' + dmain_trg
+
+#            for (name, rdataset) in \
+#                zone.iterate_rdatasets(dns.rdatatype.RRSIG):
+#                for rdata in rdataset:
+#                    print '[*]\t', 'RRSIG', str(name) + '.' + dmain_trg
+
+#            for (name, rdataset) in \
+#                zone.iterate_rdatasets(dns.rdatatype.DNSKEY):
+#                for rdata in rdataset:
+#                    print '[*]\t', 'DNSKEY', str(name) + '.' + dmain_trg
+
+#            for (name, rdataset) in \
+#                zone.iterate_rdatasets(dns.rdatatype.DS):
+#                for rdata in rdataset:
+#                    print '[*]\t', 'DS', str(name) + '.' + dmain_trg
+
+#            for (name, rdataset) in \
+#                zone.iterate_rdatasets(dns.rdatatype.NSEC):
+#                for rdata in rdataset:
+#                    print '[*]\t', 'NSEC', str(name) + '.' + dmain_trg
+
+#            for (name, rdataset) in \
+#                zone.iterate_rdatasets(dns.rdatatype.NSEC3):
+#                for rdata in rdataset:
+#                    print '[*]\t', 'NSEC3', str(name) + '.' + dmain_trg
+
+#            for (name, rdataset) in \
+#                zone.iterate_rdatasets(dns.rdatatype.NSEC3PARAM):
+#                for rdata in rdataset:
+#                    print '[*]\t', 'NSEC3PARAM', str(name) + '.' + dmain_trg
+
+#            for (name, rdataset) in \
+#                zone.iterate_rdatasets(dns.rdatatype.IPSECKEY):
+#                for rdata in rdataset:
+#                    print '[*]\t', 'IPSECKEY', str(name) + '.' + dmain_trg
             zone_success = True
         except:
             print '[-] Zone Transfer Failed!'
