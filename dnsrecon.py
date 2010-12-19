@@ -4,8 +4,9 @@
 #    DNSRecon
 # TODO:
 # 1. Implement whois query of all records, do uniqe and perform reverse look up on them.
-# 2. Implement saving to file results.
+# 2. Implement saving to XML file results.
 # 3. Finish zone transfer parsing.
+# 4. Add query for DNSSEC Records.
 #
 #    Copyright (C) 2010  Carlos Perez
 #
@@ -45,6 +46,7 @@ import dns.rdatatype
 import dns.resolver
 import dns.reversename
 import dns.zone
+import dns.dnssec
 import getopt
 import sys
 import os
@@ -228,7 +230,8 @@ def zone_transfer(dmain_trg):
     Function for testing for zone transfers for a given Domain, it will parse the
     output by record type.
     """
-
+    # if anyone reports a record not parsed I will add it, the list is a long one
+    # I tried to include those I thought where the most common.
     zone_success = None
     print '[*] Checking for Zone Transfer for', dmain_trg, \
         'name servers'
@@ -318,37 +321,37 @@ def zone_transfer(dmain_trg):
                 zone.iterate_rdatasets(dns.rdatatype.ISDN):
                 for rdata in rdataset:
                     print '[*]\t', 'ISDN', rdata.address
-#
-#            for (name, rdataset) in \
-#                zone.iterate_rdatasets(dns.rdatatype.RT):
-#                for rdata in rdataset:
-#                    print '[*]\t', 'RT', str(name) + '.' + dmain_trg
-#
-#            for (name, rdataset) in \
-#                zone.iterate_rdatasets(dns.rdatatype.NSAP):
-#                for rdata in rdataset:
-#                    print '[*]\t', 'NSAP', str(name) + '.' + dmain_trg
-#
-#            for (name, rdataset) in \
-#                zone.iterate_rdatasets(dns.rdatatype.NSAP_PTR):
-#                for rdata in rdataset:
-#                    print '[*]\t', 'NSAP_PTR', str(name) + '.'\
-#                         + dmain_trg
-#
-#            for (name, rdataset) in \
-#                zone.iterate_rdatasets(dns.rdatatype.SIG):
-#                for rdata in rdataset:
-#                    print '[*]\t', 'SIG', str(name) + '.' + dmain_trg
 
-#            for (name, rdataset) in \
-#                zone.iterate_rdatasets(dns.rdatatype.RRSIG):
-#                for rdata in rdataset:
-#                    print '[*]\t', 'RRSIG', str(name) + '.' + dmain_trg
+            for (name, rdataset) in \
+                zone.iterate_rdatasets(dns.rdatatype.RT):
+                for rdata in rdataset:
+                    print '[*]\t', 'RT', str(rdata.exchange), rdata.preference
 
-#            for (name, rdataset) in \
-#                zone.iterate_rdatasets(dns.rdatatype.DNSKEY):
-#                for rdata in rdataset:
-#                    print '[*]\t', 'DNSKEY', str(name) + '.' + dmain_trg
+            for (name, rdataset) in \
+                zone.iterate_rdatasets(dns.rdatatype.NSAP):
+                for rdata in rdataset:
+                    print '[*]\t', 'NSAP', rdata.address
+
+
+            for (name, rdataset) in \
+                zone.iterate_rdatasets(dns.rdatatype.SIG):
+                for rdata in rdataset:
+                    print '[*]\t', 'SIG', algorithm_to_text(rdata.algorithm), rdata.expiration, \
+                    rdata.inception, rdata.key_tag, rdata.labels, rdata.original_ttl, \
+                    rdata.signature, str(rdata.signer), rdata.type_covered
+
+            for (name, rdataset) in \
+                zone.iterate_rdatasets(dns.rdatatype.RRSIG):
+                for rdata in rdataset:
+                    print '[*]\t', 'RRSIG', algorithm_to_text(rdata.algorithm), rdata.expiration, \
+                    rdata.inception, rdata.key_tag, rdata.labels, rdata.original_ttl, \
+                    rdata.signature, str(rdata.signer), rdata.type_covered
+
+            for (name, rdataset) in \
+                zone.iterate_rdatasets(dns.rdatatype.DNSKEY):
+                for rdata in rdataset:
+                    print '[*]\t', 'DNSKEY', algorithm_to_text(rdata.algorithm), rdata.flags, rdata.key,\
+                    rdata.protocol
 
 #            for (name, rdataset) in \
 #                zone.iterate_rdatasets(dns.rdatatype.DS):
@@ -511,10 +514,10 @@ def get_spf(domain):
         answers = res.query(domain, 'SPF')
         for rdata in answers:
             name = rdata.strings
-            spf_record.append(['SPF', name])
+            spf_record.extend(['SPF', name])
             print '[*]', 'SPF', name
     except:
-        spf_record.append(['SPF', "none"])
+        return None
     
     return spf_record
 
@@ -528,7 +531,7 @@ def get_txt(domain):
         for rdata in answers:
             name = "".join(rdata.strings)
             print '[*]\t', 'TXT', name
-            txt_record.append(['TXT', name])
+            txt_record.extend(['TXT', name])
     except:
         return None
     
@@ -633,53 +636,19 @@ def brute_srv(domain):
     brtdata = []
     srv = []
     srvrcd = [
-        '_gc._tcp.',
-        '_kerberos._tcp.',
-        '_kerberos._udp.',
-        '_ldap._tcp',
-        '_test._tcp.',
-        '_sips._tcp.',
-        '_sip._udp.',
-        '_sip._tcp.',
-        '_aix._tcp.',
-        '_aix._tcp.',
-        '_finger._tcp.',
-        '_ftp._tcp.',
-        '_http._tcp.',
-        '_nntp._tcp.',
-        '_telnet._tcp.',
-        '_whois._tcp.',
-        '_h323cs._tcp.',
-        '_h323cs._udp.',
-        '_h323be._tcp.',
-        '_h323be._udp.',
-        '_h323ls._tcp.',
-        '_h323ls._udp.',
-        '_sipinternal._tcp.',
-        '_sipinternaltls._tcp.',
-        '_sip._tls.',
-        '_sipfederationtls._tcp.',
-        '_jabber._tcp.',
-        '_xmpp-server._tcp.',
-        '_xmpp-client._tcp.',
-        '_imap.tcp.',
-        '_certificates._tcp.',
-        '_crls._tcp.',
-        '_pgpkeys._tcp.',
-        '_pgprevokations._tcp.',
-        '_cmp._tcp.',
-        '_svcp._tcp.',
-        '_crl._tcp.',
-        '_ocsp._tcp.',
-        '_PKIXREP._tcp.',
-        '_smtp._tcp.',
-        '_hkp._tcp.',
-        '_hkps._tcp.',
-        '_jabber._udp.',
-        '_xmpp-server._udp.',
-        '_xmpp-client._udp.',
-        '_jabber-client._tcp.',
-        '_jabber-client._udp.',
+        '_gc._tcp.', '_kerberos._tcp.', '_kerberos._udp.', '_ldap._tcp',
+        '_test._tcp.', '_sips._tcp.', '_sip._udp.', '_sip._tcp.', '_aix._tcp.',
+        '_aix._tcp.', '_finger._tcp.', '_ftp._tcp.', '_http._tcp.', '_nntp._tcp.',
+        '_telnet._tcp.', '_whois._tcp.', '_h323cs._tcp.', '_h323cs._udp.',
+        '_h323be._tcp.', '_h323be._udp.', '_h323ls._tcp.',
+        '_h323ls._udp.', '_sipinternal._tcp.', '_sipinternaltls._tcp.',
+        '_sip._tls.', '_sipfederationtls._tcp.', '_jabber._tcp.',
+        '_xmpp-server._tcp.', '_xmpp-client._tcp.', '_imap.tcp.',
+        '_certificates._tcp.', '_crls._tcp.', '_pgpkeys._tcp.',
+        '_pgprevokations._tcp.', '_cmp._tcp.', '_svcp._tcp.', '_crl._tcp.',
+        '_ocsp._tcp.', '_PKIXREP._tcp.', '_smtp._tcp.', '_hkp._tcp.',
+        '_hkps._tcp.', '_jabber._udp.','_xmpp-server._udp.', '_xmpp-client._udp.',
+        '_jabber-client._tcp.', '_jabber-client._udp.',
         ]
 
     for srvtype in srvrcd:
@@ -705,12 +674,12 @@ def brute_reverse(ip_list):
     found_records = []
     global brtdata
     brtdata = []
+    s = 0
     # Resolve each IP in a separate thread.
     for x in ip_list:
         pool.add_task(get_ptr, x)
     # Wait for threads to finish.
     pool.wait_completion()
-    
     for rcd_found in brtdata:
         for rcd in rcd_found:
             found_records.append(" ".join(rcd))
@@ -907,83 +876,26 @@ def mdns_enum():
     """
     global brtdata
     mdns_types = [
-        '_appletv-itunes._tcp',
-        '_touch-able._tcp',
-        '_sleep-proxy._tcp',
-        '_raop._tcp',
-        '_touch-remote._tcp',
-        '_appletv-pair._tcp',
-        '_appletv._tcp',
-        '_rfb._tcp',
-        '_adisk._tcp',
-        '_daap._tcp',
-        '_presence._tcp',
-        '_ichat._tcp',
-        '_http._tcp',
-        '_ftp._tcp',
-        '_rtsp._tcp',
-        '_distcc._tcp',
-        '_tivo_servemedia._tcp',
-        '_airport._tcp',
-        '_afpovertcp._tcp',
-        '_printer._tcp',
-        '_ipp._tcp',
-        '_pdl-datastream._tcp',
-        '_eppc._tcp',
-        '_workstation._tcp',
-        '_ssh._tcp',
-        '_telnet._tcp',
-        '_tftp._udp',
-        '_smb._tcp',
-        '_netbios-ns._udp',
-        '_netbios-ssn._tcp',
-        '_apple-sasl._tcp',
-        '_ssscreenshare._tcp',
-        '_postgresql._tcp',
-        '_pop3._tcp',
-        '_imaps._tcp',
-        '_imap._tcp',
-        '_pop3s._tcp',
-        '_bootps._udp',
-        '_shell._tcp',
-        '_login._tcp',
-        '_teleport._udp',
-        '_dacp._tcp',
-        '_dpap._tcp',
-        '_auth._tcp',
-        '_fmpro-internal._tcp',
-        '_h323._tcp',
-        '_iwork._tcp',
-        '_nfs._tcp',
-        '_ptp._tcp',
-        '_spl-itunes._tcp',
-        '_spr-itunes._tcp',
-        '_upnp._tcp',
-        '_webdav._tcp',
-        '_ws._tcp',
-        '_exec._tcp',
-        '_net-assistant._udp',
-        '_raop._tcp',
-        '_servermgr._tcp',
-        '_sftp-ssh._tcp',
-        '_asr._tcp',
-        '_dacp._tcp',
-        '_domain._udp',
-        '_dns-llq._udp',
-        '_iax._udp',
-        '_kerberos-adm._tcp',
-        '_kerberos._tcp',
-        '_ntp._tcp',
-        '_rsync._tcp',
-        '_sip._udp',
-        '_xmpp-client._tcp',
-        '_xmpp-server._tcp',
-        '_skype._tcp',
-        '_ica-networking._tcp',
-        '_presence._tcp',
-        '_ofocus-sync._tcp',
-        '_zuul1000205._udp',
-        '_sub._ipp._tcp'
+        '_appletv-itunes._tcp', '_touch-able._tcp', '_sleep-proxy._tcp',
+        '_raop._tcp', '_touch-remote._tcp', '_appletv-pair._tcp', '_appletv._tcp',
+        '_rfb._tcp', '_adisk._tcp', '_daap._tcp', '_presence._tcp', '_ichat._tcp',
+        '_http._tcp', '_ftp._tcp', '_rtsp._tcp', '_distcc._tcp',
+        '_tivo_servemedia._tcp', '_airport._tcp', '_afpovertcp._tcp',
+        '_printer._tcp', '_ipp._tcp', '_pdl-datastream._tcp', '_eppc._tcp',
+        '_workstation._tcp', '_ssh._tcp', '_telnet._tcp', '_tftp._udp',
+        '_smb._tcp', '_netbios-ns._udp', '_netbios-ssn._tcp', '_apple-sasl._tcp',
+        '_ssscreenshare._tcp', '_postgresql._tcp', '_pop3._tcp', '_imaps._tcp',
+        '_imap._tcp', '_pop3s._tcp', '_bootps._udp', '_shell._tcp', '_login._tcp',
+        '_teleport._udp', '_dacp._tcp', '_dpap._tcp', '_auth._tcp',
+        '_fmpro-internal._tcp', '_h323._tcp', '_iwork._tcp', '_nfs._tcp',
+        '_ptp._tcp', '_spl-itunes._tcp', '_spr-itunes._tcp', '_upnp._tcp',
+        '_webdav._tcp', '_ws._tcp', '_exec._tcp', '_net-assistant._udp',
+        '_raop._tcp', '_servermgr._tcp', '_sftp-ssh._tcp', '_asr._tcp',
+        '_dacp._tcp', '_domain._udp', '_dns-llq._udp', '_iax._udp',
+        '_kerberos-adm._tcp', '_kerberos._tcp', '_ntp._tcp', '_rsync._tcp',
+        '_sip._udp', '_xmpp-client._tcp', '_xmpp-server._tcp', '_skype._tcp',
+        '_ica-networking._tcp', '_presence._tcp', '_ofocus-sync._tcp',
+        '_zuul1000205._udp', '_sub._ipp._tcp'
         ]
     for m in mdns_types:
         pool.add_task(mdns_browse, m)
@@ -1061,10 +973,13 @@ def general_enum(domain, do_axfr,do_google,do_spf):
         print '[*]\t', a_rcrd[0], a_rcrd[1], a_rcrd[2]
         
     # Enumerate SFP and TXT Records for the target domain
+    text_data = ""
+    spf_text_data = get_spf(domain)
+    txt_text_data = get_txt(domain)
+    if spf_text_data is not None: text_data += spf_text_data[1]
+    if txt_text_data is not None: text_data += txt_text_data[1]
+    # Process ipv4 SPF records if selected
     if do_spf is not None:
-        text_data = get_spf(domain)[0]
-        text_data += get_txt(domain)[0]
-        # Process ipv4 SPF records of found
         found_spf_ranges.extend(re.findall('([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}/\d*)',"".join(text_data)))
         if len(found_spf_ranges) > 0:
             print "[*] Performing Reverse Look-up of SPF ipv4 Ranges"
