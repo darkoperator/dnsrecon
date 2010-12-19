@@ -3,7 +3,7 @@
 
 #    DNSRecon
 # TODO:
-# 1. Implement whois query of all records, do uniq and perform reverse look up on them.
+# 1. Implement whois query of all records, do uniqe and perform reverse look up on them.
 # 2. Implement saving to file results.
 # 3. Finish zone transfer parsing.
 #
@@ -32,9 +32,9 @@ DNSRecon http://www.darkoperator.com
 for Python 2.7
 
 requires bonjour for Mac, Windows, Linux
-requieres pybonjour http://code.google.com/p/pybonjour/
-requieres dnspython http://www.dnspython.org/
-requieres netaddr https://github.com/drkjam/netaddr/
+requires pybonjour http://code.google.com/p/pybonjour/
+requires dnspython http://www.dnspython.org/
+requires netaddr https://github.com/drkjam/netaddr/
 
 """
 import time
@@ -996,7 +996,7 @@ def general_enum(domain, do_axfr,do_google,do_spf):
     """
     Function for performing general enumeration of a domain. It gets SOA, NS, MX
     A, AAA and SRV records for a given domain.It Will first try a Zone Transfer
-    if not successfull it will try indivifual record type enumeration. If chosen
+    if not successful it will try individual record type enumeration. If chosen
     it will also perform a Google Search and scrape the results for host names and
     perform an A and AAA query against them.
     """
