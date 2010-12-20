@@ -353,30 +353,36 @@ def zone_transfer(dmain_trg):
                     print '[*]\t', 'DNSKEY', algorithm_to_text(rdata.algorithm), rdata.flags, rdata.key,\
                     rdata.protocol
 
-#            for (name, rdataset) in \
-#                zone.iterate_rdatasets(dns.rdatatype.DS):
-#                for rdata in rdataset:
-#                    print '[*]\t', 'DS', str(name) + '.' + dmain_trg
+            for (name, rdataset) in \
+                zone.iterate_rdatasets(dns.rdatatype.DS):
+                for rdata in rdataset:
+                    print '[*]\t', 'DS', algorithm_to_text(rdata.algorithm), rdata.digest, \
+                    rdata.digest_type, rdata.key_tag
 
-#            for (name, rdataset) in \
-#                zone.iterate_rdatasets(dns.rdatatype.NSEC):
-#                for rdata in rdataset:
-#                    print '[*]\t', 'NSEC', str(name) + '.' + dmain_trg
+            for (name, rdataset) in \
+                zone.iterate_rdatasets(dns.rdatatype.NSEC):
+                for rdata in rdataset:
+                    print '[*]\t', 'NSEC', algorithm_to_text(rdata.algorithm),rdata.flags,\
+                    rdata.iterations, rdata.salt
 
-#            for (name, rdataset) in \
-#                zone.iterate_rdatasets(dns.rdatatype.NSEC3):
-#                for rdata in rdataset:
-#                    print '[*]\t', 'NSEC3', str(name) + '.' + dmain_trg
+            for (name, rdataset) in \
+                zone.iterate_rdatasets(dns.rdatatype.NSEC3):
+                for rdata in rdataset:
+                    print '[*]\t', 'NSEC', algorithm_to_text(rdata.algorithm),rdata.flags,\
+                    rdata.iterations, rdata.salt
 
-#            for (name, rdataset) in \
-#                zone.iterate_rdatasets(dns.rdatatype.NSEC3PARAM):
-#                for rdata in rdataset:
-#                    print '[*]\t', 'NSEC3PARAM', str(name) + '.' + dmain_trg
+            for (name, rdataset) in \
+                zone.iterate_rdatasets(dns.rdatatype.NSEC3PARAM):
+                for rdata in rdataset:
+                    print '[*]\t', 'NSEC3PARAM', algorithm_to_text(rdata.algorithm),rdata.flags,\
+                    rdata.iterations, rdata.salt
+                    
+            for (name, rdataset) in \
+                zone.iterate_rdatasets(dns.rdatatype.IPSECKEY):
+                for rdata in rdataset:
+                    print '[*]\t', 'IPSECKEY', algorithm_to_text(rdata.algorithm), rdata.gateway, \
+                    rdata.gateway_type, rdata.key, rdata.precedence
 
-#            for (name, rdataset) in \
-#                zone.iterate_rdatasets(dns.rdatatype.IPSECKEY):
-#                for rdata in rdataset:
-#                    print '[*]\t', 'IPSECKEY', str(name) + '.' + dmain_trg
             zone_success = True
         except:
             print '[-] Zone Transfer Failed!'
@@ -897,6 +903,7 @@ def mdns_enum():
         '_ica-networking._tcp', '_presence._tcp', '_ofocus-sync._tcp',
         '_zuul1000205._udp', '_sub._ipp._tcp'
         ]
+    
     for m in mdns_types:
         pool.add_task(mdns_browse, m)
     pool.wait_completion()
