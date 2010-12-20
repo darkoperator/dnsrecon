@@ -61,7 +61,9 @@ from random import Random
 from threading import Thread
 from threading import Lock
 from time import sleep
-
+from xml.etree import ElementTree
+from xml.dom import minidom
+from xml.etree.ElementTree import Element, SubElement, Comment, tostring
 
 
 # Global Variables for Brute force Threads
@@ -1005,6 +1007,29 @@ def general_enum(domain, do_axfr,do_google,do_spf):
     if do_google is not None:
         print '[*] Performing Google Search Enumeration'
         goo_result_process(scrape_google(domain))
+
+def prettify(elem):
+    """
+    Return a pretty-printed XML string for the Element.
+    """
+    rough_string = ElementTree.tostring(elem, 'utf-8')
+    reparsed = minidom.parseString(rough_string)
+    return reparsed.toprettyxml(indent="  ")
+
+
+def dns_record_from_dict(record_dict_list):
+	"""
+	Saves DNS Records to XML Given a a list of dictionaries each representing
+	a record to be saved, returns the XML Document formatted.
+	"""
+	xml_doc = Element("records")
+	for r in record_dict_list:
+		xml_record = Element('record')
+		for n,v in r.iteritems():
+			record_field = SubElement(xml_record,n)
+			record_field.text = v
+		xml_doc.append(xml_record)
+	return prettify(xml_doc)
 
 
 def usage():
