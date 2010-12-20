@@ -5,8 +5,7 @@
 # TODO:
 # 1. Implement whois query of all records, do uniqe and perform reverse look up on them.
 # 2. Implement saving to XML file results.
-# 3. Finish zone transfer parsing.
-# 4. Add query for DNSSEC Records.
+# 3. Add query for DNSSEC Records.
 #
 #    Copyright (C) 2010  Carlos Perez
 #
