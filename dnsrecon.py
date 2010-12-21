@@ -1082,7 +1082,7 @@ def general_enum(domain, do_axfr,do_google,do_spf):
     # Perform test for Zone Transfer against all NS servers of a Domain
     if do_axfr is not None:
         returned_records = zone_transfer(domain)
-        print prettify(dns_record_from_dict(returned_records))
+        dns_record_from_dict(returned_records)
         
     # Enumerate SOA Record
     found_soa_record = get_soa(domain)
