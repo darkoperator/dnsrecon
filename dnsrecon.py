@@ -243,12 +243,12 @@ def zone_transfer(dmain_trg):
         try:
             zone = dns.zone.from_xfr(dns.query.xfr(ns_srv, dmain_trg))
             print '[*] Zone Transfer was successful!!'
-            zone_records.append({'zone_transfer':'success','ns_server':'ns_srv'})
+            zone_records.append({'zone_transfer':'success','ns_server':ns_srv})
             for (name, rdataset) in \
                 zone.iterate_rdatasets(dns.rdatatype.SOA):
                 for rdata in rdataset:
                     print '[*]\t', 'SOA', rdata.mname.to_text()
-                    zone_records.append({'zone_server':'ns_srv','type':'SOA',\
+                    zone_records.append({'zone_server':ns_srv,'type':'SOA',\
                                          'mname':rdata.mname.to_text()
                     })
 
@@ -256,7 +256,7 @@ def zone_transfer(dmain_trg):
                 zone.iterate_rdatasets(dns.rdatatype.NS):
                 for rdata in rdataset:
                     print '[*]\t', 'NS', rdata.target.to_text()
-                    zone_records.append({'zone_server':'ns_srv','type':'NS',\
+                    zone_records.append({'zone_server':ns_srv,'type':'NS',\
                                          'mname':rdata.target.to_text()
                     })
 
@@ -264,7 +264,7 @@ def zone_transfer(dmain_trg):
                 zone.iterate_rdatasets(dns.rdatatype.TXT):
                 for rdata in rdataset:
                     print '[*]\t', 'TXT', ''.join(rdata.strings)
-                    zone_records.append({'zone_server':'ns_srv','type':'TXT',\
+                    zone_records.append({'zone_server':ns_srv,'type':'TXT',\
                                          'strings':''.join(rdata.strings)
                     })
 
@@ -272,7 +272,7 @@ def zone_transfer(dmain_trg):
                 zone.iterate_rdatasets(dns.rdatatype.SPF):
                 for rdata in rdataset:
                     print '[*]\t', 'SPF', ''.join(rdata.strings)
-                    zone_records.append({'zone_server':'ns_srv','type':'SPF',\
+                    zone_records.append({'zone_server':ns_srv,'type':'SPF',\
                                          'strings':''.join(rdata.strings)
                     })
 
@@ -281,7 +281,7 @@ def zone_transfer(dmain_trg):
                 for rdata in rdataset:
                     print '[*]\t', 'MX', str(name) + '.' + dmain_trg, \
                         rdata.exchange.to_text()
-                    zone_records.append({'zone_server':'ns_srv','type':'MX',\
+                    zone_records.append({'zone_server':ns_srv,'type':'MX',\
                                          'name':str(name) + '.' + dmain_trg,\
                                          'exchange':rdata.exchange.to_text()
                     })
@@ -291,7 +291,7 @@ def zone_transfer(dmain_trg):
                 for rdata in rdataset:
                     print '[*]\t', 'AAAA', str(name) + '.' + dmain_trg, \
                         rdata.address
-                    zone_records.append({'zone_server':'ns_srv','type':'AAAA',\
+                    zone_records.append({'zone_server':ns_srv,'type':'AAAA',\
                                          'name':str(name) + '.' + dmain_trg,\
                                          'address':rdata.address
                     })
@@ -301,7 +301,7 @@ def zone_transfer(dmain_trg):
                 for rdata in rdataset:
                     print '[*]\t', 'A', str(name) + '.' + dmain_trg, \
                         rdata.address
-                    zone_records.append({'zone_server':'ns_srv','type':'A',\
+                    zone_records.append({'zone_server':ns_srv,'type':'A',\
                                          'name':str(name) + '.' + dmain_trg,\
                                          'address':rdata.address
                     })
@@ -311,9 +311,9 @@ def zone_transfer(dmain_trg):
                 for rdata in rdataset:
                     print '[*]\t', 'CNAME', str(name) + '.'\
                          + dmain_trg, rdata.target.to_text()
-                    zone_records.append({'zone_server':'ns_srv','type':'CNAME',\
-                                         'name':str(name) + '.' + dmain_trg,\
-                                         'target':rdata.target.to_text()
+                    zone_records.append({'zone_server':ns_srv,'type':'CNAME',\
+                                         'name':str(name)+ '.' + dmain_trg,\
+                                         'target':str(rdata.target.to_text())
                     })
 
             for (name, rdataset) in \
@@ -321,7 +321,7 @@ def zone_transfer(dmain_trg):
                 for rdata in rdataset:
                     print '[*]\t', 'SRV', str(name)+ '.' + dmain_trg, rdata.target, \
                     str(rdata.port), str(rdata.weight)
-                    zone_records.append({'zone_server':'ns_srv','type':'SRV',\
+                    zone_records.append({'zone_server':ns_srv,'type':'SRV',\
                                          'name':str(name) + '.' + dmain_trg,\
                                          'target':rdata.target.to_text(),\
                                          'port':str(rdata.port),\
@@ -332,7 +332,7 @@ def zone_transfer(dmain_trg):
                 zone.iterate_rdatasets(dns.rdatatype.HINFO):
                 for rdata in rdataset:
                     print '[*]\t', 'HINFO', rdata.cpu, rdata.os
-                    zone_records.append({'zone_server':'ns_srv','type':'HINFO',\
+                    zone_records.append({'zone_server':ns_srv,'type':'HINFO',\
                                          'cpu':rdata.cpu,'os':rdata.os
                     })
 
@@ -340,7 +340,7 @@ def zone_transfer(dmain_trg):
                 zone.iterate_rdatasets(dns.rdatatype.WKS):
                 for rdata in rdataset:
                     print '[*]\t', 'WKS', rdata.address, rdata.bitmap, rdata.protocol
-                    zone_records.append({'zone_server':'ns_srv','type':'WKS',\
+                    zone_records.append({'zone_server':ns_srv,'type':'WKS',\
                                          'address':rdata.address,'bitmap':rdata.bitmap,\
                                          'protocol':rdata.protocol
                     })
@@ -349,7 +349,7 @@ def zone_transfer(dmain_trg):
                 zone.iterate_rdatasets(dns.rdatatype.RP):
                 for rdata in rdataset:
                     print '[*]\t', 'RP', rdata.mbox, rdata.txt
-                    zone_records.append({'zone_server':'ns_srv','type':'RP',\
+                    zone_records.append({'zone_server':ns_srv,'type':'RP',\
                                          'mbox':rdata.mbox,'txt':rdata.txt
                     })
 
@@ -357,7 +357,7 @@ def zone_transfer(dmain_trg):
                 zone.iterate_rdatasets(dns.rdatatype.AFSDB):
                 for rdata in rdataset:
                     print '[*]\t', 'AFSDB', rdata.subtype, rdata.hostname
-                    zone_records.append({'zone_server':'ns_srv','type':'AFSDB',\
+                    zone_records.append({'zone_server':ns_srv,'type':'AFSDB',\
                                          'subtype':rdata.subtype,'hostname':rdata.hostname
                     })
 
@@ -365,7 +365,7 @@ def zone_transfer(dmain_trg):
                 zone.iterate_rdatasets(dns.rdatatype.X25):
                 for rdata in rdataset:
                     print '[*]', '\tX25', rdata.address
-                    zone_records.append({'zone_server':'ns_srv','type':'X25',\
+                    zone_records.append({'zone_server':ns_srv,'type':'X25',\
                                          'address':rdata.address
                     })
 
@@ -373,7 +373,7 @@ def zone_transfer(dmain_trg):
                 zone.iterate_rdatasets(dns.rdatatype.ISDN):
                 for rdata in rdataset:
                     print '[*]\t', 'ISDN', rdata.address
-                    zone_records.append({'zone_server':'ns_srv','type':'ISDN',\
+                    zone_records.append({'zone_server':ns_srv,'type':'ISDN',\
                                          'address':rdata.address
                     })
 
@@ -381,7 +381,7 @@ def zone_transfer(dmain_trg):
                 zone.iterate_rdatasets(dns.rdatatype.RT):
                 for rdata in rdataset:
                     print '[*]\t', 'RT', str(rdata.exchange), rdata.preference
-                    zone_records.append({'zone_server':'ns_srv','type':'X25',\
+                    zone_records.append({'zone_server':ns_srv,'type':'X25',\
                                          'address':rdata.address
                     })
 
@@ -389,7 +389,7 @@ def zone_transfer(dmain_trg):
                 zone.iterate_rdatasets(dns.rdatatype.NSAP):
                 for rdata in rdataset:
                     print '[*]\t', 'NSAP', rdata.address
-                    zone_records.append({'zone_server':'ns_srv','type':'NSAP',\
+                    zone_records.append({'zone_server':ns_srv,'type':'NSAP',\
                                          'address':rdata.address
                     })
 
@@ -400,7 +400,7 @@ def zone_transfer(dmain_trg):
                     print '[*]\t', 'SIG', algorithm_to_text(rdata.algorithm), rdata.expiration, \
                     rdata.inception, rdata.key_tag, rdata.labels, rdata.original_ttl, \
                     rdata.signature, str(rdata.signer), rdata.type_covered
-                    zone_records.append({'zone_server':'ns_srv','type':'SIG',\
+                    zone_records.append({'zone_server':ns_srv,'type':'SIG',\
                                          'algorithm':algorithm_to_text(rdata.algorithm),\
                                          'expiration':rdata.expiration,\
                                          'inception':rdata.inception,\
@@ -418,7 +418,7 @@ def zone_transfer(dmain_trg):
                     print '[*]\t', 'RRSIG', algorithm_to_text(rdata.algorithm), rdata.expiration, \
                     rdata.inception, rdata.key_tag, rdata.labels, rdata.original_ttl, \
                     rdata.signature, str(rdata.signer), rdata.type_covered
-                    zone_records.append({'zone_server':'ns_srv','type':'RRSIG',\
+                    zone_records.append({'zone_server':ns_srv,'type':'RRSIG',\
                                          'algorithm':algorithm_to_text(rdata.algorithm),\
                                          'expiration':rdata.expiration,\
                                          'inception':rdata.inception,\
@@ -435,7 +435,7 @@ def zone_transfer(dmain_trg):
                 for rdata in rdataset:
                     print '[*]\t', 'DNSKEY', algorithm_to_text(rdata.algorithm), rdata.flags, rdata.key,\
                     rdata.protocol
-                    zone_records.append({'zone_server':'ns_srv','type':'DNSKEY',\
+                    zone_records.append({'zone_server':ns_srv,'type':'DNSKEY',\
                                          'algorithm':algorithm_to_text(rdata.algorithm),\
                                          'flags':rdata.flags,\
                                          'key':rdata.key,\
@@ -447,7 +447,7 @@ def zone_transfer(dmain_trg):
                 for rdata in rdataset:
                     print '[*]\t', 'DS', algorithm_to_text(rdata.algorithm), rdata.digest, \
                     rdata.digest_type, rdata.key_tag
-                    zone_records.append({'zone_server':'ns_srv','type':'DS',\
+                    zone_records.append({'zone_server':ns_srv,'type':'DS',\
                                          'algorithm':algorithm_to_text(rdata.algorithm),\
                                          'digest':rdata.digest,\
                                          'digest_type':rdata.digest_type,\
@@ -459,7 +459,7 @@ def zone_transfer(dmain_trg):
                 for rdata in rdataset:
                     print '[*]\t', 'NSEC', algorithm_to_text(rdata.algorithm),rdata.flags,\
                     rdata.iterations, rdata.salt
-                    zone_records.append({'zone_server':'ns_srv','type':'NSEC',\
+                    zone_records.append({'zone_server':ns_srv,'type':'NSEC',\
                                          'algorithm':algorithm_to_text(rdata.algorithm),\
                                          'flags':rdata.flags,\
                                          'iterations':rdata.iterations,\
@@ -471,7 +471,7 @@ def zone_transfer(dmain_trg):
                 for rdata in rdataset:
                     print '[*]\t', 'NSEC3', algorithm_to_text(rdata.algorithm),rdata.flags,\
                     rdata.iterations, rdata.salt
-                    zone_records.append({'zone_server':'ns_srv','type':'NSEC',\
+                    zone_records.append({'zone_server':ns_srv,'type':'NSEC',\
                                          'algorithm':algorithm_to_text(rdata.algorithm),\
                                          'flags':rdata.flags,\
                                          'iterations':rdata.iterations,\
@@ -483,7 +483,7 @@ def zone_transfer(dmain_trg):
                 for rdata in rdataset:
                     print '[*]\t', 'NSEC3PARAM', algorithm_to_text(rdata.algorithm),rdata.flags,\
                     rdata.iterations, rdata.salt
-                    zone_records.append({'zone_server':'ns_srv','type':'NSEC3PARAM',\
+                    zone_records.append({'zone_server':ns_srv,'type':'NSEC3PARAM',\
                                          'algorithm':algorithm_to_text(rdata.algorithm),\
                                          'flags':rdata.flags,\
                                          'iterations':rdata.iterations,\
@@ -495,7 +495,7 @@ def zone_transfer(dmain_trg):
                 for rdata in rdataset:
                     print '[*]\t', 'IPSECKEY', algorithm_to_text(rdata.algorithm), rdata.gateway, \
                     rdata.gateway_type, rdata.key, rdata.precedence
-                    zone_records.append({'zone_server':'ns_srv','type':'IPSECKEY',\
+                    zone_records.append({'zone_server':ns_srv,'type':'IPSECKEY',\
                                          'algorithm':algorithm_to_text(rdata.algorithm),\
                                          'gateway':rdata.gateway,\
                                          'gateway_type':rdata.gateway_type,\
@@ -505,7 +505,7 @@ def zone_transfer(dmain_trg):
 
         except:
             print '[-] Zone Transfer Failed!'
-            zone_records.append({'zone_transfer':'failed','ns_server':'ns_srv'})
+            zone_records.append({'zone_transfer':'failed','ns_server':ns_srv})
     return zone_records
 
 
@@ -1081,7 +1081,8 @@ def general_enum(domain, do_axfr,do_google,do_spf):
     
     # Perform test for Zone Transfer against all NS servers of a Domain
     if do_axfr is not None:
-        zone_transfer(domain)
+        returned_records = zone_transfer(domain)
+        print prettify(dns_record_from_dict(returned_records))
         
     # Enumerate SOA Record
     found_soa_record = get_soa(domain)
@@ -1198,6 +1199,7 @@ def usage():
 #-------------------------------------------------------------------------------
 def main():
     # Option Variables
+    returned_records = []
     domain = None
     cidr = None
     ns_server = None
@@ -1304,7 +1306,7 @@ def main():
                 if r == 'axfr':
                     if domain is not None:
                         print '[*] Testing NS Servers for Zone Transfer'
-                        zone_transfer(domain)
+                        returned_records.append(zone_transfer(domain))
                     else:
                         print '[-] No Domain to target specified!'
                         exit(1)
