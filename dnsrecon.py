@@ -38,33 +38,34 @@ requires dnspython http://www.dnspython.org/
 requires netaddr https://github.com/drkjam/netaddr/
 
 """
-import time
 import Queue
+import getopt
+import os
+import re
+import select
+import socket
+import string
+import sys
+import time
+import urllib
+from Queue import Queue
+from random import Random
+from threading import Lock, Thread
+from time import sleep
+from xml.dom import minidom
+from xml.etree import ElementTree
+from xml.etree.ElementTree import Comment, Element, SubElement, tostring, dump
+
+
 import dns.message
 import dns.query
 import dns.rdatatype
 import dns.resolver
 import dns.reversename
 import dns.zone
-import getopt
-import sys
-import os
 import pybonjour
-import select
-import string
-import socket
-import re
-import urllib
 from dns.dnssec import algorithm_to_text
 from netaddr import *
-from Queue import Queue
-from random import Random
-from threading import Thread
-from threading import Lock
-from time import sleep
-from xml.etree import ElementTree
-from xml.dom import minidom
-from xml.etree.ElementTree import Element, SubElement, Comment, tostring
 
 
 # Global Variables for Brute force Threads
@@ -915,10 +916,10 @@ def in_cache(dict_file,ns):
                 for rcd in an:
                     if rcd.rdtype == 1:
                         print "[*]\tName:",an.name, "TTL:",an.ttl, "Address:",rcd.address, "Type: A"
-                        found_records.append(["A",an.name,rcd.address,an.ttl])
+                        found_records.extend([{"A",an.name,rcd.address,an.ttl}])
                     elif rcd.rdtype == 5:
                         print "[*]\tName:",an.name, "TTL:",an.ttl,"Target:",rcd.target, "Type: CNAME"
-                        found_records.append(["CNAME",an.name,rcd.target,an.ttl])
+                        found_records.extend([{"CNAME",an.name,rcd.target,an.ttl}])
                     else:
                         print ""
     return found_records
@@ -947,10 +948,10 @@ def mdns_browse(regtype):
         ):
         if errorCode == pybonjour.kDNSServiceErr_NoError:
             results.append({
-                'name': fullname,
-                'host': hosttarget.strip(),
-                'port': port,
-                'txtRecord': txtRecord.strip(),
+                'name': fullname.replace("\\032", " "),
+                'host': hosttarget.strip().encode("utf-8").replace("\\032", " ").replace('\\',""),
+                'port': str(port),
+                'txtRecord':str(txtRecord).replace('\\',"")
                 })
             resolved.append(True)
 
@@ -1030,6 +1031,7 @@ def mdns_enum():
     subnet.
     """
     global brtdata
+    found_results = []
     mdns_types = [
         '_appletv-itunes._tcp', '_touch-able._tcp', '_sleep-proxy._tcp',
         '_raop._tcp', '_touch-remote._tcp', '_appletv-pair._tcp', '_appletv._tcp',
@@ -1058,12 +1060,14 @@ def mdns_enum():
     pool.wait_completion()
     for i in brtdata:
         for e in i:
+            found_results.extend([e])
             print "[*]\tHost:",e['host']
-            print "[*]\tName:",e['name'].encode("utf-8")
+            print "[*]\tName:",e['name']
             print "[*]\tPort:",e['port']
-            print "[*]\tTXTRecord:",e['txtRecord'].replace("\n"," ")
+            print "[*]\tTXTRecord:",e['txtRecord']
             print "[*]"
     brtdata = []
+    return found_results
 
 def scrape_google(dom):
     """
@@ -1223,6 +1227,7 @@ def dns_record_from_dict(record_dict_list):
 			record_field = SubElement(xml_record,n)
 			record_field.text = v
 		xml_doc.append(xml_record)
+
 	return prettify(xml_doc)
 
 
@@ -1272,7 +1277,11 @@ def usage():
 # Main
 #-------------------------------------------------------------------------------
 def main():
+    
+    #
     # Option Variables
+    #
+    
     returned_records = []
     domain = None
     ns_server = None
@@ -1289,11 +1298,17 @@ def main():
     ip_range = None
     ip_range_pattern = '([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})-([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})'
     
+    #
     # Global Vars
+    #
+    
     global res
     global pool
     
+    #
     # Define options
+    #
+    
     options, remainder = getopt.getopt(sys.argv[1:], 'hd:c:n:f:D:t:xq:gwr:s',
                                        ['help',
                                        'domain=',
@@ -1309,7 +1324,11 @@ def main():
                                        'do_spf',
                                        'lifetime=',
                                        'threads='])
+    
+    #
     # Parse options
+    #
+    
     for opt, arg in options:
         
         if opt in ('-t','--type'):
@@ -1388,7 +1407,8 @@ def main():
                 elif r == 'std':
                     if domain is not None:
                         print "[*] Performing General Enumeration of Domain:",domain
-                        returned_records.extend(general_enum(domain, xfr, goo, spf_enum))
+                        std_enum_records = general_enum(domain, xfr, goo, spf_enum)
+                        if (output_file is not None): returned_records.extend(std_enum_records)
                     else:
                         print '[-] No Domain to target specified!'
                         exit(1)
@@ -1396,7 +1416,8 @@ def main():
                 elif r == 'rvl':
                     if len(ip_list) > 0:
                         print '[*] Reverse Look-up of a Range'
-                        returned_records.extend(brute_reverse(ip_list))
+                        rvl_enum_records = brute_reverse(ip_list)
+                        if (output_file is not None): returned_records.extend(rvl_enum_records)
                     else:
                         print '[-] Failed CIDR or Range is Required for type rvl'
                         
@@ -1404,7 +1425,8 @@ def main():
                     if (dict is not None) and (domain is not None):
                         print '[*] Performing host and subdomain brute force against', \
                             domain
-                        brute_domain(dict, domain)
+                        brt_enum_records = brute_domain(dict, domain)
+                        if (output_file is not None): returned_records.extend(brt_enum_records)
                     else:
                         print '[-] No Dictionary file specified!'
                         exit(1)
@@ -1413,19 +1435,21 @@ def main():
                     if domain is not None:
                         print '[*] Enumerating Common SRV Records against', \
                             domain
-                        returned_records.extend(brute_srv(domain))
+                        srv_enum_records = brute_srv(domain)
+                        if (output_file is not None): returned_records.extend(srv_enum_records)
                     else:
                         print '[-] No Domain to target specified!'
                         exit(1)
                     
                 elif r == 'mdns':
                     print '[*] Enumerating most common mDNS Records on Subnet'
-                    mdns_enum()
+                    mdns_enum_records = mdns_enum()
                     
                 elif r == 'tld':
                     if domain is not None:
                         print "[*] Performing TLD Brute force Enumeration against", domain
-                        returned_records.extend(brute_tlds(domain))
+                        tld_enum_records = brute_tlds(domain)
+                        if (output_file is not None): returned_records.extend(tld_enum_records)
                     else:
                         print '[-] No Domain to target specified!'
                         exit(1)
@@ -1433,7 +1457,8 @@ def main():
                 elif r == 'goo':
                     if domain is not None:
                         print "[*] Performing Google Search Enumeration against", domain
-                        returned_records.extend(goo_result_process(scrape_google(domain)))
+                        goo_enum_records = goo_result_process(scrape_google(domain))
+                        if (output_file is not None): returned_records.extend(goo_enum_records)
                     else:
                         print '[-] No Domain to target specified!'
                         exit(1)
@@ -1441,7 +1466,8 @@ def main():
                 elif r == "snoop":
                     if (dict is not None) and (ns_server is not None):
                         print "[*] Performing Cache Snooping against NS Server:", ns_server
-                        in_cache(dict,ns_server)
+                        cache_enum_records = in_cache(dict,ns_server)
+                        if (output_file is not None): returned_records.extend(cache_enum_records)
                     else:
                         print '[-] No Domain or Name Server to target specified!'
                         exit(1)
@@ -1462,8 +1488,8 @@ def main():
         
         # if an output xml file is specified it will write returned results.
         if (output_file is not None): 
-            write_to_file(dns_record_from_dict(returned_records), output_file)
-            
+            xml_enum_doc = dns_record_from_dict(returned_records)
+            write_to_file(xml_enum_doc,output_file)
         exit(0)
     else:
         usage()
