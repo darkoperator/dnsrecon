@@ -69,9 +69,8 @@ from netaddr import *
 
 
 # Global Variables for Brute force Threads
-
 brtdata = []
-lck = Lock()
+
 
 
 # Function Definitions
@@ -93,6 +92,7 @@ class Worker(Thread):
         # Global variable that will hold the results
         global brtdata
     def run(self):
+        lck = Lock()
         found_recrd = []
         while True:
             (func, args, kargs) = self.tasks.get()
@@ -115,7 +115,7 @@ class ThreadPool:
     def __init__(self, num_threads):
         self.tasks = Queue(num_threads)
         for _ in range(num_threads):
-            Worker(self.tasks)
+           Worker(self.tasks)
 
     def add_task(
         self,
@@ -126,7 +126,7 @@ class ThreadPool:
         """Add a task to the queue"""
 
         self.tasks.put((func, args, kargs))
-
+        
     def wait_completion(self):
         """Wait for completion of all the tasks in the queue"""
 
@@ -714,6 +714,10 @@ def check_wildcard(domain_trg):
     return wildcard
 
 def brute_tlds(domain):
+    
+    global brtdata
+    brtdata = []
+    
     # tlds taken from http://data.iana.org/TLD/tlds-alpha-by-domain.txt
     gtld = ['co','com','net','biz','org']
     tlds = ['ac', 'ad', 'aeaero', 'af', 'ag', 'ai', 'al', 'am', 'an', 'ao', 'aq', 'ar',
@@ -749,15 +753,13 @@ def brute_tlds(domain):
     
     # Wait for threads to finish.
     pool.wait_completion()
-    
+
     # Process the output of the threads.
     for rcd_found in brtdata:
         for rcd in rcd_found:
             print "[*]\t"," ".join(rcd)
             found_tlds.extend([{'type':rcd[0],'name':rcd[1],'address':rcd[2]}])
     
-    # Clear Global variable
-    brtdata = []
     
     return found_tlds
 
@@ -790,6 +792,8 @@ def brute_srv(domain):
     
     # Wait for threads to finish.
     pool.wait_completion()
+    
+    
     print "[*] The operation could take up to:", time.strftime('%H:%M:%S', \
     time.gmtime(len(tlds)/2))
     
@@ -803,8 +807,7 @@ def brute_srv(domain):
             srv.append(rcd)
             print "[*]\t", " ".join(rcd)
     
-    # Clear Global Variable
-    brtdata = []
+    
     
     return returned_records
 
@@ -814,8 +817,11 @@ def brute_reverse(ip_list):
     Reverse look-up brute force for given CIDR example 192.168.1.1/24. Returns an
     Array of found records.
     """
-    returned_records = []
     global brtdata
+    brtdata = []
+    
+    returned_records = []
+
     
     # Give an estimated time to finish
     print "[*] The operation could take up to:", time.strftime('%H:%M:%S', \
@@ -824,17 +830,16 @@ def brute_reverse(ip_list):
     # Resolve each IP in a separate thread.
     for x in ip_list:
         pool.add_task(get_ptr, x)
+   
     # Wait for threads to finish.
     pool.wait_completion()
+    
     for rcd_found in brtdata:
         for rcd in rcd_found:
             returned_records.extend([{'type':rcd[0],\
             "name":rcd[1],'address':rcd[2]
             }])
             print "[*]\t"," ".join(rcd)
-    
-    # Clear Global variable
-    brtdata = []
     
     return returned_records
 
@@ -862,9 +867,12 @@ def brute_domain(dict, dom):
     """
     Main Function for domain brute forcing
     """
+    global brtdata
+    brtdata = []
+    
     found_hosts = []
     continue_brt = 'y'
-    global brtdata
+   
     # Check if wildcard resolution is enabled
 
     if check_wildcard(dom):
@@ -915,11 +923,19 @@ def in_cache(dict_file,ns):
             for an in answer.answer:
                 for rcd in an:
                     if rcd.rdtype == 1:
-                        print "[*]\tName:",an.name, "TTL:",an.ttl, "Address:",rcd.address, "Type: A"
-                        found_records.extend([{"A",an.name,rcd.address,an.ttl}])
+                        print "[*]\tName:",an.name, "TTL:",an.ttl, "Address:",\
+                        rcd.address, "Type: A"
+                        
+                        found_records.extend([{'type':"A",'name':an.name,\
+                        'address':rcd.address,'ttl':an.ttl}])
+                    
                     elif rcd.rdtype == 5:
-                        print "[*]\tName:",an.name, "TTL:",an.ttl,"Target:",rcd.target, "Type: CNAME"
-                        found_records.extend([{"CNAME",an.name,rcd.target,an.ttl}])
+                        print "[*]\tName:",an.name, "TTL:",an.ttl,"Target:",\
+                        rcd.target, "Type: CNAME"
+                        
+                        found_records.extend([{'type':"CNAME",'name':an.name,\
+                        'target':rcd.target,'ttl':an.ttl}])
+                    
                     else:
                         print ""
     return found_records
@@ -1031,6 +1047,7 @@ def mdns_enum():
     subnet.
     """
     global brtdata
+    brtdata = []
     found_results = []
     mdns_types = [
         '_appletv-itunes._tcp', '_touch-able._tcp', '_sleep-proxy._tcp',
@@ -1057,6 +1074,7 @@ def mdns_enum():
     
     for m in mdns_types:
         pool.add_task(mdns_browse, m)
+    
     pool.wait_completion()
     for i in brtdata:
         for e in i:
