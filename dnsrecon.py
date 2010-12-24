@@ -55,7 +55,7 @@ from time import sleep
 from xml.dom import minidom
 from xml.etree import ElementTree
 from xml.etree.ElementTree import Comment, Element, SubElement, tostring, dump
-
+import xml.dom.minidom
 
 import dns.message
 import dns.query
@@ -137,6 +137,21 @@ class AppURLopener(urllib.FancyURLopener):
 
     version = 'Mozilla/5.0 (compatible; Googlebot/2.1; + http://www.google.com/bot.html)'
 
+
+
+def clean_str(out_string):
+    # from http://boodebr.org/main/python/all-about-python-and-unicode#UNI_XML
+    RE_XML_ILLEGAL = u'([\u0000-\u0008\u000b-\u000c\u000e-\u001f\ufffe-\uffff])' + \
+                     u'|' + \
+                     u'([%s-%s][^%s-%s])|([^%s-%s][%s-%s])|([%s-%s]$)|(^[%s-%s])' % \
+                      (unichr(0xd800),unichr(0xdbff),unichr(0xdc00),unichr(0xdfff),
+                       unichr(0xd800),unichr(0xdbff),unichr(0xdc00),unichr(0xdfff),
+                       unichr(0xd800),unichr(0xdbff),unichr(0xdc00),unichr(0xdfff))
+    regex = re.compile(RE_XML_ILLEGAL)
+
+    for match in regex.finditer(out_string):
+        out_string = out_string[:match.start()] + " " + out_string[match.end():]
+    return out_string
 
 def unique(seq, idfun=repr):
     """
@@ -964,10 +979,10 @@ def mdns_browse(regtype):
         ):
         if errorCode == pybonjour.kDNSServiceErr_NoError:
             results.append({
-                'name': fullname.replace("\\032", " "),
-                'host': hosttarget.strip().encode("utf-8").replace("\\032", " ").replace('\\',""),
+                'name': clean_str(fullname),
+                'host': clean_str(hosttarget),
                 'port': str(port),
-                'txtRecord':str(txtRecord).replace('\\',"")
+                'txtRecord':clean_str(txtRecord)
                 })
             resolved.append(True)
 
@@ -1082,7 +1097,7 @@ def mdns_enum():
             print "[*]\tHost:",e['host']
             print "[*]\tName:",e['name']
             print "[*]\tPort:",e['port']
-            print "[*]\tTXTRecord:",e['txtRecord']
+           # print "[*]\tTXTRecord:",e['txtRecord']
             print "[*]"
     brtdata = []
     return found_results
@@ -1326,23 +1341,25 @@ def main():
     #
     # Define options
     #
-    
-    options, remainder = getopt.getopt(sys.argv[1:], 'hd:c:n:f:D:t:xq:gwr:s',
-                                       ['help',
-                                       'domain=',
-                                       'cidr=',
-                                       'name_server=',
-                                       'output_file=',
-                                       'dictionary=',
-                                       'type=',
-                                       'axfr',
-                                       'google',
-                                       'do_whois',
-                                       'range=',
-                                       'do_spf',
-                                       'lifetime=',
-                                       'threads='])
-    
+    try:
+        options, remainder = getopt.getopt(sys.argv[1:], 'hd:c:n:f:D:t:xq:gwr:s',
+                                           ['help',
+                                           'domain=',
+                                           'cidr=',
+                                           'name_server=',
+                                           'output_file=',
+                                           'dictionary=',
+                                           'type=',
+                                           'axfr',
+                                           'google',
+                                           'do_whois',
+                                           'range=',
+                                           'do_spf',
+                                           'lifetime=',
+                                           'threads='])
+    except getopt.GetoptError:
+        print "[-] Wrong Option Provided!"
+        usage()
     #
     # Parse options
     #
@@ -1462,6 +1479,7 @@ def main():
                 elif r == 'mdns':
                     print '[*] Enumerating most common mDNS Records on Subnet'
                     mdns_enum_records = mdns_enum()
+                    if (output_file is not None): returned_records.extend(mdns_enum_records)
                     
                 elif r == 'tld':
                     if domain is not None:
