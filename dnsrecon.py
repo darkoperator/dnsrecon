@@ -55,7 +55,6 @@ from time import sleep
 from xml.dom import minidom
 from xml.etree import ElementTree
 from xml.etree.ElementTree import Comment, Element, SubElement, tostring, dump
-import xml.dom.minidom
 
 import dns.message
 import dns.query
@@ -979,10 +978,10 @@ def mdns_browse(regtype):
         ):
         if errorCode == pybonjour.kDNSServiceErr_NoError:
             results.append({
-                'name': clean_str(fullname),
-                'host': clean_str(hosttarget),
+                'name': fullname,
+                'host': str(hosttarget).replace('\032'," "),
                 'port': str(port),
-                'txtRecord':clean_str(txtRecord)
+                'txtRecord':txtRecord.strip()
                 })
             resolved.append(True)
 
@@ -1087,18 +1086,28 @@ def mdns_enum():
         '_zuul1000205._udp', '_sub._ipp._tcp'
         ]
     
+    n = re.compile(u'(\x00|\x07|\x1A|\x16|\x06|\x08|\x1f|\xdb|\xb2|\xb0|\xb1'
+                   u'\xc9|\xb9|\xcd|\u2019|\u2018|\u2019|\u201c|\u201d|\u2407)')
+    
+    t = re.compile(r'[\x00-\x1f|\x7f|\x0e]')
+    
     for m in mdns_types:
         pool.add_task(mdns_browse, m)
     
     pool.wait_completion()
     for i in brtdata:
         for e in i:
-            found_results.extend([e])
             print "[*]\tHost:",e['host']
-            print "[*]\tName:",e['name']
+            host = e['host']
+            print "[*]\tName:",n.sub(" ",e['name'])
+            name = n.sub(" ",e['name'])
             print "[*]\tPort:",e['port']
-           # print "[*]\tTXTRecord:",e['txtRecord']
+            port = e['port']
+            print "[*]\tTXTRecord:",t.sub(" ",e['txtRecord'])
+            txtrecord = t.sub(" ",e['txtRecord'])
             print "[*]"
+            found_results.extend([{'host':host,'name':name,'port':port,
+                                   'txtrecord':txtrecord}])
     brtdata = []
     return found_results
 
