@@ -2,11 +2,6 @@
 # -*- coding: utf-8 -*-
 
 #    DNSRecon
-# TODO Implement whois query of all records, do uniqe and perform reverse look up on them.
-# TODO Implement saving to XML file results.
-# TODO Add query for DNSSEC Records.
-# TODO Provide option to filter for wildcard return IP when doing a dictionary name
-#      brute force.
 #
 #    Copyright (C) 2010  Carlos Perez
 #
