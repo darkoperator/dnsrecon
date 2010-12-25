@@ -798,7 +798,6 @@ def brute_srv(domain):
             'name':rcd[1],'target':rcd[2],'address':rcd[2],'port':rcd[2],\
             'weight':rcd[2]
             }])
-            srv.append(rcd)
             print "[*]\t", " ".join(rcd)
     
     
