@@ -789,7 +789,7 @@ def brute_srv(domain):
     
     
     print "[*] The operation could take up to:", time.strftime('%H:%M:%S', \
-    time.gmtime(len(tlds)/2))
+    time.gmtime(len(srvrcd)/2))
     
     # Make sure we clear the variable
     for rcd_found in brtdata:
