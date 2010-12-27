@@ -55,7 +55,6 @@ import dns.resolver
 import dns.reversename
 import dns.zone
 
-from dns.dnssec import algorithm_to_text
 from netaddr import *
 
 sys.path.append("lib/")
