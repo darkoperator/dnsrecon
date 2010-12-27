@@ -37,19 +37,16 @@ import Queue
 import getopt
 import os
 import re
-import select
-import socket
 import string
 import sys
 import time
-import urllib
+
 from Queue import Queue
 from random import Random
 from threading import Lock, Thread
-from time import sleep
 from xml.dom import minidom
 from xml.etree import ElementTree
-from xml.etree.ElementTree import Comment, Element, SubElement, tostring, dump
+from xml.etree.ElementTree import Element, SubElement
 
 import dns.message
 import dns.query
@@ -57,10 +54,16 @@ import dns.rdatatype
 import dns.resolver
 import dns.reversename
 import dns.zone
-import pybonjour
+
 from dns.dnssec import algorithm_to_text
 from netaddr import *
 
+sys.path.append("lib/")
+
+from gooenum import *
+from whois import *
+from mdnsenum import *
+from dnshelper import DnsHelper
 
 # Global Variables for Brute force Threads
 brtdata = []
@@ -127,68 +130,6 @@ class ThreadPool:
         self.tasks.join()
 
 
-class AppURLopener(urllib.FancyURLopener):
-
-    version = 'Mozilla/5.0 (compatible; Googlebot/2.1; + http://www.google.com/bot.html)'
-
-
-def unique(seq, idfun=repr):
-    """
-    Function to remove duplicates in an array. Returns array with duplicates
-    removed.
-    """
-    seen = {}
-    return [seen.setdefault(idfun(e),e) for e in seq if idfun(e) not in seen]
-
-
-def get_whois(ip_addrs):
-    """
-    Function that returns what whois server is the one to be queried for
-    registration information, returns whois.arin.net is not in database, returns
-    None if private.
-    """
-    whois_server = None
-    ip = IPAddress(ip_addrs)
-    info_of_ip = ip.info
-    if ip.version == 4 and ip.is_private() == False:
-        for i in info_of_ip['IPv4']:
-            whois_server = i['whois']
-            if len(whois_server) == 0 and i['status'] != "Reserved":
-                whois_server = "whois.arin.net"
-            elif len(whois_server) == 0:
-                whois_server = None
-
-    return whois_server
-
-
-def whois(target,whois_srv):
-    """
-    Performs a whois query against a arin.net for a given IP, Domain or Host as a
-    string and returns the answer of the query.
-    """
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.connect((whois_srv, 43))
-    s.send(target + "\r\n")
-    response = ''
-    while True:
-        d = s.recv(4096)
-        response += d
-        if d == '':
-            break
-    s.close()
-    return response
-
-
-def get_whois_nets(data):
-    """
-    Parses whois data and extracts the Network Ranges returning an array of lists
-    where each list has the starting and ending IP of the found range.
-    """
-    patern = '([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}) - ([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})'
-    results = re.findall(patern,data)
-    return results
-
-
 def expand_cidr(cidr_to_expand):
     """
     Function to expand a given CIDR and return an Array of IP Addresses that
@@ -222,482 +163,15 @@ def write_to_file(data,target_file):
     f.close
 
 
-def zone_transfer(dmain_trg):
-    """
-    Function for testing for zone transfers for a given Domain, it will parse the
-    output by record type.
-    """
-    # if anyone reports a record not parsed I will add it, the list is a long one
-    # I tried to include those I thought where the most common.
-   
-    zone_records = []
-    print '[*] Checking for Zone Transfer for', dmain_trg, \
-        'name servers'
-    ns_srvs = get_ns(dmain_trg)
-    for ns in ns_srvs:
-        ns_srv = ''.join(ns[2])
-        print '[*] Trying NS server', ns_srv
-        try:
-            zone = dns.zone.from_xfr(dns.query.xfr(ns_srv, dmain_trg))
-            print '[*] Zone Transfer was successful!!'
-            zone_records.append({'zone_transfer':'success','ns_server':ns_srv})
-            for (name, rdataset) in \
-                zone.iterate_rdatasets(dns.rdatatype.SOA):
-                for rdata in rdataset:
-                    print '[*]\t', 'SOA', rdata.mname.to_text()
-                    zone_records.append({'zone_server':ns_srv,'type':'SOA',\
-                                         'mname':rdata.mname.to_text()
-                    })
-
-            for (name, rdataset) in \
-                zone.iterate_rdatasets(dns.rdatatype.NS):
-                for rdata in rdataset:
-                    print '[*]\t', 'NS', rdata.target.to_text()
-                    zone_records.append({'zone_server':ns_srv,'type':'NS',\
-                                         'mname':rdata.target.to_text()
-                    })
-
-            for (name, rdataset) in \
-                zone.iterate_rdatasets(dns.rdatatype.TXT):
-                for rdata in rdataset:
-                    print '[*]\t', 'TXT', ''.join(rdata.strings)
-                    zone_records.append({'zone_server':ns_srv,'type':'TXT',\
-                                         'strings':''.join(rdata.strings)
-                    })
-
-            for (name, rdataset) in \
-                zone.iterate_rdatasets(dns.rdatatype.SPF):
-                for rdata in rdataset:
-                    print '[*]\t', 'SPF', ''.join(rdata.strings)
-                    zone_records.append({'zone_server':ns_srv,'type':'SPF',\
-                                         'strings':''.join(rdata.strings)
-                    })
-
-            for (name, rdataset) in \
-                zone.iterate_rdatasets(dns.rdatatype.MX):
-                for rdata in rdataset:
-                    print '[*]\t', 'MX', str(name) + '.' + dmain_trg, \
-                        rdata.exchange.to_text()
-                    zone_records.append({'zone_server':ns_srv,'type':'MX',\
-                                         'name':str(name) + '.' + dmain_trg,\
-                                         'exchange':rdata.exchange.to_text()
-                    })
-
-            for (name, rdataset) in \
-                zone.iterate_rdatasets(dns.rdatatype.AAAA):
-                for rdata in rdataset:
-                    print '[*]\t', 'AAAA', str(name) + '.' + dmain_trg, \
-                        rdata.address
-                    zone_records.append({'zone_server':ns_srv,'type':'AAAA',\
-                                         'name':str(name) + '.' + dmain_trg,\
-                                         'address':rdata.address
-                    })
-                    
-            for (name, rdataset) in \
-                zone.iterate_rdatasets(dns.rdatatype.A):
-                for rdata in rdataset:
-                    print '[*]\t', 'A', str(name) + '.' + dmain_trg, \
-                        rdata.address
-                    zone_records.append({'zone_server':ns_srv,'type':'A',\
-                                         'name':str(name) + '.' + dmain_trg,\
-                                         'address':rdata.address
-                    })
-
-            for (name, rdataset) in \
-                zone.iterate_rdatasets(dns.rdatatype.CNAME):
-                for rdata in rdataset:
-                    print '[*]\t', 'CNAME', str(name) + '.'\
-                         + dmain_trg, rdata.target.to_text()
-                    zone_records.append({'zone_server':ns_srv,'type':'CNAME',\
-                                         'name':str(name)+ '.' + dmain_trg,\
-                                         'target':str(rdata.target.to_text())
-                    })
-
-            for (name, rdataset) in \
-                zone.iterate_rdatasets(dns.rdatatype.SRV):
-                for rdata in rdataset:
-                    print '[*]\t', 'SRV', str(name)+ '.' + dmain_trg, rdata.target, \
-                    str(rdata.port), str(rdata.weight)
-                    zone_records.append({'zone_server':ns_srv,'type':'SRV',\
-                                         'name':str(name) + '.' + dmain_trg,\
-                                         'target':rdata.target.to_text(),\
-                                         'port':str(rdata.port),\
-                                         'weight':str(rdata.weight)
-                    })
-
-            for (name, rdataset) in \
-                zone.iterate_rdatasets(dns.rdatatype.HINFO):
-                for rdata in rdataset:
-                    print '[*]\t', 'HINFO', rdata.cpu, rdata.os
-                    zone_records.append({'zone_server':ns_srv,'type':'HINFO',\
-                                         'cpu':rdata.cpu,'os':rdata.os
-                    })
-
-            for (name, rdataset) in \
-                zone.iterate_rdatasets(dns.rdatatype.WKS):
-                for rdata in rdataset:
-                    print '[*]\t', 'WKS', rdata.address, rdata.bitmap, rdata.protocol
-                    zone_records.append({'zone_server':ns_srv,'type':'WKS',\
-                                         'address':rdata.address,'bitmap':rdata.bitmap,\
-                                         'protocol':rdata.protocol
-                    })
-
-            for (name, rdataset) in \
-                zone.iterate_rdatasets(dns.rdatatype.RP):
-                for rdata in rdataset:
-                    print '[*]\t', 'RP', rdata.mbox, rdata.txt
-                    zone_records.append({'zone_server':ns_srv,'type':'RP',\
-                                         'mbox':rdata.mbox,'txt':rdata.txt
-                    })
-
-            for (name, rdataset) in \
-                zone.iterate_rdatasets(dns.rdatatype.AFSDB):
-                for rdata in rdataset:
-                    print '[*]\t', 'AFSDB', rdata.subtype, rdata.hostname
-                    zone_records.append({'zone_server':ns_srv,'type':'AFSDB',\
-                                         'subtype':rdata.subtype,'hostname':rdata.hostname
-                    })
-
-            for (name, rdataset) in \
-                zone.iterate_rdatasets(dns.rdatatype.X25):
-                for rdata in rdataset:
-                    print '[*]', '\tX25', rdata.address
-                    zone_records.append({'zone_server':ns_srv,'type':'X25',\
-                                         'address':rdata.address
-                    })
-
-            for (name, rdataset) in \
-                zone.iterate_rdatasets(dns.rdatatype.ISDN):
-                for rdata in rdataset:
-                    print '[*]\t', 'ISDN', rdata.address
-                    zone_records.append({'zone_server':ns_srv,'type':'ISDN',\
-                                         'address':rdata.address
-                    })
-
-            for (name, rdataset) in \
-                zone.iterate_rdatasets(dns.rdatatype.RT):
-                for rdata in rdataset:
-                    print '[*]\t', 'RT', str(rdata.exchange), rdata.preference
-                    zone_records.append({'zone_server':ns_srv,'type':'X25',\
-                                         'address':rdata.address
-                    })
-
-            for (name, rdataset) in \
-                zone.iterate_rdatasets(dns.rdatatype.NSAP):
-                for rdata in rdataset:
-                    print '[*]\t', 'NSAP', rdata.address
-                    zone_records.append({'zone_server':ns_srv,'type':'NSAP',\
-                                         'address':rdata.address
-                    })
-
-
-            for (name, rdataset) in \
-                zone.iterate_rdatasets(dns.rdatatype.SIG):
-                for rdata in rdataset:
-                    print '[*]\t', 'SIG', algorithm_to_text(rdata.algorithm), rdata.expiration, \
-                    rdata.inception, rdata.key_tag, rdata.labels, rdata.original_ttl, \
-                    rdata.signature, str(rdata.signer), rdata.type_covered
-                    zone_records.append({'zone_server':ns_srv,'type':'SIG',\
-                                         'algorithm':algorithm_to_text(rdata.algorithm),\
-                                         'expiration':rdata.expiration,\
-                                         'inception':rdata.inception,\
-                                         'key_tag':rdata.key_tag,\
-                                         'labels':rdata.labels,\
-                                         'original_ttl':rdata.original_ttl,\
-                                         'signature':rdata.signature,\
-                                         'signer':str(rdata.signer),\
-                                         'type_covered':rdata.type_covered
-                    })
-
-            for (name, rdataset) in \
-                zone.iterate_rdatasets(dns.rdatatype.RRSIG):
-                for rdata in rdataset:
-                    print '[*]\t', 'RRSIG', algorithm_to_text(rdata.algorithm), rdata.expiration, \
-                    rdata.inception, rdata.key_tag, rdata.labels, rdata.original_ttl, \
-                    rdata.signature, str(rdata.signer), rdata.type_covered
-                    zone_records.append({'zone_server':ns_srv,'type':'RRSIG',\
-                                         'algorithm':algorithm_to_text(rdata.algorithm),\
-                                         'expiration':rdata.expiration,\
-                                         'inception':rdata.inception,\
-                                         'key_tag':rdata.key_tag,\
-                                         'labels':rdata.labels,\
-                                         'original_ttl':rdata.original_ttl,\
-                                         'signature':rdata.signature,\
-                                         'signer':str(rdata.signer),\
-                                         'type_covered':rdata.type_covered
-                    })
-
-            for (name, rdataset) in \
-                zone.iterate_rdatasets(dns.rdatatype.DNSKEY):
-                for rdata in rdataset:
-                    print '[*]\t', 'DNSKEY', algorithm_to_text(rdata.algorithm), rdata.flags, rdata.key,\
-                    rdata.protocol
-                    zone_records.append({'zone_server':ns_srv,'type':'DNSKEY',\
-                                         'algorithm':algorithm_to_text(rdata.algorithm),\
-                                         'flags':rdata.flags,\
-                                         'key':rdata.key,\
-                                         'protocol':rdata.protocol
-                    })
-
-            for (name, rdataset) in \
-                zone.iterate_rdatasets(dns.rdatatype.DS):
-                for rdata in rdataset:
-                    print '[*]\t', 'DS', algorithm_to_text(rdata.algorithm), rdata.digest, \
-                    rdata.digest_type, rdata.key_tag
-                    zone_records.append({'zone_server':ns_srv,'type':'DS',\
-                                         'algorithm':algorithm_to_text(rdata.algorithm),\
-                                         'digest':rdata.digest,\
-                                         'digest_type':rdata.digest_type,\
-                                         'key_tag':rdata.key_tag
-                    })
-
-            for (name, rdataset) in \
-                zone.iterate_rdatasets(dns.rdatatype.NSEC):
-                for rdata in rdataset:
-                    print '[*]\t', 'NSEC', algorithm_to_text(rdata.algorithm),rdata.flags,\
-                    rdata.iterations, rdata.salt
-                    zone_records.append({'zone_server':ns_srv,'type':'NSEC',\
-                                         'algorithm':algorithm_to_text(rdata.algorithm),\
-                                         'flags':rdata.flags,\
-                                         'iterations':rdata.iterations,\
-                                         'salt':rdata.salt
-                    })
-
-            for (name, rdataset) in \
-                zone.iterate_rdatasets(dns.rdatatype.NSEC3):
-                for rdata in rdataset:
-                    print '[*]\t', 'NSEC3', algorithm_to_text(rdata.algorithm),rdata.flags,\
-                    rdata.iterations, rdata.salt
-                    zone_records.append({'zone_server':ns_srv,'type':'NSEC',\
-                                         'algorithm':algorithm_to_text(rdata.algorithm),\
-                                         'flags':rdata.flags,\
-                                         'iterations':rdata.iterations,\
-                                         'salt':rdata.salt
-                    })
-
-            for (name, rdataset) in \
-                zone.iterate_rdatasets(dns.rdatatype.NSEC3PARAM):
-                for rdata in rdataset:
-                    print '[*]\t', 'NSEC3PARAM', algorithm_to_text(rdata.algorithm),rdata.flags,\
-                    rdata.iterations, rdata.salt
-                    zone_records.append({'zone_server':ns_srv,'type':'NSEC3PARAM',\
-                                         'algorithm':algorithm_to_text(rdata.algorithm),\
-                                         'flags':rdata.flags,\
-                                         'iterations':rdata.iterations,\
-                                         'salt':rdata.salt
-                    })
-                    
-            for (name, rdataset) in \
-                zone.iterate_rdatasets(dns.rdatatype.IPSECKEY):
-                for rdata in rdataset:
-                    print '[*]\t', 'IPSECKEY', algorithm_to_text(rdata.algorithm), rdata.gateway, \
-                    rdata.gateway_type, rdata.key, rdata.precedence
-                    zone_records.append({'zone_server':ns_srv,'type':'IPSECKEY',\
-                                         'algorithm':algorithm_to_text(rdata.algorithm),\
-                                         'gateway':rdata.gateway,\
-                                         'gateway_type':rdata.gateway_type,\
-                                         'key':rdata.key,\
-                                         'precedence':rdata.precedence
-                    })
-
-        except:
-            print '[-] Zone Transfer Failed!'
-            zone_records.append({'zone_transfer':'failed','ns_server':ns_srv})
-    return zone_records
-
-
-def get_cname(host_trg):
-    """
-    Function for CNAME Record resolving. Returns the hostnames for a given alias.
-    Returns array with value.
-    """
-    host_name = []
-    names_answers = res.query(host_trg, 'CNAME')
-    for crdata in names_answers:
-        host_name.append(crdata.target.to_text())
-    return host_name
-
-
-def get_a(host_trg):
-    """
-    Function for resolving the A Record for a given host. Returns an Array of
-    the IP Address it resolves to.
-    """
-    address = []
-    try:
-        ipv4_answers = res.query(host_trg, 'A')
-        for ardata in ipv4_answers:
-            address.append(ardata.address)
-            return address
-    except:
-        return address
-
-
-def get_aaaa(host_trg):
-    """
-    Function for resolving the AAAA Record for a given host. Returns an Array of
-    the IP Address it resolves to.
-    """
-    address = []
-    try:
-        ipv6_answers = res.query(host_trg, 'AAAA')
-        for ardata in ipv6_answers:
-            address.append(ardata.address)
-            return address
-    except:
-        return address
-
-
-def get_mx(domain):
-    """
-    Function for MX Record resolving. Returns all MX records. Returns also the IP
-    address of the host both in IPv4 and IPv6. Returns an Array
-    """
-    mx_records = []
-    answers = res.query(domain, 'MX')
-    for rdata in answers:
-        try:
-            name = rdata.exchange.to_text()
-            ipv4_answers = res.query(name, 'A')
-            for ardata in ipv4_answers:
-                mx_records.append(['MX', name[:-1], ardata.address,
-                                rdata.preference])
-        except:
-            pass
-    try:
-        for rdata in answers:
-            name = rdata.exchange.to_text()
-            ipv6_answers = res.query(name, 'AAAA')
-            for ardata in ipv6_answers:
-                mx_records.append(['MX', name[:-1], ardata.address,
-                                  rdata.preference])
-        return mx_records
-    except:
-        return mx_records
-
-
-def get_ns(domain):
-    """
-    Function for NS Record resolving. Returns all NS records. Returns also the IP
-    address of the host both in IPv4 and IPv6. Returns an Array.
-    """
-    ns_srvs = []
-    answers = res.query(domain, 'NS')
-    for rdata in answers:
-        name = rdata.target.to_text()
-        ipv4_answers = res.query(name, 'A')
-        for ardata in ipv4_answers:
-            ns_srvs.append(['NS', name[:-1], ardata.address])
-            
-    try:
-        for rdata in answers:
-            name = rdata.target.to_text()
-            ipv6_answers = res.query(name, 'AAAA')
-            for ardata in ipv6_answers:
-                ns_srvs.append(['NS', name[:-1], ardata.address])
-                
-        return ns_srvs
-    except:
-        return ns_srvs
-
-
-def get_soa(domain):
-    """
-    Function for SOA Record resolving. Returns all SOA records. Returns also the IP
-    address of the host both in IPv4 and IPv6. Returns an Array.
-    """
-    soa_records = []
-    answers = res.query(domain, 'SOA')
-    for rdata in answers:
-        name = rdata.mname.to_text()
-        ipv4_answers = res.query(name, 'A')
-        for ardata in ipv4_answers:
-            soa_records.extend(['SOA', name[:-1], ardata.address])
-            
-    try:
-        for rdata in answers:
-            name = rdata.mname.to_text()
-            ipv4_answers = res.query(name, 'AAAA')
-            for ardata in ipv4_answers:
-                soa_records.extend(['SOA', name[:-1], ardata.address])
-                
-        return soa_records
-    except:
-        return soa_records
-
-
-def get_spf(domain):
-    """
-    Function for SPF Record resolving returns the string with the SPF definition.
-    Prints the string for the SPF Record and Returns the string
-    """
-    spf_record = []
     
-    try:
-        answers = res.query(domain, 'SPF')
-        for rdata in answers:
-            name = rdata.strings
-            spf_record.extend(['SPF', name])
-            print '[*]', 'SPF', name
-    except:
-        return None
-    
-    return spf_record
-
-def get_txt(domain):
-    """
-    Function for TXT Record resolving returns the string.
-    """
-    txt_record = []
-    try:
-        answers = res.query(domain, 'TXT')
-        for rdata in answers:
-            name = "".join(rdata.strings)
-            print '[*]\t', 'TXT', name
-            txt_record.extend(['TXT', name])
-    except:
-        return None
-    
-    return txt_record
-
-def get_ptr(ipaddress):
-    """
-    Function for resolving PTR Record given it's IPv4 or IPv6 Address.
-    """
-    found_ptr = []
-    n = dns.reversename.from_address(ipaddress)
-    try:
-        answers = res.query(n, 'PTR')
-        for a in answers:
-            found_ptr.append(['PTR', a.target.to_text(),ipaddress])
-        return found_ptr
-    except:
-        return None
-    
-def get_srv(host):
-    """
-    Function for resolving SRV Records.
-    """
-    record = []
-    try:
-        answers = res.query(host, 'SRV')
-        for a in answers:
-            target = a.target.to_text()
-            for ip in get_a(target):
-                record.append(['SRV', host, a.target.to_text(), ip,
-                              str(a.port), str(a.weight)])
-    except:
-        return record
-    return record
-    
-def check_wildcard(domain_trg):
+def check_wildcard(res, domain_trg):
     """
     Function for checking if Wildcard resolution is configured for a Domain
     """
     wildcard = None
     test_name = ''.join(Random().sample(string.letters + string.digits,
                         12)) + '.' + domain_trg
-    ips = get_a(test_name)
+    ips = res.get_a(test_name)
     
     if len(ips) > 0:
         print '[-] Wildcard resolution is enabled on this domain'
@@ -707,7 +181,7 @@ def check_wildcard(domain_trg):
     
     return wildcard
 
-def brute_tlds(domain):
+def brute_tlds(res, domain):
     
     global brtdata
     brtdata = []
@@ -741,9 +215,9 @@ def brute_tlds(domain):
     time.gmtime(len(tlds)/2))
     
     for t in tlds:
-        pool.add_task(get_ip, domain_main + "." + t)
+        pool.add_task(res.get_ip, domain_main + "." + t)
         for g in gtld:
-            pool.add_task(get_ip, domain_main+ "." + g + "." + t)
+            pool.add_task(res.get_ip, domain_main+ "." + g + "." + t)
     
     # Wait for threads to finish.
     pool.wait_completion()
@@ -757,7 +231,7 @@ def brute_tlds(domain):
     
     return found_tlds
 
-def brute_srv(domain):
+def brute_srv(res, domain):
     """
     Brute-force most common SRV records for a given Domain. Returns an Array with
     records found.
@@ -782,7 +256,7 @@ def brute_srv(domain):
         ]
 
     for srvtype in srvrcd:
-        pool.add_task(get_srv, srvtype + domain)
+        pool.add_task(res.get_srv, srvtype + domain)
     
     # Wait for threads to finish.
     pool.wait_completion()
@@ -792,20 +266,23 @@ def brute_srv(domain):
     time.gmtime(len(srvrcd)/2))
     
     # Make sure we clear the variable
-    for rcd_found in brtdata:
-        for rcd in rcd_found:
-            returned_records.extend([{'type':rcd[0],\
-            'name':rcd[1],'target':rcd[2],'address':rcd[2],'port':rcd[2],\
-            'weight':rcd[2]
-            }])
-            print "[*]\t", " ".join(rcd)
     
+    if len(brtdata) > 0:
+        for rcd_found in brtdata:
+            for rcd in rcd_found:
+                returned_records.extend([{'type':rcd[0],\
+                'name':rcd[1],'target':rcd[2],'address':rcd[2],'port':rcd[2],\
+                'weight':rcd[2]
+                }])
+                print "[*]\t", " ".join(rcd)
+    else:
+        print "[-] No SRV Records Found for",domain
     
     
     return returned_records
 
 
-def brute_reverse(ip_list):
+def brute_reverse(res,ip_list):
     """
     Reverse look-up brute force for given CIDR example 192.168.1.1/24. Returns an
     Array of found records.
@@ -822,7 +299,7 @@ def brute_reverse(ip_list):
     
     # Resolve each IP in a separate thread.
     for x in ip_list:
-        pool.add_task(get_ptr, x)
+        pool.add_task(res.get_ptr, x)
    
     # Wait for threads to finish.
     pool.wait_completion()
@@ -836,27 +313,8 @@ def brute_reverse(ip_list):
     
     return returned_records
 
-def get_ip(hostname):
-    """
-    Function resolves a host name to its given A and/or AAA record. Returns Array
-    of found hosts and IPv4 or IPv6 Address.
-    """
-    found_ip_add = []
-    ipv4 = get_a(hostname)
-    time.sleep(0.2)
-    if ipv4:
-        for ip in ipv4:
-            found_ip_add.append(["A",hostname,ip])
-    ipv6 = get_aaaa(hostname)
-    
-    if ipv6:
-        for ip in ipv6:
-            found_ip_add.append(["AAAA",hostname,ip])
-    
-    return found_ip_add
 
-
-def brute_domain(dict, dom):
+def brute_domain(res, dict, dom):
     """
     Main Function for domain brute forcing
     """
@@ -868,7 +326,7 @@ def brute_domain(dict, dom):
    
     # Check if wildcard resolution is enabled
 
-    if check_wildcard(dom):
+    if check_wildcard(res, dom):
         continue_brt = raw_input('[*] Do you wish to continue? y/n ')
     if continue_brt == 'y':
         # Check if Dictionary file exists
@@ -880,7 +338,7 @@ def brute_domain(dict, dom):
 
             for line in f:
                 target = line.strip() + '.' + dom.strip()
-                pool.add_task(get_ip, target)
+                pool.add_task(res.get_ip, target)
                 
         # Wait for threads to finish
         pool.wait_completion()
@@ -933,105 +391,6 @@ def in_cache(dict_file,ns):
                         print ""
     return found_records
 
-
-def mdns_browse(regtype):
-    """
-    Function for resolving a specific mDNS record in the Local Subnet.
-    """
-    found_mdns_records = []
-    domain = None
-    browse_timeout = 1
-    resolve_timeout = 1
-    results = []
-    resolved = []
-
-    def resolve_callback(
-        sdRef,
-        flags,
-        interfaceIndex,
-        errorCode,
-        fullname,
-        hosttarget,
-        port,
-        txtRecord,
-        ):
-        if errorCode == pybonjour.kDNSServiceErr_NoError:
-            results.append({
-                'name': fullname,
-                'host': str(hosttarget).replace('\032'," "),
-                'port': str(port),
-                'txtRecord':txtRecord.strip()
-                })
-            resolved.append(True)
-
-    def browse_callback(
-        sdRef,
-        flags,
-        interfaceIndex,
-        errorCode,
-        serviceName,
-        regtype,
-        replyDomain,
-        ):
-        if errorCode != pybonjour.kDNSServiceErr_NoError:
-            return
-
-        if not flags & pybonjour.kDNSServiceFlagsAdd:
-
-            # Service removed
-
-            return
-
-        resolve_sdRef = pybonjour.DNSServiceResolve(
-            0,
-            interfaceIndex,
-            serviceName,
-            regtype,
-            replyDomain,
-            resolve_callback,
-            )
-
-        try:
-            while not resolved:
-                ready = select.select([resolve_sdRef], [], [],
-                        resolve_timeout)
-
-                if resolve_sdRef not in ready[0]:
-
-                    # Resolve timed out
-
-                    break
-
-                pybonjour.DNSServiceProcessResult(resolve_sdRef)
-            else:
-
-                resolved.pop()
-        finally:
-
-            resolve_sdRef.close()
-
-    browse_sdRef = pybonjour.DNSServiceBrowse(regtype=regtype,
-            domain=domain, callBack=browse_callback)
-
-    try:
-        while True:
-            ready = select.select([browse_sdRef], [], [],
-                                  browse_timeout)
-
-            if not ready[0]:
-                break
-
-            if browse_sdRef in ready[0]:
-                pybonjour.DNSServiceProcessResult(browse_sdRef)
-
-            _results = results
-
-            for result in _results:
-                found_mdns_records = [result]
-    finally:
-
-        browse_sdRef.close()
-    return found_mdns_records
 
 
 def mdns_enum():
@@ -1090,33 +449,11 @@ def mdns_enum():
     brtdata = []
     return found_results
 
-def scrape_google(dom):
-    """
-    Function for enumerating sub-domains and hosts by scrapping Google.
-    """
-    results = []
-    filtered = []
-    searches = ["100", "200","300","400","500"]
-    data = ""
-    urllib._urlopener = AppURLopener()
-    #opener.addheaders = [('User-Agent','Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)')]
-    for n in searches:
-        url = "http://google.com/search?hl=en&lr=&ie=UTF-8&q=%2B"+dom+"&start="+n+"&sa=N&filter=0&num=100"
-        sock = urllib.urlopen(url)
-        data += sock.read()
-        sock.close()
-    results.extend(unique(re.findall("href=\"htt\w{1,2}:\/\/([^:?]*[a-b0-9]*[^:?]*\."+dom+")\/", data)))
-    # Make sure we are only getting the host
-    for f in results:
-        filtered.extend(re.findall("^([a-z.0-9^]*"+dom+")", f))
-    sleep(2)
-    return unique(filtered)
 
-
-def goo_result_process(found_hosts):
+def goo_result_process(res, found_hosts):
     returned_records = []
     for sd in found_hosts:
-        for sdip in get_ip(sd):
+        for sdip in res.get_ip(sd):
             print '[*]\t', sdip[0], sdip[1], sdip[2]
             
             returned_records.extend([{'type':sdip[0], 'name':sdip[1], \
@@ -1125,7 +462,7 @@ def goo_result_process(found_hosts):
     return returned_records
 
 
-def general_enum(domain, do_axfr,do_google,do_spf):
+def general_enum(res, domain, do_axfr,do_google,do_spf):
     """
     Function for performing general enumeration of a domain. It gets SOA, NS, MX
     A, AAA and SRV records for a given domain.It Will first try a Zone Transfer
@@ -1139,41 +476,51 @@ def general_enum(domain, do_axfr,do_google,do_spf):
     ip_spf_list = []
     
     # Check if wildcards are enabled on the target domain 
-    check_wildcard(domain)
+    check_wildcard(res, domain)
     
     # Perform test for Zone Transfer against all NS servers of a Domain
     if do_axfr is not None:
-        returned_records.extend(zone_transfer(domain))
+        returned_records.extend(res.zone_transfer())
         
     # Enumerate SOA Record
-    found_soa_record = get_soa(domain)
-    print '[*]\t', found_soa_record[0], found_soa_record[1], found_soa_record[2]
     
-    # Save dictionary of returned record
-    returned_records.extend([{'type':found_soa_record[0],\
-    "mname":found_soa_record[1],'address':found_soa_record[2]
-    }])
-    
-    # Enumerate Name Servers
-    for ns_rcrd in get_ns(domain):
-        print '[*]\t', ns_rcrd[0], ns_rcrd[1], ns_rcrd[2]
-        
+    try:
+        found_soa_record = res.get_soa()
+        print '[*]\t', found_soa_record[0], found_soa_record[1], found_soa_record[2]
+
         # Save dictionary of returned record
-        returned_records.extend([{'type':ns_rcrd[0],\
-        "target":ns_rcrd[1],'address':ns_rcrd[2]
+        returned_records.extend([{'type':found_soa_record[0],\
+        "mname":found_soa_record[1],'address':found_soa_record[2]
         }])
+    except:
+        print "[-] Could not Resolve SOA Recor for",domain
+
+    # Enumerate Name Servers
+    try:
+        for ns_rcrd in res.get_ns():
+            print '[*]\t', ns_rcrd[0], ns_rcrd[1], ns_rcrd[2]
+
+            # Save dictionary of returned record
+            returned_records.extend([{'type':ns_rcrd[0],\
+            "target":ns_rcrd[1],'address':ns_rcrd[2]
+            }])
+    except dns.resolver.NoAnswer:
+        print "[-] Could not Resolve NS Records for",domain
         
     # Enumerate MX Records
-    for mx_rcrd in get_mx(domain):
-        print '[*]\t', mx_rcrd[0], mx_rcrd[1], mx_rcrd[2]
-        
-        # Save dictionary of returned record
-        returned_records.extend([{'type':mx_rcrd[0],\
-        "exchange":mx_rcrd[1],'address':mx_rcrd[2]
-        }])
+    try:
+        for mx_rcrd in res.get_mx():
+            print '[*]\t', mx_rcrd[0], mx_rcrd[1], mx_rcrd[2]
+
+            # Save dictionary of returned record
+            returned_records.extend([{'type':mx_rcrd[0],\
+            "exchange":mx_rcrd[1],'address':mx_rcrd[2]
+            }])
+    except dns.resolver.NoAnswer:
+        print "[-] Could not Resolve MX Records for",domain
     
     # Enumerate A Record for the targeted Domain
-    for a_rcrd in get_ip(domain):
+    for a_rcrd in res.get_ip(domain):
         print '[*]\t', a_rcrd[0], a_rcrd[1], a_rcrd[2]
         
         # Save dictionary of returned record
@@ -1183,7 +530,7 @@ def general_enum(domain, do_axfr,do_google,do_spf):
         
     # Enumerate SFP and TXT Records for the target domain
     text_data = ""
-    spf_text_data = get_spf(domain)
+    spf_text_data = res.get_spf()
     
     # Save dictionary of returned record
     if spf_text_data is not None:
@@ -1191,7 +538,7 @@ def general_enum(domain, do_axfr,do_google,do_spf):
         "text":spf_text_data[1]
         }])
     
-    txt_text_data = get_txt(domain)
+    txt_text_data = res.get_txt()
     
     # Save dictionary of returned record
     if txt_text_data is not None:
@@ -1212,17 +559,17 @@ def general_enum(domain, do_axfr,do_google,do_spf):
                 ip_list = list(ip)
                 for i in ip_list:
                     ip_spf_list.append(str(i))
-            returned_records.extend(brute_reverse(unique(ip_spf_list)))
+            returned_records.extend(brute_reverse(res,unique(ip_spf_list)))
         
         
     # Enumerate SRV Records for the targeted Domain
     print '[*] Enumerating SRV Records'
-    returned_records.extend(brute_srv(domain))
+    returned_records.extend(brute_srv(res, domain))
     
     # Do Google Search enumeration if selected
     if do_google is not None:
         print '[*] Performing Google Search Enumeration'
-        returned_records.extend(goo_result_process(scrape_google(domain)))
+        returned_records.extend(goo_result_process(res, scrape_google(domain)))
     
     return returned_records
 
@@ -1317,7 +664,7 @@ def main():
     request_timeout = 1.0
     ip_list = []
     ip_range = None
-    ip_range_pattern = '([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})-([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})'
+    ip_range_pattern ='([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})-([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})'
     
     #
     # Global Vars
@@ -1406,22 +753,16 @@ def main():
     pool = ThreadPool(thread_num)
     
     if type is not None:
-        # We use system DNS for 1st query for SOA Record
-        if ns_server:
-            print "[*] Changing to server: ", ns_server
-            res = dns.resolver.Resolver(configure=False)
-            res.nameservers = [ns_server]
-        else:
-            res = dns.resolver.Resolver(configure=True)
-        # Set timing
-        res.timeout = request_timeout
-        res.lifetime = request_timeout
+        
+        # Set the resolver
+        res = DnsHelper(domain, ns_server, request_timeout)
+       
         for r in type.split(','):
             try:
                 if r == 'axfr':
                     if domain is not None:
                         print '[*] Testing NS Servers for Zone Transfer'
-                        returned_records.extend(zone_transfer(domain))
+                        returned_records.extend(res.zone_transfer())
 
                     else:
                         print '[-] No Domain to target specified!'
@@ -1430,7 +771,7 @@ def main():
                 elif r == 'std':
                     if domain is not None:
                         print "[*] Performing General Enumeration of Domain:",domain
-                        std_enum_records = general_enum(domain, xfr, goo, spf_enum)
+                        std_enum_records = general_enum(res, domain, xfr, goo, spf_enum)
                         if (output_file is not None): returned_records.extend(std_enum_records)
                     else:
                         print '[-] No Domain to target specified!'
@@ -1439,7 +780,7 @@ def main():
                 elif r == 'rvl':
                     if len(ip_list) > 0:
                         print '[*] Reverse Look-up of a Range'
-                        rvl_enum_records = brute_reverse(ip_list)
+                        rvl_enum_records = brute_reverse(res, ip_list)
                         if (output_file is not None): returned_records.extend(rvl_enum_records)
                     else:
                         print '[-] Failed CIDR or Range is Required for type rvl'
@@ -1448,7 +789,7 @@ def main():
                     if (dict is not None) and (domain is not None):
                         print '[*] Performing host and subdomain brute force against', \
                             domain
-                        brt_enum_records = brute_domain(dict, domain)
+                        brt_enum_records = brute_domain(res, dict, domain)
                         if (output_file is not None): returned_records.extend(brt_enum_records)
                     else:
                         print '[-] No Dictionary file specified!'
@@ -1458,7 +799,7 @@ def main():
                     if domain is not None:
                         print '[*] Enumerating Common SRV Records against', \
                             domain
-                        srv_enum_records = brute_srv(domain)
+                        srv_enum_records = brute_srv(res, domain)
                         if (output_file is not None): returned_records.extend(srv_enum_records)
                     else:
                         print '[-] No Domain to target specified!'
@@ -1472,7 +813,7 @@ def main():
                 elif r == 'tld':
                     if domain is not None:
                         print "[*] Performing TLD Brute force Enumeration against", domain
-                        tld_enum_records = brute_tlds(domain)
+                        tld_enum_records = brute_tlds(res, domain)
                         if (output_file is not None): returned_records.extend(tld_enum_records)
                     else:
                         print '[-] No Domain to target specified!'
@@ -1481,7 +822,7 @@ def main():
                 elif r == 'goo':
                     if domain is not None:
                         print "[*] Performing Google Search Enumeration against", domain
-                        goo_enum_records = goo_result_process(scrape_google(domain))
+                        goo_enum_records = goo_result_process(res, scrape_google(domain))
                         if (output_file is not None): returned_records.extend(goo_enum_records)
                     else:
                         print '[-] No Domain to target specified!'

@@ -48,5 +48,3 @@ def get_whois_nets(data):
     patern = '([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}) - ([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})'
     results = re.findall(patern,data)
     return results
-
-

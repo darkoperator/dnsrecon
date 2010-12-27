@@ -99,6 +99,3 @@ def mdns_browse(regtype):
 
         browse_sdRef.close()
     return found_mdns_records
-
-
-
