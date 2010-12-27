@@ -668,8 +668,7 @@ def main():
     #
     # Global Vars
     #
-    
-    global res
+
     global pool
     
     #
