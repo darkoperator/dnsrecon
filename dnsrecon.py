@@ -270,7 +270,7 @@ def brute_srv(res, domain):
         for rcd_found in brtdata:
             for rcd in rcd_found:
                 returned_records.extend([{'type':rcd[0],\
-                'name':rcd[1],'target':rcd[2],'address':rcd[2],'port':rcd[2],\
+                'name':rcd[1],'target':rcd[2],'address':rcd[3],'port':rcd[2],\
                 'weight':rcd[2]
                 }])
                 print "[*]\t", " ".join(rcd)
@@ -297,11 +297,14 @@ def brute_reverse(res,ip_list):
     time.gmtime(len(ip_list)/2))
     
     # Resolve each IP in a separate thread.
-    for x in ip_list:
-        pool.add_task(res.get_ptr, x)
-   
-    # Wait for threads to finish.
-    pool.wait_completion()
+    try:
+        for x in ip_list:
+            pool.add_task(res.get_ptr, x)
+
+        # Wait for threads to finish.
+        pool.wait_completion()
+    except (KeyboardInterrupt):
+        print "[-] You have pressed ^c. Saving found records."
     
     for rcd_found in brtdata:
         for rcd in rcd_found:
@@ -460,8 +463,38 @@ def goo_result_process(res, found_hosts):
             }])
     return returned_records
 
+def whois_ips(res,ip_list):
+    answer = ""
+    found_records = []
+    print "[*] Performing Whois lookup against records found."
+    list = get_whois_nets_iplist(unique(ip_list))
+    print "[*] The following IP Ranges where found:"
+    for i in range(len(list)):
+        print "[*]\t",str(i)+")", list[i]['start'],"-",list[i]['end'],list[i]['orgname']
+    print '[*] What Range do you wish to do a Revers Lookup for?' 
+    print '(number, comma separated list, a for all or n for none)',
+    answer = raw_input().split(",")
 
-def general_enum(res, domain, do_axfr,do_google,do_spf):
+    if "a" in answer:
+        for i in range(len(list)):
+             print "[*] Performing Reverse Lookup of range", list[i]['start'],'-',list[i]['end']
+             found_records.append(brute_reverse(res, \
+                expand_range(list[i]['start'],list[i]['end'])))
+
+    elif "n" in answer:
+        print "[*] No Reverse Lookups will be performed."
+        pass
+    else:
+        for a in answer:
+            net_selected = list[int(a)]
+            print net_selected['orgname']
+            print "[*] Performing Reverse Lookup of range", net_selected['start'],'-',net_selected['end']
+            found_records.append(brute_reverse(res, \
+                expand_range(net_selected['start'],net_selected['end'])))
+    
+    return found_records
+            
+def general_enum(res, domain, do_axfr,do_google,do_spf, do_whois):
     """
     Function for performing general enumeration of a domain. It gets SOA, NS, MX
     A, AAA and SRV records for a given domain.It Will first try a Zone Transfer
@@ -473,6 +506,8 @@ def general_enum(res, domain, do_axfr,do_google,do_spf):
     # Var for SPF Record Range Reverse Look-up
     found_spf_ranges = []
     ip_spf_list = []
+    # Var to hold the IP Addresses that will be queried in Whois
+    ip_for_whois = []
     
     # Check if wildcards are enabled on the target domain 
     check_wildcard(res, domain)
@@ -491,6 +526,9 @@ def general_enum(res, domain, do_axfr,do_google,do_spf):
         returned_records.extend([{'type':found_soa_record[0],\
         "mname":found_soa_record[1],'address':found_soa_record[2]
         }])
+        
+        ip_for_whois.append(found_soa_record[2])
+        
     except:
         print "[-] Could not Resolve SOA Recor for",domain
 
@@ -503,6 +541,9 @@ def general_enum(res, domain, do_axfr,do_google,do_spf):
             returned_records.extend([{'type':ns_rcrd[0],\
             "target":ns_rcrd[1],'address':ns_rcrd[2]
             }])
+            
+            ip_for_whois.append(ns_rcrd[2])
+            
     except dns.resolver.NoAnswer:
         print "[-] Could not Resolve NS Records for",domain
         
@@ -515,6 +556,9 @@ def general_enum(res, domain, do_axfr,do_google,do_spf):
             returned_records.extend([{'type':mx_rcrd[0],\
             "exchange":mx_rcrd[1],'address':mx_rcrd[2]
             }])
+            
+            ip_for_whois.append(mx_rcrd[2])
+            
     except dns.resolver.NoAnswer:
         print "[-] Could not Resolve MX Records for",domain
     
@@ -526,6 +570,8 @@ def general_enum(res, domain, do_axfr,do_google,do_spf):
         returned_records.extend([{'type':a_rcrd[0],\
         "name":a_rcrd[1],'address':a_rcrd[2]
         }])
+        
+        ip_for_whois.append(a_rcrd[2])
         
     # Enumerate SFP and TXT Records for the target domain
     text_data = ""
@@ -550,7 +596,8 @@ def general_enum(res, domain, do_axfr,do_google,do_spf):
     
     # Process ipv4 SPF records if selected
     if do_spf is not None:
-        found_spf_ranges.extend(re.findall('([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}/\d*)',"".join(text_data)))
+        found_spf_ranges.extend(re.findall(\
+        '([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}/\d*)',"".join(text_data)))
         if len(found_spf_ranges) > 0:
             print "[*] Performing Reverse Look-up of SPF ipv4 Ranges"
             for c in found_spf_ranges:
@@ -563,13 +610,25 @@ def general_enum(res, domain, do_axfr,do_google,do_spf):
         
     # Enumerate SRV Records for the targeted Domain
     print '[*] Enumerating SRV Records'
-    returned_records.extend(brute_srv(res, domain))
+    srv_rcd = brute_srv(res, domain)
+    if srv_rcd:
+        for r in srv_rcd:
+            ip_for_whois.append(r['address'])
+            returned_records.extend(r)
     
     # Do Google Search enumeration if selected
     if do_google is not None:
         print '[*] Performing Google Search Enumeration'
-        returned_records.extend(goo_result_process(res, scrape_google(domain)))
-    
+        goo_rcd = goo_result_process(res, scrape_google(domain))
+        if goo_rcd:
+            for r in goo_rcd:
+                ip_for_whois.append(r['address'])
+                returned_records.extend(r)
+                
+    if do_whois:
+        whois_ips(res, ip_for_whois)
+        
+        
     return returned_records
 
 
@@ -633,8 +692,8 @@ def usage():
     print "  -s, --do_spf                Perform Reverse Look-up of ipv4 ranges in the SPF Record of the"
     print "                              targeted domain with the standard enumeration."
     print "  -g, --google                Perform Google enumeration with the standard enumeration."
-    #print "  -w, --do_whois              Do deep whois record analysis and reverse look-up of IP"
-    #print "                              ranges found thru whois when doing standard query."
+    print "  -w, --do_whois              Do deep whois record analysis and reverse look-up of IP"
+    print "                              ranges found thru whois when doing standard query."
     print "  --threads          <number> Number of threads to use in Range Reverse Look-up, Forward"
     print "                              Look-up Brute force and SRV Record Enumeration"
     print "  --lifetime         <number> Time to wait for a server to response to a query."
@@ -658,7 +717,7 @@ def main():
     xfr = None
     goo = None
     spf_enum = None
-    #deep_whois = None
+    do_whois = None
     thread_num = 10
     request_timeout = 1.0
     ip_list = []
@@ -729,7 +788,7 @@ def main():
             goo = True
             
         elif opt in ('-w','--do_whois'):
-            deep_whois = True
+            do_whois = True
             
         elif opt in ('-s','--do_spf'):
             spf_enum = True
@@ -769,7 +828,7 @@ def main():
                 elif r == 'std':
                     if domain is not None:
                         print "[*] Performing General Enumeration of Domain:",domain
-                        std_enum_records = general_enum(res, domain, xfr, goo, spf_enum)
+                        std_enum_records = general_enum(res, domain, xfr, goo, spf_enum, do_whois)
                         if (output_file is not None): returned_records.extend(std_enum_records)
                     else:
                         print '[-] No Domain to target specified!'

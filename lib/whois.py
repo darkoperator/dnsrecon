@@ -18,6 +18,7 @@
 
 import re
 from netaddr import *
+import socket
 
 def get_whois(ip_addrs):
     """
@@ -44,16 +45,21 @@ def whois(target,whois_srv):
     Performs a whois query against a arin.net for a given IP, Domain or Host as a
     string and returns the answer of the query.
     """
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.connect((whois_srv, 43))
-    s.send(target + "\r\n")
-    response = ''
-    while True:
-        d = s.recv(4096)
-        response += d
-        if d == '':
-            break
-    s.close()
+    response = ""
+    #socket.setdefaulttimeout(4.0)
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.connect((whois_srv, 43))
+        s.send("n " + target + "\r\n")
+        response = ''
+        while True:
+            d = s.recv(4096)
+            response += d
+            if d == '':
+                break
+        s.close()
+    except:
+        pass
     return response
 
 
@@ -62,6 +68,32 @@ def get_whois_nets(data):
     Parses whois data and extracts the Network Ranges returning an array of lists
     where each list has the starting and ending IP of the found range.
     """
+
     patern = '([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}) - ([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})'
     results = re.findall(patern,data)
+   
     return results
+
+def get_whois_orgname(data):
+    org_pattern = "OrgName\:\s*(.*)"
+    result = re.findall(org_pattern,data)
+    if not result:
+        result.append("Not Found")
+    return result
+
+def get_whois_nets_iplist(ip_list):
+    seen = {}
+    idfun=repr
+    found_nets = []
+    for ip in ip_list:
+        # Find appropiate Whois Server for the IP
+        whois_server = get_whois(ip)
+        # If we get a Whois server Process get the whois and process.
+        if whois_server:
+            whois_data = whois(ip,whois_server )
+            net = get_whois_nets(whois_data)
+            if net:
+                org = get_whois_orgname(whois_data)
+                found_nets.append({'start':net[0][0],'end':net[0][1],'orgname':"".join(org)})
+    #Remove Duplicates
+    return [seen.setdefault(idfun(e),e) for e in found_nets if idfun(e) not in seen]
