@@ -18,14 +18,13 @@
 #    along with this program; if not, write to the Free Software
 #    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
-__version__ = '0.2'
+__version__ = '0.3'
 __author__ = 'Carlos Perez, Carlos_Perez@darkoperator.com'
 
 __doc__ = """
 DNSRecon http://www.darkoperator.com
 
  by Carlos Perez, Darkoperator
-for Python 2.7
 
 requires bonjour for Mac, Windows, Linux
 requires pybonjour http://code.google.com/p/pybonjour/
@@ -211,16 +210,20 @@ def brute_tlds(res, domain):
     
     # Let the user know how long it could take
     print "[*] The operation could take up to:", time.strftime('%H:%M:%S', \
-    time.gmtime(len(tlds)/2))
+    time.gmtime(len(tlds)/4))
     
-    for t in tlds:
-        pool.add_task(res.get_ip, domain_main + "." + t)
-        for g in gtld:
-            pool.add_task(res.get_ip, domain_main+ "." + g + "." + t)
-    
-    # Wait for threads to finish.
-    pool.wait_completion()
+    try:
+        for t in tlds:
+            pool.add_task(res.get_ip, domain_main + "." + t)
+            for g in gtld:
+                pool.add_task(res.get_ip, domain_main+ "." + g + "." + t)
 
+        # Wait for threads to finish.
+        pool.wait_completion()
+        
+    except (KeyboardInterrupt):
+        print "[-] You have pressed Crtl-C. Saving found records."
+        
     # Process the output of the threads.
     for rcd_found in brtdata:
         for rcd in rcd_found:
@@ -253,16 +256,20 @@ def brute_srv(res, domain):
         '_hkps._tcp.', '_jabber._udp.','_xmpp-server._udp.', '_xmpp-client._udp.',
         '_jabber-client._tcp.', '_jabber-client._udp.',
         ]
-
-    for srvtype in srvrcd:
-        pool.add_task(res.get_srv, srvtype + domain)
-    
-    # Wait for threads to finish.
-    pool.wait_completion()
-    
-    
     print "[*] The operation could take up to:", time.strftime('%H:%M:%S', \
-    time.gmtime(len(srvrcd)/2))
+    time.gmtime(len(srvrcd)/4))
+    
+    try:
+        for srvtype in srvrcd:
+            pool.add_task(res.get_srv, srvtype + domain)
+            
+            # Wait for threads to finish.
+        pool.wait_completion()
+    
+    except (KeyboardInterrupt):
+        print "[-] You have pressed Crtl-C. Saving found records."
+    
+        
     
     # Make sure we clear the variable
     
@@ -304,7 +311,7 @@ def brute_reverse(res,ip_list):
         # Wait for threads to finish.
         pool.wait_completion()
     except (KeyboardInterrupt):
-        print "[-] You have pressed ^c. Saving found records."
+        print "[-] You have pressed Crtl-C. Saving found records."
     
     for rcd_found in brtdata:
         for rcd in rcd_found:
