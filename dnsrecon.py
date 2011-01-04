@@ -853,10 +853,10 @@ def main():
     # Setting the number of threads to 10
     pool = ThreadPool(thread_num)
     
-    if type is not None:
+    # Set the resolver
+    res = DnsHelper(domain, ns_server, request_timeout)
         
-        # Set the resolver
-        res = DnsHelper(domain, ns_server, request_timeout)
+    if type is not None:
        
         for r in type.split(','):
             try:
@@ -951,6 +951,16 @@ def main():
                 print "[-] directly and requests are not being filtered. Increase the timeout from 1.0 second"
                 print "[-] to a higher number with --lifetime <time> option."
                 exit(1)
+        
+        # if an output xml file is specified it will write returned results.
+        if (output_file is not None): 
+            xml_enum_doc = dns_record_from_dict(returned_records)
+            write_to_file(xml_enum_doc,output_file)
+        exit(0)
+    elif domain is not None:
+        print "[*] Performing General Enumeration of Domain:",domain
+        std_enum_records = general_enum(res, domain, xfr, goo, spf_enum, do_whois)
+        if (output_file is not None): returned_records.extend(std_enum_records)
         
         # if an output xml file is specified it will write returned results.
         if (output_file is not None): 
