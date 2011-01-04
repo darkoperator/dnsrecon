@@ -179,8 +179,12 @@ def check_wildcard(res, domain_trg):
     
     return wildcard
 
+
 def brute_tlds(res, domain):
-    
+    """
+    This function performs a check of a given domain for known TLD values.
+    prints and returns a dictionary of the results.
+    """
     global brtdata
     brtdata = []
     
@@ -232,6 +236,7 @@ def brute_tlds(res, domain):
     
     
     return found_tlds
+
 
 def brute_srv(res, domain):
     """
@@ -366,7 +371,6 @@ def brute_domain(res, dict, dom):
 
 
 
-
 def in_cache(dict_file,ns):
     """
     Function for Cache Snooping, it will check a given NS server for specific
@@ -460,6 +464,11 @@ def mdns_enum():
 
 
 def goo_result_process(res, found_hosts):
+    """
+    This function processes the results returned from the Google Search and does
+    an A and AAAA query for the IP of the found host. Prints and returns a dictionary
+    with all the results found.
+    """
     returned_records = []
     for sd in found_hosts:
         for sdip in res.get_ip(sd):
@@ -470,7 +479,34 @@ def goo_result_process(res, found_hosts):
             }])
     return returned_records
 
+def get_whois_nets_iplist(ip_list):
+    """
+    This function will perform whois queries against a list of IP's and extract
+    the net ranges and if available the orgasation list of each and remover any
+    duplicate entries.
+    """
+    seen = {}
+    idfun=repr
+    found_nets = []
+    for ip in ip_list:
+        # Find appropiate Whois Server for the IP
+        whois_server = get_whois(ip)
+        # If we get a Whois server Process get the whois and process.
+        if whois_server:
+            whois_data = whois(ip,whois_server )
+            net = get_whois_nets(whois_data)
+            if net:
+                org = get_whois_orgname(whois_data)
+                found_nets.append({'start':net[0][0],'end':net[0][1],'orgname':"".join(org)})
+    #Remove Duplicates
+    return [seen.setdefault(idfun(e),e) for e in found_nets if idfun(e) not in seen]
+
 def whois_ips(res,ip_list):
+    """
+    This function will proess the results of the whois lookups and present the 
+    user with the list of net ranges found and ask the user if he wishes to perform
+    a reverse lookup on any of the ranges or all the ranges.
+    """
     answer = ""
     found_records = []
     print "[*] Performing Whois lookup against records found."
@@ -500,7 +536,8 @@ def whois_ips(res,ip_list):
                 expand_range(net_selected['start'],net_selected['end'])))
     
     return found_records
-            
+
+
 def general_enum(res, domain, do_axfr,do_google,do_spf, do_whois):
     """
     Function for performing general enumeration of a domain. It gets SOA, NS, MX
