@@ -81,19 +81,4 @@ def get_whois_orgname(data):
         result.append("Not Found")
     return result
 
-def get_whois_nets_iplist(ip_list):
-    seen = {}
-    idfun=repr
-    found_nets = []
-    for ip in ip_list:
-        # Find appropiate Whois Server for the IP
-        whois_server = get_whois(ip)
-        # If we get a Whois server Process get the whois and process.
-        if whois_server:
-            whois_data = whois(ip,whois_server )
-            net = get_whois_nets(whois_data)
-            if net:
-                org = get_whois_orgname(whois_data)
-                found_nets.append({'start':net[0][0],'end':net[0][1],'orgname':"".join(org)})
-    #Remove Duplicates
-    return [seen.setdefault(idfun(e),e) for e in found_nets if idfun(e) not in seen]
+
