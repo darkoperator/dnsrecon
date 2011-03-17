@@ -40,6 +40,7 @@ import string
 import sys
 import time
 
+
 from Queue import Queue
 from random import Random
 from threading import Lock, Thread
@@ -127,7 +128,7 @@ class ThreadPool:
 
         self.tasks.join()
 
-
+    
 def expand_cidr(cidr_to_expand):
     """
     Function to expand a given CIDR and return an Array of IP Addresses that
@@ -261,8 +262,8 @@ def brute_srv(res, domain):
         '_hkps._tcp.', '_jabber._udp.','_xmpp-server._udp.', '_xmpp-client._udp.',
         '_jabber-client._tcp.', '_jabber-client._udp.',
         ]
-    print "[*] The operation could take up to:", time.strftime('%H:%M:%S', \
-    time.gmtime(len(srvrcd)/4))
+#    print "[*] The operation could take up to:", time.strftime('%H:%M:%S', \
+#    time.gmtime(len(srvrcd)/4))
     
     try:
         for srvtype in srvrcd:
@@ -304,9 +305,9 @@ def brute_reverse(res,ip_list):
     returned_records = []
 
     
-    # Give an estimated time to finish
-    print "[*] The operation could take up to:", time.strftime('%H:%M:%S', \
-    time.gmtime(len(ip_list)/2))
+#    # Give an estimated time to finish
+#    print "[*] The operation could take up to:", time.strftime('%H:%M:%S', \
+#    time.gmtime(len(ip_list)/2))
     
     # Resolve each IP in a separate thread.
     try:
@@ -326,7 +327,6 @@ def brute_reverse(res,ip_list):
             print "[*]\t"," ".join(rcd)
     
     return returned_records
-
 
 def brute_domain(res, dict, dom):
     """
@@ -434,7 +434,9 @@ def mdns_enum():
         '_kerberos-adm._tcp', '_kerberos._tcp', '_ntp._tcp', '_rsync._tcp',
         '_sip._udp', '_xmpp-client._tcp', '_xmpp-server._tcp', '_skype._tcp',
         '_ica-networking._tcp', '_presence._tcp', '_ofocus-sync._tcp',
-        '_zuul1000205._udp', '_sub._ipp._tcp'
+        '_zuul1000205._udp', '_sub._ipp._tcp','_raop._tcp','_rfb._tcp','_growl._tcp',
+        '_home-sharing._tcp','_odisk._tcp','_remote-jukebox._tcp',"_eppc._tcp",
+        '_scanner._tcp', '_couchdb_location._tcp','_udisks-ssh._tcp','_presence._tcp'
         ]
     
     n = re.compile(u'(\x00|\x07|\x1A|\x16|\x06|\x08|\x1f|\xdb|\xb2|\xb0|\xb1'
@@ -763,7 +765,7 @@ def main():
     spf_enum = None
     do_whois = None
     thread_num = 10
-    request_timeout = 1.0
+    request_timeout = 1.5
     ip_list = []
     ip_range = None
     ip_range_pattern ='([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})-([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})'
