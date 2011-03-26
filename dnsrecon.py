@@ -18,7 +18,7 @@
 #    along with this program; if not, write to the Free Software
 #    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
-__version__ = '0.3'
+__version__ = '0.4'
 __author__ = 'Carlos Perez, Carlos_Perez@darkoperator.com'
 
 __doc__ = """
@@ -39,7 +39,7 @@ import re
 import string
 import sys
 import time
-
+import sqlite3
 
 from Queue import Queue
 from random import Random
@@ -80,6 +80,8 @@ class Worker(Thread):
 
     """Thread executing tasks from a given tasks queue"""
 
+    lck = Lock()
+
     def __init__(self, tasks):
         Thread.__init__(self)
         self.tasks = tasks
@@ -88,16 +90,23 @@ class Worker(Thread):
         # Global variable that will hold the results
         global brtdata
     def run(self):
-        lck = Lock()
+
         found_recrd = []
         while True:
             (func, args, kargs) = self.tasks.get()
             try:
                 found_recrd = func(*args, **kargs)
                 if found_recrd:
-                    lck.acquire()
+                    Worker.lck.acquire()
                     brtdata.append(found_recrd)
-                    lck.release()
+                    for r in found_recrd:
+                        if type(r).__name__ == "dict":
+                            for k,v in r.iteritems():
+                                print "[*]\t",k,":",v
+                            print "[*]"
+                        else:
+                            print "[*]\t", " ".join(r)
+                    Worker.lck.release()
 
             except Exception, e:
                 print e
@@ -152,6 +161,12 @@ def expand_range(startip,endip):
         ip_list.append(str(i))
     return ip_list
 
+def range2cidr(ip1,ip2):
+    """
+    Function to return the maximun CIDR given a range of IP's
+    """
+    r1 = IPRange(ip1, ip2)
+    return str(r1.cidrs()[-1])
 
 def write_to_file(data,target_file):
     """
@@ -235,7 +250,8 @@ def brute_tlds(res, domain):
             print "[*]\t"," ".join(rcd)
             found_tlds.extend([{'type':rcd[0],'name':rcd[1],'address':rcd[2]}])
     
-    
+    print "[*]", len(found_tlds), "Records Found"
+
     return found_tlds
 
 
@@ -262,8 +278,7 @@ def brute_srv(res, domain):
         '_hkps._tcp.', '_jabber._udp.','_xmpp-server._udp.', '_xmpp-client._udp.',
         '_jabber-client._tcp.', '_jabber-client._udp.',
         ]
-#    print "[*] The operation could take up to:", time.strftime('%H:%M:%S', \
-#    time.gmtime(len(srvrcd)/4))
+
     
     try:
         for srvtype in srvrcd:
@@ -283,13 +298,14 @@ def brute_srv(res, domain):
         for rcd_found in brtdata:
             for rcd in rcd_found:
                 returned_records.extend([{'type':rcd[0],\
-                'name':rcd[1],'target':rcd[2],'address':rcd[3],'port':rcd[2],\
-                'weight':rcd[2]
+                'name':rcd[1],'target':rcd[2],'address':rcd[3],'port':rcd[4],\
+                'weight':rcd[5]
                 }])
-                print "[*]\t", " ".join(rcd)
+    
     else:
         print "[-] No SRV Records Found for",domain
-    
+
+    print "[*]", len(returned_records), "Records Found"
     
     return returned_records
 
@@ -303,12 +319,8 @@ def brute_reverse(res,ip_list):
     brtdata = []
     
     returned_records = []
+    print "[*] Performing Reverse Lookup from",ip_list[0],"to",ip_list[-1]
 
-    
-#    # Give an estimated time to finish
-#    print "[*] The operation could take up to:", time.strftime('%H:%M:%S', \
-#    time.gmtime(len(ip_list)/2))
-    
     # Resolve each IP in a separate thread.
     try:
         for x in ip_list:
@@ -324,8 +336,9 @@ def brute_reverse(res,ip_list):
             returned_records.extend([{'type':rcd[0],\
             "name":rcd[1],'address':rcd[2]
             }])
-            print "[*]\t"," ".join(rcd)
-    
+
+    print "[*]",len(returned_records),"Records Found"
+
     return returned_records
 
 def brute_domain(res, dict, dom):
@@ -360,8 +373,7 @@ def brute_domain(res, dict, dom):
         # Process the output of the threads.
         for rcd_found in brtdata:
             for rcd in rcd_found:
-                print "[*]\t"," ".join(rcd)
-                
+               # print "[*]\t"," ".join(rcd)
                 found_hosts.extend([{'type':rcd[0],'name':rcd[1],'address':rcd[2]}])
         
         # Clear Global variable
@@ -439,28 +451,16 @@ def mdns_enum():
         '_scanner._tcp', '_couchdb_location._tcp','_udisks-ssh._tcp','_presence._tcp'
         ]
     
-    n = re.compile(u'(\x00|\x07|\x1A|\x16|\x06|\x08|\x1f|\xdb|\xb2|\xb0|\xb1'
-                   u'\xc9|\xb9|\xcd|\u2019|\u2018|\u2019|\u201c|\u201d|\u2407)')
-    
-    t = re.compile(r'[\x00-\x1f|\x7f|\x0e]')
-    
     for m in mdns_types:
         pool.add_task(mdns_browse, m)
     
     pool.wait_completion()
+    
+    # Process returned data
     for i in brtdata:
         for e in i:
-            print "[*]\tHost:",e['host']
-            host = e['host']
-            print "[*]\tName:",n.sub(" ",e['name'])
-            name = n.sub(" ",e['name'])
-            print "[*]\tPort:",e['port']
-            port = e['port']
-            print "[*]\tTXTRecord:",t.sub(" ",e['txtRecord'])
-            txtrecord = t.sub(" ",e['txtRecord'])
-            print "[*]"
-            found_results.extend([{'host':host,'name':name,'port':port,
-                                   'txtrecord':txtrecord}])
+            found_results.extend([e])
+            
     brtdata = []
     return found_results
 
@@ -539,145 +539,6 @@ def whois_ips(res,ip_list):
     
     return found_records
 
-
-def general_enum(res, domain, do_axfr,do_google,do_spf, do_whois):
-    """
-    Function for performing general enumeration of a domain. It gets SOA, NS, MX
-    A, AAA and SRV records for a given domain.It Will first try a Zone Transfer
-    if not successful it will try individual record type enumeration. If chosen
-    it will also perform a Google Search and scrape the results for host names and
-    perform an A and AAA query against them.
-    """
-    returned_records = []
-    # Var for SPF Record Range Reverse Look-up
-    found_spf_ranges = []
-    ip_spf_list = []
-    # Var to hold the IP Addresses that will be queried in Whois
-    ip_for_whois = []
-    
-    # Check if wildcards are enabled on the target domain 
-    check_wildcard(res, domain)
-    
-    # Perform test for Zone Transfer against all NS servers of a Domain
-    if do_axfr is not None:
-        returned_records.extend(res.zone_transfer())
-        
-    # Enumerate SOA Record
-    
-    try:
-        found_soa_record = res.get_soa()
-        print '[*]\t', found_soa_record[0], found_soa_record[1], found_soa_record[2]
-
-        # Save dictionary of returned record
-        returned_records.extend([{'type':found_soa_record[0],\
-        "mname":found_soa_record[1],'address':found_soa_record[2]
-        }])
-        
-        ip_for_whois.append(found_soa_record[2])
-        
-    except:
-        print "[-] Could not Resolve SOA Recor for",domain
-
-    # Enumerate Name Servers
-    try:
-        for ns_rcrd in res.get_ns():
-            print '[*]\t', ns_rcrd[0], ns_rcrd[1], ns_rcrd[2]
-
-            # Save dictionary of returned record
-            returned_records.extend([{'type':ns_rcrd[0],\
-            "target":ns_rcrd[1],'address':ns_rcrd[2]
-            }])
-            
-            ip_for_whois.append(ns_rcrd[2])
-            
-    except dns.resolver.NoAnswer:
-        print "[-] Could not Resolve NS Records for",domain
-        
-    # Enumerate MX Records
-    try:
-        for mx_rcrd in res.get_mx():
-            print '[*]\t', mx_rcrd[0], mx_rcrd[1], mx_rcrd[2]
-
-            # Save dictionary of returned record
-            returned_records.extend([{'type':mx_rcrd[0],\
-            "exchange":mx_rcrd[1],'address':mx_rcrd[2]
-            }])
-            
-            ip_for_whois.append(mx_rcrd[2])
-            
-    except dns.resolver.NoAnswer:
-        print "[-] Could not Resolve MX Records for",domain
-    
-    # Enumerate A Record for the targeted Domain
-    for a_rcrd in res.get_ip(domain):
-        print '[*]\t', a_rcrd[0], a_rcrd[1], a_rcrd[2]
-        
-        # Save dictionary of returned record
-        returned_records.extend([{'type':a_rcrd[0],\
-        "name":a_rcrd[1],'address':a_rcrd[2]
-        }])
-        
-        ip_for_whois.append(a_rcrd[2])
-        
-    # Enumerate SFP and TXT Records for the target domain
-    text_data = ""
-    spf_text_data = res.get_spf()
-    
-    # Save dictionary of returned record
-    if spf_text_data is not None:
-        returned_records.extend([{'type':spf_text_data[0],\
-        "text":spf_text_data[1]
-        }])
-    
-    txt_text_data = res.get_txt()
-    
-    # Save dictionary of returned record
-    if txt_text_data is not None:
-        returned_records.extend([{'type':txt_text_data[0],\
-        "text":txt_text_data[1]
-        }])
-    
-    if spf_text_data is not None: text_data += spf_text_data[1]
-    if txt_text_data is not None: text_data += txt_text_data[1]
-    
-    # Process ipv4 SPF records if selected
-    if do_spf is not None:
-        found_spf_ranges.extend(re.findall(\
-        '([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}/\d*)',"".join(text_data)))
-        if len(found_spf_ranges) > 0:
-            print "[*] Performing Reverse Look-up of SPF ipv4 Ranges"
-            for c in found_spf_ranges:
-                ip = IPNetwork(c)
-                ip_list = list(ip)
-                for i in ip_list:
-                    ip_spf_list.append(str(i))
-            returned_records.extend(brute_reverse(res,unique(ip_spf_list)))
-        
-        
-    # Enumerate SRV Records for the targeted Domain
-    print '[*] Enumerating SRV Records'
-    srv_rcd = brute_srv(res, domain)
-    if srv_rcd:
-        for r in srv_rcd:
-            ip_for_whois.append(r['address'])
-            returned_records.extend(r)
-    
-    # Do Google Search enumeration if selected
-    if do_google is not None:
-        print '[*] Performing Google Search Enumeration'
-        goo_rcd = goo_result_process(res, scrape_google(domain))
-        if goo_rcd:
-            for r in goo_rcd:
-                ip_for_whois.append(r['address'])
-                returned_records.extend(r)
-                
-    if do_whois:
-        whois_ips(res, ip_for_whois)
-        
-        
-    return returned_records
-
-
 def prettify(elem):
     """
     Return a pretty-printed XML string for the Element.
@@ -701,6 +562,275 @@ def dns_record_from_dict(record_dict_list):
 		xml_doc.append(xml_record)
 
 	return prettify(xml_doc)
+
+
+def create_db(db):
+    """
+    Function will create the specified database if not present and it will create
+    the table needed for storing the data returned by the modules.
+    """
+
+    # Connect to the DB
+    con = sqlite3.connect(db)
+
+    # Create SQL Queries to be used in the script
+    make_table = """CREATE TABLE data (
+    serial integer  Primary Key Autoincrement,
+    type TEXT(8),
+    name TEXT(32),
+    address TEXT(32),
+    target TEXT(32),
+    port TEXT(8),
+    text TEXT(256),
+    zt_dns TEXT(32)
+    )"""
+
+    # Set the cursor for connection
+    con.isolation_level = None
+    cur = con.cursor()
+
+    # Connect and create table
+    cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='data';")
+    if cur.fetchone() == None:
+        cur.execute(make_table)
+        con.commit()
+    else:
+        pass
+
+
+def write_db(db,data):
+    """
+    Function to write DNS Records SOA, PTR, NS, A, AAAA, MX, TXT, SPF and SRV to
+    DB.
+    """
+    records = []
+
+    con = sqlite3.connect(db)
+    # Set the cursor for connection
+    con.isolation_level = None
+    cur = con.cursor()
+
+    # Format list for the record dictionary
+    fmts = {
+       'NS'   : ['type', 'target', 'address'],
+       'SOA'  : ['type', 'mname', 'address'],
+       'MX'   : ['type', 'exchange','address'],
+       'A'    : ['type', 'name', 'address'],
+       'AAAA' : ['type', 'name', 'address'],
+       'PTR'  : ['type', 'name', 'address'],
+       'SRV'  : ['type', 'name', 'target', 'address', 'port'],
+       'SPF'  : ['type','text'],
+       'TXT'  : ['type','text'],
+       'MDNS' : ['type', 'name','host','port','txtRecord']
+    }
+
+    # Normalize the dictionary data
+    for n in data:
+        if n['type'] in fmts:
+            records.append([n[k] for k in fmts[n['type']]])
+        else:
+            t = n['type']
+            del n['type']
+            records.append([t," ".join(n.values())])
+
+    for record in records:
+        # Check if the data we are getting is from a zone trasfer or not.
+        rcd_type = record[0]
+
+        if re.match(r'SOA|PTR|NS|^[A]$|AAAA|MX',rcd_type):
+
+            entry = "insert into data(type,name,address) values ('" + \
+                record[0] + "','" + record[1] + "','" + record[2] + "')"
+            cur.execute(entry)
+            con.commit()
+
+
+        elif re.match(r'TXT|SPF',rcd_type):
+
+            entry = "insert into data(type,text) values ('"+\
+                record[0] + "','" + record[1] +"')"
+            cur.execute(entry)
+            con.commit()
+
+
+        elif re.match(r'SRV',rcd_type):
+
+            entry = "insert into data(type,name,target,address,port) values ('"+\
+                record[0] + "','" + record[1] + "','" + record[2] + "','" +\
+                record[3] + "','" + record[4] +"')"
+            cur.execute(entry)
+            con.commit()
+
+        elif re.match(r'MDNS',rcd_type):
+
+            entry = "insert into data(type,name,target,port,text) values ('"+\
+                record[0] + "','" + record[1] + "','" + record[2] + "','" +\
+                record[3] + "','" + record[4] +"')"
+            cur.execute(entry)
+            con.commit()
+
+        else:
+            entry = "insert into data(type,text) values ('"+\
+                record[0] + "','" + " ".join(record[1:]) +"')"
+            cur.execute(entry)
+            con.commit()
+
+
+
+def general_enum(res, domain, do_axfr, do_google, do_spf, do_whois, xml_file, db_file):
+    """
+    Function for performing general enumeration of a domain. It gets SOA, NS, MX
+    A, AAA and SRV records for a given domain.It Will first try a Zone Transfer
+    if not successful it will try individual record type enumeration. If chosen
+    it will also perform a Google Search and scrape the results for host names and
+    perform an A and AAA query against them.
+    """
+    returned_records = []
+
+    # Var for SPF Record Range Reverse Look-up
+    found_spf_ranges = []
+    ip_spf_list = []
+    
+    # Var to hold the IP Addresses that will be queried in Whois
+    ip_for_whois = []
+    
+    # Check if wildcards are enabled on the target domain 
+    check_wildcard(res, domain)
+
+    # To identify when the records come from a Zone Transfer
+    from_zt =  None
+    
+    # Perform test for Zone Transfer against all NS servers of a Domain
+    if do_axfr is not None:
+        returned_records.extend(res.zone_transfer())
+        if len(returned_records) == 0:
+            from_zt = True
+
+    # If a Zone Trasfer was possible there is no need to enumerate the rest
+    if from_zt == None:
+
+        # Enumerate SOA Record
+
+        try:
+            found_soa_record = res.get_soa()
+            print '[*]\t', found_soa_record[0], found_soa_record[1], found_soa_record[2]
+
+            # Save dictionary of returned record
+            returned_records.extend([{'type':found_soa_record[0],\
+            "mname":found_soa_record[1],'address':found_soa_record[2]
+            }])
+
+            ip_for_whois.append(found_soa_record[2])
+
+        except:
+            print "[-] Could not Resolve SOA Recor for",domain
+
+        # Enumerate Name Servers
+        try:
+            for ns_rcrd in res.get_ns():
+                print '[*]\t', ns_rcrd[0], ns_rcrd[1], ns_rcrd[2]
+
+                # Save dictionary of returned record
+                returned_records.extend([{'type':ns_rcrd[0],\
+                "target":ns_rcrd[1],'address':ns_rcrd[2]
+                }])
+
+                ip_for_whois.append(ns_rcrd[2])
+
+        except dns.resolver.NoAnswer:
+            print "[-] Could not Resolve NS Records for",domain
+
+        # Enumerate MX Records
+        try:
+            for mx_rcrd in res.get_mx():
+                print '[*]\t', mx_rcrd[0], mx_rcrd[1], mx_rcrd[2]
+
+                # Save dictionary of returned record
+                returned_records.extend([{'type':mx_rcrd[0],\
+                "exchange":mx_rcrd[1],'address':mx_rcrd[2]
+                }])
+
+                ip_for_whois.append(mx_rcrd[2])
+
+        except dns.resolver.NoAnswer:
+            print "[-] Could not Resolve MX Records for",domain
+
+        # Enumerate A Record for the targeted Domain
+        for a_rcrd in res.get_ip(domain):
+            print '[*]\t', a_rcrd[0], a_rcrd[1], a_rcrd[2]
+
+            # Save dictionary of returned record
+            returned_records.extend([{'type':a_rcrd[0],\
+            "name":a_rcrd[1],'address':a_rcrd[2]
+            }])
+
+            ip_for_whois.append(a_rcrd[2])
+
+        # Enumerate SFP and TXT Records for the target domain
+        text_data = ""
+        spf_text_data = res.get_spf()
+
+        # Save dictionary of returned record
+        if spf_text_data is not None:
+            returned_records.extend([{'type':spf_text_data[0],\
+            "text":spf_text_data[1]
+            }])
+
+        txt_text_data = res.get_txt()
+
+        # Save dictionary of returned record
+        if txt_text_data is not None:
+            returned_records.extend([{'type':txt_text_data[0],\
+            "text":txt_text_data[1]
+            }])
+
+        if spf_text_data is not None: text_data += spf_text_data[1]
+        if txt_text_data is not None: text_data += txt_text_data[1]
+
+        # Process ipv4 SPF records if selected
+        if do_spf is not None:
+            found_spf_ranges.extend(re.findall(\
+            '([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}/\d*)',"".join(text_data)))
+            if len(found_spf_ranges) > 0:
+                print "[*] Performing Reverse Look-up of SPF ipv4 Ranges"
+                for c in found_spf_ranges:
+                    ip = IPNetwork(c)
+                    ip_list = list(ip)
+                    for i in ip_list:
+                        ip_spf_list.append(str(i))
+                returned_records.extend(brute_reverse(res,unique(ip_spf_list)))
+
+
+        # Enumerate SRV Records for the targeted Domain
+        print '[*] Enumerating SRV Records'
+        srv_rcd = brute_srv(res, domain)
+        if srv_rcd:
+            for r in srv_rcd:
+                ip_for_whois.append(r['address'])
+                returned_records.append(r)
+
+        # Do Google Search enumeration if selected
+        if do_google is not None:
+            print '[*] Performing Google Search Enumeration'
+            goo_rcd = goo_result_process(res, scrape_google(domain))
+            if goo_rcd:
+                for r in goo_rcd:
+                    ip_for_whois.append(r['address'])
+                    returned_records.extend(r)
+
+        if do_whois:
+            whois_rcd = whois_ips(res, ip_for_whois)
+            returned_records.extend(whois_rcd)
+
+        if (xml_file is not None):
+            xml_enum_doc = dns_record_from_dict(returned_records)
+            write_to_file(xml_enum_doc,xml_file)
+        if (db_file is not None):
+            create_db(db_file)
+            write_db(db_file,returned_records)
+
+        sys.exit(0)
+
 
 
 def usage():
@@ -743,7 +873,8 @@ def usage():
     print "  --threads          <number> Number of threads to use in Range Reverse Look-up, Forward"
     print "                              Look-up Brute force and SRV Record Enumeration"
     print "  --lifetime         <number> Time to wait for a server to response to a query."
-    exit(0)
+    print "  --db               <file>   SQLite3 file to save found records.."
+    sys.exit(0)
 
 
 # Main
@@ -769,6 +900,8 @@ def main():
     ip_list = []
     ip_range = None
     ip_range_pattern ='([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})-([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})'
+    results_db = None
+    from_zt = None
     
     #
     # Global Vars
@@ -794,7 +927,8 @@ def main():
                                            'range=',
                                            'do_spf',
                                            'lifetime=',
-                                           'threads='])
+                                           'threads=',
+                                           'db='])
     except getopt.GetoptError:
         print "[-] Wrong Option Provided!"
         usage()
@@ -848,6 +982,8 @@ def main():
             
         elif opt in ('--lifetime'):
             request_timeout = float(arg)
+        elif opt in ('--db'):
+            results_db = arg
             
         elif opt in ('-h'):
             usage()
@@ -866,25 +1002,30 @@ def main():
                     if domain is not None:
                         print '[*] Testing NS Servers for Zone Transfer'
                         returned_records.extend(res.zone_transfer())
+                        from_zt = True
 
                     else:
                         print '[-] No Domain to target specified!'
-                        exit(1)
+                        sys.exit(1)
                     
                 elif r == 'std':
                     if domain is not None:
                         print "[*] Performing General Enumeration of Domain:",domain
-                        std_enum_records = general_enum(res, domain, xfr, goo, spf_enum, do_whois)
-                        if (output_file is not None): returned_records.extend(std_enum_records)
+                        std_enum_records = general_enum(res, domain, xfr, goo,\
+                        spf_enum, do_whois, output_file, results_db)
+                        
+                        #if (output_file is not None) or (results_db is not None):
+                         #   returned_records.extend(std_enum_records)
                     else:
                         print '[-] No Domain to target specified!'
-                        exit(1)
+                        sys.exit(1)
                     
                 elif r == 'rvl':
                     if len(ip_list) > 0:
                         print '[*] Reverse Look-up of a Range'
                         rvl_enum_records = brute_reverse(res, ip_list)
-                        if (output_file is not None): returned_records.extend(rvl_enum_records)
+                        if (output_file is not None) or (results_db is not None):
+                            returned_records.extend(rvl_enum_records)
                     else:
                         print '[-] Failed CIDR or Range is Required for type rvl'
                         
@@ -893,52 +1034,58 @@ def main():
                         print '[*] Performing host and subdomain brute force against', \
                             domain
                         brt_enum_records = brute_domain(res, dict, domain)
-                        if (output_file is not None): returned_records.extend(brt_enum_records)
+                        if (output_file is not None) or (results_db is not None):
+                            returned_records.extend(brt_enum_records)
                     else:
                         print '[-] No Dictionary file specified!'
-                        exit(1)
+                        sys.exit(1)
                         
                 elif r == 'srv':
                     if domain is not None:
                         print '[*] Enumerating Common SRV Records against', \
                             domain
                         srv_enum_records = brute_srv(res, domain)
-                        if (output_file is not None): returned_records.extend(srv_enum_records)
+                        if (output_file is not None) or (results_db is not None):
+                            returned_records.extend(srv_enum_records)
                     else:
                         print '[-] No Domain to target specified!'
-                        exit(1)
+                        sys.exit(1)
                     
                 elif r == 'mdns':
                     print '[*] Enumerating most common mDNS Records on Subnet'
                     mdns_enum_records = mdns_enum()
-                    if (output_file is not None): returned_records.extend(mdns_enum_records)
+                    if (output_file is not None) or (results_db is not None):
+                        returned_records.extend(mdns_enum_records)
                     
                 elif r == 'tld':
                     if domain is not None:
                         print "[*] Performing TLD Brute force Enumeration against", domain
                         tld_enum_records = brute_tlds(res, domain)
-                        if (output_file is not None): returned_records.extend(tld_enum_records)
+                        if (output_file is not None) or (results_db is not None):
+                            returned_records.extend(tld_enum_records)
                     else:
                         print '[-] No Domain to target specified!'
-                        exit(1)
+                        sys.exit(1)
                         
                 elif r == 'goo':
                     if domain is not None:
                         print "[*] Performing Google Search Enumeration against", domain
                         goo_enum_records = goo_result_process(res, scrape_google(domain))
-                        if (output_file is not None): returned_records.extend(goo_enum_records)
+                        if (output_file is not None) or (results_db is not None):
+                            returned_records.extend(goo_enum_records)
                     else:
                         print '[-] No Domain to target specified!'
-                        exit(1)
+                        sys.exit(1)
                         
                 elif r == "snoop":
                     if (dict is not None) and (ns_server is not None):
                         print "[*] Performing Cache Snooping against NS Server:", ns_server
                         cache_enum_records = in_cache(dict,ns_server)
-                        if (output_file is not None): returned_records.extend(cache_enum_records)
+                        if (output_file is not None) or (results_db is not None):
+                            returned_records.extend(cache_enum_records)
                     else:
                         print '[-] No Domain or Name Server to target specified!'
-                        exit(1)
+                        sys.exit(1)
                     
                 else:
                     print "[-] This type of scan is not in the list", r
@@ -947,21 +1094,27 @@ def main():
                     
             except dns.resolver.NXDOMAIN:
                 print "[-] Could not resolve domain:",domain
-                exit(1)
+                sys.exit(1)
             except dns.exception.Timeout:
                 print "[-] A timeout error occurred please make sure you can reach the target DNS Servers"
                 print "[-] directly and requests are not being filtered. Increase the timeout from 1.0 second"
                 print "[-] to a higher number with --lifetime <time> option."
-                exit(1)
+                sys.exit(1)
         
         # if an output xml file is specified it will write returned results.
         if (output_file is not None): 
             xml_enum_doc = dns_record_from_dict(returned_records)
             write_to_file(xml_enum_doc,output_file)
+        if (results_db is not None):
+            create_db(results_db)
+            write_db(results_db,returned_records)
         exit(0)
+        
     elif domain is not None:
         print "[*] Performing General Enumeration of Domain:",domain
-        std_enum_records = general_enum(res, domain, xfr, goo, spf_enum, do_whois)
+        std_enum_records = general_enum(res, domain, xfr, goo,\
+        spf_enum, do_whois, output_file, results_db)
+
         if (output_file is not None): returned_records.extend(std_enum_records)
         
         # if an output xml file is specified it will write returned results.
