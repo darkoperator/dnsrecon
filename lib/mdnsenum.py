@@ -18,6 +18,7 @@
 
 import pybonjour
 import select
+import re
 
 def mdns_browse(regtype):
     """
@@ -40,12 +41,19 @@ def mdns_browse(regtype):
         port,
         txtRecord,
         ):
+
+        n = re.compile(u'(\x00|\x07|\x1A|\x16|\x06|\x08|\x1f|\xdb|\xb2|\xb0|\xb1'
+                   u'\xc9|\xb9|\xcd|\u2019|\u2018|\u2019|\u201c|\u201d|\u2407)')
+
+        t = re.compile(r'[\x00-\x1f|\x7f|\x0e]')
+
         if errorCode == pybonjour.kDNSServiceErr_NoError:
             results.append({
-                'name': fullname,
+                'type': 'MDNS',
+                'name': n.sub(" ",fullname),
                 'host': str(hosttarget).replace('\032'," "),
                 'port': str(port),
-                'txtRecord':txtRecord.strip()
+                'txtRecord': t.sub(" ",txtRecord.strip())
                 })
             resolved.append(True)
 
