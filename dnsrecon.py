@@ -603,77 +603,57 @@ def write_db(db,data):
     Function to write DNS Records SOA, PTR, NS, A, AAAA, MX, TXT, SPF and SRV to
     DB.
     """
-    records = []
 
     con = sqlite3.connect(db)
     # Set the cursor for connection
     con.isolation_level = None
     cur = con.cursor()
+    records = []
 
-    # Format list for the record dictionary
-    fmts = {
-       'NS'   : ['type', 'target', 'address'],
-       'SOA'  : ['type', 'mname', 'address'],
-       'MX'   : ['type', 'exchange','address'],
-       'A'    : ['type', 'name', 'address'],
-       'AAAA' : ['type', 'name', 'address'],
-       'PTR'  : ['type', 'name', 'address'],
-       'SRV'  : ['type', 'name', 'target', 'address', 'port'],
-       'SPF'  : ['type','text'],
-       'TXT'  : ['type','text'],
-       'MDNS' : ['type', 'name','host','port','txtRecord']
-    }
 
     # Normalize the dictionary data
     for n in data:
-        if n['type'] in fmts:
-            records.append([n[k] for k in fmts[n['type']]])
+
+        if re.match(r'PTR|^[A]$|AAAA',n['type']):
+            query = 'insert into data( type, name, address ) '+\
+            'values( "%(type)s", "%(name)s","%(address)s" )' % n
+
+        elif re.match(r'NS',n['type']):
+            query = 'insert into data( type, name, address ) '+\
+            'values( "%(type)s", "%(target)s", "%(address)s" )' % n
+
+        elif re.match(r'SOA',n['type']):
+            query = 'insert into data( type, name, address ) '+\
+            'values( "%(type)s", "%(mname)s", "%(address)s" )' % n
+
+        elif re.match(r'MX',n['type']):
+            query = 'insert into data( type, name, address ) '+\
+            'values( "%(type)s", "%(exchange)s", "%(address)s" )' % n
+
+        elif re.match(r'TXT|SPF',n['type']):
+            query = 'insert into data( type, text) '+\
+            'values( "%(type)s", "%(text)s" )' % n
+
+        elif re.match(r'SRV',n['type']):
+            query = 'insert into data( type, name, target, address, port ) '+\
+            'values( "%(type)s", "%(name)s" , "%(target)s", "%(address)s" ,"%(port)s" )' % n
+
+        elif re.match(r'MDNS',n['type']):
+            query = 'insert into data( type, name, target, port, text ) '+\
+            'values( "%(type)s", "%(name)s", "%(host)s, "%(port)s, "%(txtRecord)s" )' % n
+
         else:
+            # Handle not common records
             t = n['type']
             del n['type']
-            records.append([t," ".join(n.values())])
+            record_data =  "".join([' %s=%s,' % (key, value) for key, value in n.items()])
+            records = [t,record_data]
+            query = "insert into data(type,text) values ('"+\
+                records[0] + "','" + records[1] +"')"
 
-    for record in records:
-        # Check if the data we are getting is from a zone trasfer or not.
-        rcd_type = record[0]
-
-        if re.match(r'SOA|PTR|NS|^[A]$|AAAA|MX',rcd_type):
-
-            entry = "insert into data(type,name,address) values ('" + \
-                record[0] + "','" + record[1] + "','" + record[2] + "')"
-            cur.execute(entry)
-            con.commit()
-
-
-        elif re.match(r'TXT|SPF',rcd_type):
-
-            entry = "insert into data(type,text) values ('"+\
-                record[0] + "','" + record[1] +"')"
-            cur.execute(entry)
-            con.commit()
-
-
-        elif re.match(r'SRV',rcd_type):
-
-            entry = "insert into data(type,name,target,address,port) values ('"+\
-                record[0] + "','" + record[1] + "','" + record[2] + "','" +\
-                record[3] + "','" + record[4] +"')"
-            cur.execute(entry)
-            con.commit()
-
-        elif re.match(r'MDNS',rcd_type):
-
-            entry = "insert into data(type,name,target,port,text) values ('"+\
-                record[0] + "','" + record[1] + "','" + record[2] + "','" +\
-                record[3] + "','" + record[4] +"')"
-            cur.execute(entry)
-            con.commit()
-
-        else:
-            entry = "insert into data(type,text) values ('"+\
-                record[0] + "','" + " ".join(record[1:]) +"')"
-            cur.execute(entry)
-            con.commit()
+        # Execute Query and commit
+        cur.execute(query)
+        con.commit()
 
 
 
@@ -982,6 +962,7 @@ def main():
             
         elif opt in ('--lifetime'):
             request_timeout = float(arg)
+            
         elif opt in ('--db'):
             results_db = arg
             
@@ -1095,6 +1076,7 @@ def main():
             except dns.resolver.NXDOMAIN:
                 print "[-] Could not resolve domain:",domain
                 sys.exit(1)
+
             except dns.exception.Timeout:
                 print "[-] A timeout error occurred please make sure you can reach the target DNS Servers"
                 print "[-] directly and requests are not being filtered. Increase the timeout from 1.0 second"
@@ -1105,10 +1087,13 @@ def main():
         if (output_file is not None): 
             xml_enum_doc = dns_record_from_dict(returned_records)
             write_to_file(xml_enum_doc,output_file)
+
+        # if an output db file is specified it will write returned results.
         if (results_db is not None):
             create_db(results_db)
             write_db(results_db,returned_records)
-        exit(0)
+            
+        sys.exit(0)
         
     elif domain is not None:
         print "[*] Performing General Enumeration of Domain:",domain
@@ -1121,7 +1106,13 @@ def main():
         if (output_file is not None): 
             xml_enum_doc = dns_record_from_dict(returned_records)
             write_to_file(xml_enum_doc,output_file)
-        exit(0)
+            
+        # if an output db file is specified it will write returned results.
+        if (results_db is not None):
+            create_db(results_db)
+            write_db(results_db,returned_records)
+
+        sys.exit(0)
     else:
         usage()
         
