@@ -802,14 +802,9 @@ def general_enum(res, domain, do_axfr, do_google, do_spf, do_whois, xml_file, db
             whois_rcd = whois_ips(res, ip_for_whois)
             returned_records.extend(whois_rcd)
 
-        if (xml_file is not None):
-            xml_enum_doc = dns_record_from_dict(returned_records)
-            write_to_file(xml_enum_doc,xml_file)
-        if (db_file is not None):
-            create_db(db_file)
-            write_db(db_file,returned_records)
+        return returned_records
 
-        sys.exit(0)
+        #sys.exit(0)
 
 
 
@@ -995,8 +990,8 @@ def main():
                         std_enum_records = general_enum(res, domain, xfr, goo,\
                         spf_enum, do_whois, output_file, results_db)
                         
-                        #if (output_file is not None) or (results_db is not None):
-                         #   returned_records.extend(std_enum_records)
+                        if (output_file is not None) or (results_db is not None):
+                           returned_records.extend(std_enum_records)
                     else:
                         print '[-] No Domain to target specified!'
                         sys.exit(1)
@@ -1005,6 +1000,7 @@ def main():
                     if len(ip_list) > 0:
                         print '[*] Reverse Look-up of a Range'
                         rvl_enum_records = brute_reverse(res, ip_list)
+
                         if (output_file is not None) or (results_db is not None):
                             returned_records.extend(rvl_enum_records)
                     else:
@@ -1015,6 +1011,7 @@ def main():
                         print '[*] Performing host and subdomain brute force against', \
                             domain
                         brt_enum_records = brute_domain(res, dict, domain)
+
                         if (output_file is not None) or (results_db is not None):
                             returned_records.extend(brt_enum_records)
                     else:
@@ -1026,6 +1023,7 @@ def main():
                         print '[*] Enumerating Common SRV Records against', \
                             domain
                         srv_enum_records = brute_srv(res, domain)
+
                         if (output_file is not None) or (results_db is not None):
                             returned_records.extend(srv_enum_records)
                     else:
@@ -1096,23 +1094,33 @@ def main():
         sys.exit(0)
         
     elif domain is not None:
-        print "[*] Performing General Enumeration of Domain:",domain
-        std_enum_records = general_enum(res, domain, xfr, goo,\
-        spf_enum, do_whois, output_file, results_db)
+        try:
+            print "[*] Performing General Enumeration of Domain:",domain
+            std_enum_records = general_enum(res, domain, xfr, goo,\
+            spf_enum, do_whois, output_file, results_db)
 
-        if (output_file is not None): returned_records.extend(std_enum_records)
-        
-        # if an output xml file is specified it will write returned results.
-        if (output_file is not None): 
-            xml_enum_doc = dns_record_from_dict(returned_records)
-            write_to_file(xml_enum_doc,output_file)
-            
-        # if an output db file is specified it will write returned results.
-        if (results_db is not None):
-            create_db(results_db)
-            write_db(results_db,returned_records)
+            if (output_file is not None): returned_records.extend(std_enum_records)
 
-        sys.exit(0)
+            # if an output xml file is specified it will write returned results.
+            if (output_file is not None):
+                xml_enum_doc = dns_record_from_dict(returned_records)
+                write_to_file(xml_enum_doc,output_file)
+
+            # if an output db file is specified it will write returned results.
+            if (results_db is not None):
+                create_db(results_db)
+                write_db(results_db,returned_records)
+
+            sys.exit(0)
+        except dns.resolver.NXDOMAIN:
+            print "[-] Could not resolve domain:",domain
+            sys.exit(1)
+
+        except dns.exception.Timeout:
+            print "[-] A timeout error occurred please make sure you can reach the target DNS Servers"
+            print "[-] directly and requests are not being filtered. Increase the timeout from 1.0 second"
+            print "[-] to a higher number with --lifetime <time> option."
+            sys.exit(1)
     else:
         usage()
         
