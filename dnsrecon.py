@@ -817,7 +817,6 @@ def usage():
     print "  -r, --range       <range>   IP Range for reverse look-up brute force (first-last)."
     print "  -n, --name_server <name>    Domain server to use, if none is given the SOA of the"
     print "                              target will be used"
-    print "  -f, --output_file <file>    File to save found records."
     print "  -D, --dictionary  <file>    Dictionary file of sub-domain and hostnames to use for"
     print "                              brute force."
     print "  -t, --type        <types>   Specify the type of enumeration to perform:"
@@ -848,7 +847,8 @@ def usage():
     print "  --threads          <number> Number of threads to use in Range Reverse Look-up, Forward"
     print "                              Look-up Brute force and SRV Record Enumeration"
     print "  --lifetime         <number> Time to wait for a server to response to a query."
-    print "  --db               <file>   SQLite3 file to save found records.."
+    print "  --db               <file>   SQLite3 file to save found records."
+    print "  --xml              <file>   XML File to save found records."
     sys.exit(0)
 
 
@@ -888,12 +888,12 @@ def main():
     # Define options
     #
     try:
-        options, remainder = getopt.getopt(sys.argv[1:], 'hd:c:n:f:D:t:xq:gwr:s',
+        options, remainder = getopt.getopt(sys.argv[1:], 'hd:c:n:x:D:t:xq:gwr:s',
                                            ['help',
                                            'domain=',
                                            'cidr=',
                                            'name_server=',
-                                           'output_file=',
+                                           'xml=',
                                            'dictionary=',
                                            'type=',
                                            'axfr',
@@ -925,7 +925,7 @@ def main():
         elif opt in ('-n','--name_server'):
             ns_server = arg
             
-        elif opt in ('-f','--output_file'):
+        elif opt in ('-x','--xml'):
             output_file = arg
             
         elif opt in ('-D','--dictionary'):
