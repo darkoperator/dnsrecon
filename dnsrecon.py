@@ -675,7 +675,7 @@ def general_enum(res, domain, do_axfr, do_google, do_spf, do_whois, xml_file, db
     ip_for_whois = []
     
     # Check if wildcards are enabled on the target domain 
-    #check_wildcard(res, domain)
+    check_wildcard(res, domain)
 
     # To identify when the records come from a Zone Transfer
     from_zt =  None
