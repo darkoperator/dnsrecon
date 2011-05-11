@@ -264,7 +264,7 @@ def brute_srv(res, domain):
     brtdata = []
     returned_records = []
     srvrcd = [
-        '_gc._tcp.', '_kerberos._tcp.', '_kerberos._udp.', '_ldap._tcp',
+        '_gc._tcp.', '_kerberos._tcp.', '_kerberos._udp.', '_ldap._tcp.',
         '_test._tcp.', '_sips._tcp.', '_sip._udp.', '_sip._tcp.', '_aix._tcp.',
         '_aix._tcp.', '_finger._tcp.', '_ftp._tcp.', '_http._tcp.', '_nntp._tcp.',
         '_telnet._tcp.', '_whois._tcp.', '_h323cs._tcp.', '_h323cs._udp.',
@@ -276,7 +276,8 @@ def brute_srv(res, domain):
         '_pgprevokations._tcp.', '_cmp._tcp.', '_svcp._tcp.', '_crl._tcp.',
         '_ocsp._tcp.', '_PKIXREP._tcp.', '_smtp._tcp.', '_hkp._tcp.',
         '_hkps._tcp.', '_jabber._udp.','_xmpp-server._udp.', '_xmpp-client._udp.',
-        '_jabber-client._tcp.', '_jabber-client._udp.',
+        '_jabber-client._tcp.', '_jabber-client._udp.','_kerberos.tcp.dc._msdcs.',
+        '_ldap._tcp.ForestDNSZones.'
         ]
 
     
@@ -298,8 +299,7 @@ def brute_srv(res, domain):
         for rcd_found in brtdata:
             for rcd in rcd_found:
                 returned_records.extend([{'type':rcd[0],\
-                'name':rcd[1],'target':rcd[2],'address':rcd[3],'port':rcd[4],\
-                'weight':rcd[5]
+                'name':rcd[1],'target':rcd[2],'address':rcd[3],'port':rcd[4]
                 }])
     
     else:
@@ -675,7 +675,7 @@ def general_enum(res, domain, do_axfr, do_google, do_spf, do_whois, xml_file, db
     ip_for_whois = []
     
     # Check if wildcards are enabled on the target domain 
-    check_wildcard(res, domain)
+    #check_wildcard(res, domain)
 
     # To identify when the records come from a Zone Transfer
     from_zt =  None
@@ -871,7 +871,7 @@ def main():
     spf_enum = None
     do_whois = None
     thread_num = 10
-    request_timeout = 1.5
+    request_timeout = 3.0
     ip_list = []
     ip_range = None
     ip_range_pattern ='([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})-([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})'
