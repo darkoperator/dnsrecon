@@ -30,6 +30,7 @@ class DnsHelper:
         self._domain = domain
         if ns_server:
             print "[*] Changing to server: ", ns_server
+            print "[*] Timeout set to:", request_timeout
             self._res = dns.resolver.Resolver(configure=False)
             self._res.nameservers = [ns_server]
         else:
@@ -219,7 +220,7 @@ class DnsHelper:
         """
         found_ip_add = []
         ipv4 = self.get_a(hostname)
-        sleep(0.2)
+        sleep(2.0)
         if ipv4:
             for ip in ipv4:
                 found_ip_add.append(["A", hostname, ip])
@@ -240,8 +241,14 @@ class DnsHelper:
             answers = self._res.query(host, 'SRV')
             for a in answers:
                 target = a.target.to_text()
-                for ip in self.get_ip(target):
-                    record.append(['SRV', host, a.target.to_text(), ip[2],
+                #print a.target.to_text()
+                ips = self.get_ip(target[:-1])
+                if ips:
+                    for ip in ips:
+                        record.append(['SRV', host, a.target.to_text(), ip[2],
+                                  str(a.port), str(a.weight)])
+                else:
+                    record.append(['SRV', host, a.target.to_text(), "no_ip",
                                   str(a.port), str(a.weight)])
         except:
             return record
