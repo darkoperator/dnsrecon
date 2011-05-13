@@ -950,7 +950,11 @@ def main():
             
         elif opt in ('-r','--range'):
             ip_range = re.findall(ip_range_pattern,arg)
-            ip_list.extend(expand_range(ip_range[0][0],ip_range[0][1]))
+            try:
+                ip_list.extend(expand_range(ip_range[0][0],ip_range[0][1]))
+            except:
+                print "[-] Make sure that you specified <start IP>-<end IP> with no spaces."
+                sys.exit(1)
             
         elif opt in ('--theads'):
             thread_num = int(arg)
