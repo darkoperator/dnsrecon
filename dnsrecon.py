@@ -888,7 +888,7 @@ def main():
     # Define options
     #
     try:
-        options, remainder = getopt.getopt(sys.argv[1:], 'hd:c:n:x:D:t:xq:gwr:s',
+        options, remainder = getopt.getopt(sys.argv[1:], 'hd:c:n:x:D:t:aq:gwr:s',
                                            ['help',
                                            'domain=',
                                            'cidr=',
@@ -936,7 +936,7 @@ def main():
                 print "[-] File",arg,"does not exist!"
                 exit(1)
                 
-        elif opt in ('-x','--axfr'):
+        elif opt in ('-a','--axfr'):
             xfr = True
             
         elif opt in ('-g','--google'):
