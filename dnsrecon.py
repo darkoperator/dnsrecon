@@ -838,7 +838,7 @@ def usage():
     print "                                      option.\n"
     print "                              tld     Will remove the TLD of given domain and test against"
     print "                                      all TLD's registered in IANA\n"
-    print "  -x, --axfr                  Perform AXFR with the standard enumeration."
+    print "  -a, --axfr                  Perform AXFR with the standard enumeration."
     print "  -s, --do_spf                Perform Reverse Look-up of ipv4 ranges in the SPF Record of the"
     print "                              targeted domain with the standard enumeration."
     print "  -g, --google                Perform Google enumeration with the standard enumeration."
