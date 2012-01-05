@@ -1081,7 +1081,7 @@ def main():
 
             except dns.exception.Timeout:
                 print "[-] A timeout error occurred please make sure you can reach the target DNS Servers"
-                print "[-] directly and requests are not being filtered. Increase the timeout from 1.0 second"
+                print "[-] directly and requests are not being filtered. Increase the timeout from", request_timeout, "second"
                 print "[-] to a higher number with --lifetime <time> option."
                 sys.exit(1)
         
@@ -1122,7 +1122,7 @@ def main():
 
         except dns.exception.Timeout:
             print "[-] A timeout error occurred please make sure you can reach the target DNS Servers"
-            print "[-] directly and requests are not being filtered. Increase the timeout from 1.0 second"
+            print "[-] directly and requests are not being filtered. Increase the timeout from", request_timeout, "second"
             print "[-] to a higher number with --lifetime <time> option."
             sys.exit(1)
     else:
