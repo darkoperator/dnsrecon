@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+	#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 #    Copyright (C) 2010  Carlos Perez
@@ -17,7 +17,7 @@
 #    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 from time import sleep
-
+import re
 import dns.query
 import dns.resolver
 import dns.reversename
@@ -55,36 +55,62 @@ class DnsHelper:
             return False
         else:
             return True
-    
+
+    def resolve(self, target, type):
+        """
+        Function for performing general resolution types returning the RDATA
+        """
+        answers = self._res.query(target, type)
+        return answers
+
     def get_a(self, host_trg):
         """
         Function for resolving the A Record for a given host. Returns an Array of
-        the IP Address it resolves to.
+        the IP Address it resolves to. It will also return CNAME data.
         """
         address = []
         try:
             ipv4_answers = self._res.query(host_trg, 'A')
-            for ardata in ipv4_answers:
-                address.append(ardata.address)
-                return address
+            for ardata in ipv4_answers.response.answer:
+                for rdata in ardata:
+                    if rdata.rdtype == 5:
+                        address.append(["CNAME", host_trg, rdata.target.to_text()])
+                        host_trg = rdata.target.to_text()
+                    else:
+                        address.append(["A", host_trg, rdata.address])
         except:
             return address
-
+        return address
 
     def get_aaaa(self, host_trg):
         """
         Function for resolving the AAAA Record for a given host. Returns an Array of
-        the IP Address it resolves to.
+        the IP Address it resolves to. It will also return CNAME data.
         """
         address = []
         try:
             ipv6_answers = self._res.query(host_trg, 'AAAA')
-            for ardata in ipv6_answers:
-                address.append(ardata.address)
-                return address
+            for ardata in ipv6_answers.response.answer:
+                for rdata in ardata:
+                    if rdata.rdtype == 5:
+                        address.append(["CNAME", host_trg, rdata.target.to_text()])
+                        host_trg = rdata.target.to_text()
+                    else:
+                        address.append(["AAAA", host_trg, rdata.address])
         except:
             return address
+        return address
 
+    def get_ip(self, hostname):
+        """
+        Function resolves a host name to its given A and/or AAA record. Returns Array
+        of found hosts and IPv4 or IPv6 Address.
+        """
+        found_ip_add = []
+        found_ip_add.extend(self.get_a(hostname))
+        found_ip_add.extend(self.get_aaaa(hostname))
+
+        return found_ip_add
 
     def get_mx(self):
         """
@@ -137,7 +163,6 @@ class DnsHelper:
             return ns_srvs
         except:
             return ns_srvs
-
 
     def get_soa(self):
         """
@@ -212,26 +237,7 @@ class DnsHelper:
         except:
             return None
 
-    
-    def get_ip(self, hostname):
-        """
-        Function resolves a host name to its given A and/or AAA record. Returns Array
-        of found hosts and IPv4 or IPv6 Address.
-        """
-        found_ip_add = []
-        ipv4 = self.get_a(hostname)
-        sleep(2.0)
-        if ipv4:
-            for ip in ipv4:
-                found_ip_add.append(["A", hostname, ip])
-        ipv6 = self.get_aaaa(hostname)
-
-        if ipv6:
-            for ip in ipv6:
-                found_ip_add.append(["AAAA", hostname, ip])
-
-        return found_ip_add
-        
+            
     def get_srv(self, host):
         """
         Function for resolving SRV Records.
@@ -245,14 +251,24 @@ class DnsHelper:
                 ips = self.get_ip(target[:-1])
                 if ips:
                     for ip in ips:
-                        record.append(['SRV', host, a.target.to_text(), ip[2],
-                                  str(a.port), str(a.weight)])
+                        if re.search('(A|AAAA)',ip[0]):
+                            record.append(['SRV', host, a.target.to_text(), ip[2],
+                                      str(a.port), str(a.weight)])
                 else:
                     record.append(['SRV', host, a.target.to_text(), "no_ip",
                                   str(a.port), str(a.weight)])
         except:
             return record
         return record
+
+    def get_nsec(self, host):
+        """
+        Function for querying for a NSEC record and retriving the rdata object.
+        This function is used mostly for performing a Zone Walk against a zone.
+        """
+        answer = self._res.query(host, 'NSEC')
+        return answer
+
     def zone_transfer(self):
         """
         Function for testing for zone transfers for a given Domain, it will parse the
@@ -502,7 +518,7 @@ class DnsHelper:
                         for rdata in rdataset:
                             print '[*]\t', 'NSEC3', algorithm_to_text(rdata.algorithm), rdata.flags, \
                             rdata.iterations, rdata.salt
-                            zone_records.append({'zone_server':ns_srv, 'type':'NSEC', \
+                            zone_records.append({'zone_server':ns_srv, 'type':'NSEC3', \
                                                 'algorithm':algorithm_to_text(rdata.algorithm), \
                                                 'flags':rdata.flags, \
                                                 'iterations':rdata.iterations, \
@@ -542,13 +558,15 @@ class DnsHelper:
 
 def main():
     resolver = DnsHelper('google.com')
-    print resolver.get_mx()
+    print resolver.get_a("www.google.com")
+    print resolver.get_aaaa('baddata-cname-to-baddata-aaaa.test.dnssec-tools.org')
+#    print resolver.get_mx()
     print resolver.get_ip('www.google.com')
-    print resolver.get_ns()
-    print resolver.get_soa()
-    print resolver.get_txt()
-    print resolver.get_spf()
-    tresolver = DnsHelper('owasp.org')
-    print tresolver.zone_transfer()
+#    print resolver.get_ns()
+#    print resolver.get_soa()
+#    print resolver.get_txt()
+#    print resolver.get_spf()
+#    tresolver = DnsHelper('owasp.org')
+#    print tresolver.zone_transfer()
 if __name__ == "__main__":
     main()

@@ -18,7 +18,7 @@
 #    along with this program; if not, write to the Free Software
 #    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
-__version__ = '0.4.1'
+__version__ = '0.5'
 __author__ = 'Carlos Perez, Carlos_Perez@darkoperator.com'
 
 __doc__ = """
@@ -54,6 +54,10 @@ import dns.rdatatype
 import dns.resolver
 import dns.reversename
 import dns.zone
+import dns.message
+import dns.rdata
+import dns.rdatatype
+from dns.dnssec import algorithm_to_text
 
 from netaddr import *
 
@@ -247,8 +251,9 @@ def brute_tlds(res, domain):
     # Process the output of the threads.
     for rcd_found in brtdata:
         for rcd in rcd_found:
-            print "[*]\t"," ".join(rcd)
-            found_tlds.extend([{'type':rcd[0],'name':rcd[1],'address':rcd[2]}])
+            if re.search(r'^A',rcd[0]):
+                print "[*]\t"," ".join(rcd)
+                found_tlds.extend([{'type':rcd[0],'name':rcd[1],'address':rcd[2]}])
     
     print "[*]", len(found_tlds), "Records Found"
 
@@ -374,8 +379,9 @@ def brute_domain(res, dict, dom):
         # Process the output of the threads.
         for rcd_found in brtdata:
             for rcd in rcd_found:
+                if re.search(r'^A',rcd[0]):
                # print "[*]\t"," ".join(rcd)
-                found_hosts.extend([{'type':rcd[0],'name':rcd[1],'address':rcd[2]}])
+                    found_hosts.extend([{'type':rcd[0],'name':rcd[1],'address':rcd[2]}])
         
         # Clear Global variable
         brtdata = []
@@ -475,11 +481,12 @@ def goo_result_process(res, found_hosts):
     returned_records = []
     for sd in found_hosts:
         for sdip in res.get_ip(sd):
-            print '[*]\t', sdip[0], sdip[1], sdip[2]
+            if re.search(r'^A',sdip[0]):
+                print '[*]\t', sdip[0], sdip[1], sdip[2]
             
-            returned_records.extend([{'type':sdip[0], 'name':sdip[1], \
-            'address':sdip[2]
-            }])
+                returned_records.extend([{'type':sdip[0], 'name':sdip[1], \
+                'address':sdip[2]
+                }])
     return returned_records
 
 def get_whois_nets_iplist(ip_list):
@@ -655,10 +662,102 @@ def write_db(db,data):
         # Execute Query and commit
         cur.execute(query)
         con.commit()
+def dns_sec_check(domain,res):
+    nsec_algos = [1,2,3,4,5]
+    nsec3_algos = [6,7]
+    try:
+        answer = res.resolve(domain, 'DNSKEY')
+        print "[*] DNSSEC is configured for", domain
+        print "[*] DNSKEYs:"
+        for rdata in answer:
+            if rdata.flags == 256:
+                key_type = "ZSK"
 
+            if rdata.flags == 257:
+                key_type = "KSk"
 
+            if rdata.algorithm in nsec_algos:
+                print "[*]\tNSEC", key_type, algorithm_to_text(rdata.algorithm), dns.rdata._hexify(rdata.key)
+            if rdata.algorithm in nsec3_algos:
+                print "[*]\tNSEC3", key_type, algorithm_to_text(rdata.algorithm), dns.rdata._hexify(rdata.key)
 
-def general_enum(res, domain, do_axfr, do_google, do_spf, do_whois, xml_file, db_file):
+    except dns.resolver.NXDOMAIN:
+        print "[-] Could not resolve domain:", domain
+        sys.exit(1)
+
+    except dns.exception.Timeout:
+        print "[-] A timeout error occurred please make sure you can reach the target DNS Servers"
+        print "[-] directly and requests are not being filtered. Increase the timeout from", request_timeout, "second"
+        print "[-] to a higher number with --lifetime <time> option."
+        sys.exit(1)
+    except dns.resolver.NoAnswer:
+        print "[-] DNSSEC is not configured for", domain
+
+def zone_walk(domain, res):
+    returned_records = []
+    found_records = []
+    print "[*] Performing NSEC Zone Walk for", domain
+    
+    # Check for the presense of a NSEC record, if none exit.
+    try:
+        answer = res.get_nsec(domain)
+    except dns.resolver.NoAnswer:
+        print "[-] This Zone can not be walked!"
+        return
+
+    # Process initial information from request
+    for arc in answer.response.authority:
+        for ns in arc:
+            name = ns.target.to_text()
+            for ip in res.get_ip(name):
+                print "[*]\tNS",name,ip[-1]
+                returned_records.extend([{'type':"NS",\
+                "target":name,'address':ip
+                }])
+
+    while answer:
+        try:
+            for rdata in answer:
+                # Make sure we do not end up in a loop where the the NSEC record
+                # keeps repeating the zone.
+                if rdata.next in found_records:
+                    answer = None
+                    break
+                #print rdata.to_text()
+                rcd_type = None
+                rcd_type = re.search('( A | AAAA)',rdata.to_text())
+                if rcd_type:
+                    ip_info = res.get_ip(rdata.next)
+                    if len(ip_info) > 0:
+                        for a_rcrd in ip_info:
+                            print '[*]\t', a_rcrd[0], a_rcrd[1], a_rcrd[2]
+                            returned_records.extend([{'type':a_rcrd[0],'name':a_rcrd[1],'address':a_rcrd[2]}])
+                    else:
+                        print "[*]\t",rcd_type.group(0).strip(), rdata.next, "no_ip"
+
+                elif re.search(' SRV ',rdata.to_text()):
+                    for rcd in res.get_srv(rdata.next.to_text()):
+                        print "[*]\t"," ".join(rcd)
+                        returned_records.extend([{'type':rcd[0],\
+                        'name':rcd[1],'target':rcd[2],'address':rcd[3],'port':rcd[4]
+                        }])
+
+                elif re.search('( TXT|SPF)',rdata.to_text()):
+                    print "[*]\t", rdata.to_text()
+                # Save record in list of found hosts
+                found_records.append(rdata.next)
+
+                # Get the next record
+                #answer = None
+                answer = res.get_nsec(rdata.next)
+        # Break out of the loop once there are no more records given for the
+        # Zone
+        except dns.resolver.NoAnswer:
+            break
+           
+    return returned_records
+
+def general_enum(res, domain, do_axfr, do_google, do_spf, do_whois, zw):
     """
     Function for performing general enumeration of a domain. It gets SOA, NS, MX
     A, AAA and SRV records for a given domain.It Will first try a Zone Transfer
@@ -689,6 +788,9 @@ def general_enum(res, domain, do_axfr, do_google, do_spf, do_whois, xml_file, db
 
     # If a Zone Trasfer was possible there is no need to enumerate the rest
     if from_zt == None:
+        
+        # Check if DNSSEC is configured
+        dns_sec_check(domain,res)
 
         # Enumerate SOA Record
 
@@ -803,6 +905,9 @@ def general_enum(res, domain, do_axfr, do_google, do_spf, do_whois, xml_file, db
             whois_rcd = whois_ips(res, ip_for_whois)
             returned_records.extend(whois_rcd)
 
+        if zw:
+            returned_records.extend(zone_walk(domain, res))
+        
         return returned_records
 
         #sys.exit(0)
@@ -821,30 +926,32 @@ def usage():
     print "  -D, --dictionary  <file>    Dictionary file of sub-domain and hostnames to use for"
     print "                              brute force."
     print "  -t, --type        <types>   Specify the type of enumeration to perform:"
-    print "                              mdns    To Enumerate local subnet with mDNS.\n"
-    print "                              std     To Enumerate general record types, enumerates."
-    print "                                      SOA, NS, A, AAAA, MX and SRV if AXRF on the"
-    print "                                      NS Servers fail.\n"
-    print "                              rvl     To Reverse Look Up a given CIDR IP range.\n"
-    print "                              brt     To Brute force Domains and Hosts using a given"
-    print "                                      dictionary.\n"
-    print "                              srv     To Enumerate common SRV Records for a given \n"
-    print "                                      domain.\n"
-    print "                              axfr    Test all NS Servers in a domain for misconfigured"
-    print "                                      zone transfers.\n"
-    print "                              goo     Perform Google search for sub-domains and hosts.\n"
-    print "                              snoop   To Perform a Cache Snooping against all NS "
-    print "                                      servers for a given domain, testing all with"
-    print "                                      file containing the domains, file given with -D"
-    print "                                      option.\n"
-    print "                              tld     Will remove the TLD of given domain and test against"
-    print "                                      all TLD's registered in IANA\n"
-    print "  -a, --axfr                  Perform AXFR with the standard enumeration."
-    print "  -s, --do_spf                Perform Reverse Look-up of ipv4 ranges in the SPF Record of the"
+    print "                              mdns     To Enumerate local subnet with mDNS.\n"
+    print "                              std      To Enumerate general record types, enumerates."
+    print "                                       SOA, NS, A, AAAA, MX and SRV if AXRF on the"
+    print "                                       NS Servers fail.\n"
+    print "                              rvl      To Reverse Look Up a given CIDR IP range.\n"
+    print "                              brt      To Brute force Domains and Hosts using a given"
+    print "                                       dictionary.\n"
+    print "                              srv      To Enumerate common SRV Records for a given \n"
+    print "                                       domain.\n"
+    print "                              axfr     Test all NS Servers in a domain for misconfigured"
+    print "                                       zone transfers.\n"
+    print "                              goo      Perform Google search for sub-domains and hosts.\n"
+    print "                              snoop    To Perform a Cache Snooping against all NS "
+    print "                                       servers for a given domain, testing all with"
+    print "                                       file containing the domains, file given with -D"
+    print "                                       option.\n"
+    print "                              tld      Will remove the TLD of given domain and test against"
+    print "                                       all TLD's registered in IANA\n"
+    print "                              zonewalk Will perform a DNSSEC Zone Walk using NSEC Records.\n"
+    print "  -a                          Perform AXFR with the standard enumeration."
+    print "  -s                          Perform Reverse Look-up of ipv4 ranges in the SPF Record of the"
     print "                              targeted domain with the standard enumeration."
-    print "  -g, --google                Perform Google enumeration with the standard enumeration."
-    print "  -w, --do_whois              Do deep whois record analysis and reverse look-up of IP"
+    print "  -g                          Perform Google enumeration with the standard enumeration."
+    print "  -w                          Do deep whois record analysis and reverse look-up of IP"
     print "                              ranges found thru whois when doing standard query."
+    print "  -z                          Perforns a DNSSEC Zone Walk with the standard enumeration."
     print "  --threads          <number> Number of threads to use in Range Reverse Look-up, Forward"
     print "                              Look-up Brute force and SRV Record Enumeration"
     print "  --lifetime         <number> Time to wait for a server to response to a query."
@@ -877,6 +984,7 @@ def main():
     ip_range = None
     ip_range_pattern ='([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})-([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})'
     results_db = None
+    zonewalk = None
     from_zt = None
     
     #
@@ -889,8 +997,9 @@ def main():
     # Define options
     #
     try:
-        options, remainder = getopt.getopt(sys.argv[1:], 'hd:c:n:x:D:t:aq:gwr:s',
+        options, args = getopt.getopt(sys.argv[1:], 'hzd:c:n:x:D:t:aq:gwr:s',
                                            ['help',
+                                           'zone_walk'
                                            'domain=',
                                            'cidr=',
                                            'name_server=',
@@ -911,9 +1020,7 @@ def main():
     #
     # Parse options
     #
-    
     for opt, arg in options:
-        
         if opt in ('-t','--type'):
             type = arg
             
@@ -946,7 +1053,10 @@ def main():
         elif opt in ('-w','--do_whois'):
             do_whois = True
             
-        elif opt in ('-s','--do_spf'):
+        elif opt in ('-z', '--zone_walk'):
+            zonewalk = True
+
+        elif opt in ('-s', '--do_spf'):
             spf_enum = True
             
         elif opt in ('-r','--range'):
@@ -976,7 +1086,6 @@ def main():
     res = DnsHelper(domain, ns_server, request_timeout)
         
     if type is not None:
-       
         for r in type.split(','):
             try:
                 if r == 'axfr':
@@ -993,7 +1102,7 @@ def main():
                     if domain is not None:
                         print "[*] Performing General Enumeration of Domain:",domain
                         std_enum_records = general_enum(res, domain, xfr, goo,\
-                        spf_enum, do_whois, output_file, results_db)
+                        spf_enum, do_whois, zonewalk)
                         
                         if (output_file is not None) or (results_db is not None):
                            returned_records.extend(std_enum_records)
@@ -1070,7 +1179,14 @@ def main():
                     else:
                         print '[-] No Domain or Name Server to target specified!'
                         sys.exit(1)
-                    
+
+                elif r == "zonewalk":
+                    if domain is not None:
+                        zone_walk(domain, res)
+                    else:
+                        print '[-] No Domain or Name Server to target specified!'
+                        sys.exit(1)
+
                 else:
                     print "[-] This type of scan is not in the list", r
                     usage()
