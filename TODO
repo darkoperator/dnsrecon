@@ -1,6 +1,4 @@
-* Implement whois query of all records, do uniqe and perform reverse look up on them.
-* Add query for DNSSEC Records.
+* Look in to doing Zone Walks using DS records, can not figure out how to properly do the query with dnspython.
 * Provide option to filter for wildcard return IP when doing a dictionary name brute force.
 * Append to the end of found hosts thru bruteforce the numbers from 1 to 9 and 01 to 09.
 * Append to dictionary hostname of hosts found thru reverse lookup.
-* If I can figure it out do NSEC Zone Walk.
