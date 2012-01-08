@@ -176,7 +176,7 @@ def write_to_file(data,target_file):
     """
     Function for writing returned data to a file
     """
-    f = open(target_file, "a")
+    f = open(target_file, "w")
     f.write(data)
     f.close
 
@@ -499,15 +499,16 @@ def get_whois_nets_iplist(ip_list):
     idfun=repr
     found_nets = []
     for ip in ip_list:
-        # Find appropiate Whois Server for the IP
-        whois_server = get_whois(ip)
-        # If we get a Whois server Process get the whois and process.
-        if whois_server:
-            whois_data = whois(ip,whois_server )
-            net = get_whois_nets(whois_data)
-            if net:
-                org = get_whois_orgname(whois_data)
-                found_nets.append({'start':net[0][0],'end':net[0][1],'orgname':"".join(org)})
+        if ip != "no_ip":
+            # Find appropiate Whois Server for the IP
+            whois_server = get_whois(ip)
+            # If we get a Whois server Process get the whois and process.
+            if whois_server:
+                whois_data = whois(ip,whois_server )
+                net = get_whois_nets(whois_data)
+                if net:
+                    org = get_whois_orgname(whois_data)
+                    found_nets.append({'start':net[0][0],'end':net[0][1],'orgname':"".join(org)})
     #Remove Duplicates
     return [seen.setdefault(idfun(e),e) for e in found_nets if idfun(e) not in seen]
 
@@ -730,8 +731,12 @@ def zone_walk(domain, res):
                     ip_info = res.get_ip(rdata.next.to_text())
                     if len(ip_info) > 0:
                         for a_rcrd in ip_info:
-                            print '[*]\t', a_rcrd[0], a_rcrd[1], a_rcrd[2]
-                            returned_records.extend([{'type':a_rcrd[0],'name':a_rcrd[1],'address':a_rcrd[2]}])
+                            if a_rcrd[0] == "A":
+                                print '[*]\t', a_rcrd[0], a_rcrd[1], a_rcrd[2]
+                                returned_records.extend([{'type':a_rcrd[0],'name':a_rcrd[1],'address':a_rcrd[2]}])
+                            elif a_rcrd[0] == "CNAME":
+                                print '[*]\t', a_rcrd[0], a_rcrd[1], a_rcrd[2]
+                                returned_records.extend([{'type':a_rcrd[0],'name':a_rcrd[1],'target':a_rcrd[2]}])
                     else:
                         print "[*]\t",rcd_type.group(0).strip(), rdata.next.to_text(), "no_ip"
 
@@ -754,6 +759,8 @@ def zone_walk(domain, res):
         # Zone
         except dns.resolver.NoAnswer:
             break
+        except:
+            return returned_records
     return returned_records
 
 def general_enum(res, domain, do_axfr, do_google, do_spf, do_whois, zw):
@@ -905,7 +912,9 @@ def general_enum(res, domain, do_axfr, do_google, do_spf, do_whois, zw):
             returned_records.extend(whois_rcd)
 
         if zw:
-            returned_records.extend(zone_walk(domain, res))
+            zone_info = zone_walk(domain, res)
+            if zone_info:
+                returned_records.extend(zone_info)
         
         return returned_records
 
