@@ -712,7 +712,7 @@ def zone_walk(domain, res):
             for ip in res.get_ip(name):
                 print "[*]\tNS",name,ip[-1]
                 returned_records.extend([{'type':"NS",\
-                "target":name,'address':ip
+                "target":name,'address':ip[2]
                 }])
 
     while answer:
@@ -727,13 +727,13 @@ def zone_walk(domain, res):
                 rcd_type = None
                 rcd_type = re.search('( A | AAAA)',rdata.to_text())
                 if rcd_type:
-                    ip_info = res.get_ip(rdata.next)
+                    ip_info = res.get_ip(rdata.next.to_text())
                     if len(ip_info) > 0:
                         for a_rcrd in ip_info:
                             print '[*]\t', a_rcrd[0], a_rcrd[1], a_rcrd[2]
                             returned_records.extend([{'type':a_rcrd[0],'name':a_rcrd[1],'address':a_rcrd[2]}])
                     else:
-                        print "[*]\t",rcd_type.group(0).strip(), rdata.next, "no_ip"
+                        print "[*]\t",rcd_type.group(0).strip(), rdata.next.to_text(), "no_ip"
 
                 elif re.search(' SRV ',rdata.to_text()):
                     for rcd in res.get_srv(rdata.next.to_text()):
@@ -745,16 +745,15 @@ def zone_walk(domain, res):
                 elif re.search('( TXT|SPF)',rdata.to_text()):
                     print "[*]\t", rdata.to_text()
                 # Save record in list of found hosts
-                found_records.append(rdata.next)
+                found_records.append(rdata.next.to_text())
 
                 # Get the next record
                 #answer = None
-                answer = res.get_nsec(rdata.next)
+                answer = res.get_nsec(rdata.next.to_text())
         # Break out of the loop once there are no more records given for the
         # Zone
         except dns.resolver.NoAnswer:
             break
-           
     return returned_records
 
 def general_enum(res, domain, do_axfr, do_google, do_spf, do_whois, zw):
@@ -1182,7 +1181,10 @@ def main():
 
                 elif r == "zonewalk":
                     if domain is not None:
-                        zone_walk(domain, res)
+                        if (output_file is not None) or (results_db is not None):
+                            returned_records.extend(zone_walk(domain, res))
+                        else:
+                            zone_walk(domain, res)
                     else:
                         print '[-] No Domain or Name Server to target specified!'
                         sys.exit(1)
