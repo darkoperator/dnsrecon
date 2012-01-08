@@ -1,0 +1,18 @@
+Version 0.5 1/8/12
+Changes:
+- Will check in standard enumeration is DNSSEC is configured for the zone by chacking for DNSKEY Records and checking is the zone is configured as NSEC or NSEC3.
+- With the get_ip() method it will also check for CNAME records and add those to the list found hosts.
+- Will Perform a DNSSEC Zone Walk if NSEC Records are available, it identifies currently A, AAAA, CNAME, NS and SRV records any other it will just print the RDATA info.
+- Genereal recod resolver method added.
+- Changes to the options.
+
+Known Issues:
+- For some reason the python getopt is not parsing the options correctly in some cases. Considering changing to optparse even if it is  more complicated to manage. 
+
+TODO:
+
+- Look in to doing Zone Walks using DS records, can not figure out how to properly do the query with dnspython.
+- Provide option to filter for wildcard return IP when doing a dictionary name brute force.
+- Append to the end of found hosts thru bruteforce the numbers from 1 to 9 and 01 to 09.
+- Append to dictionary hostname of hosts found thru reverse lookup.
+
