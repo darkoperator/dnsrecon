@@ -61,12 +61,10 @@ from dns.dnssec import algorithm_to_text
 
 from netaddr import *
 
-sys.path.append("lib/")
-
-from gooenum import *
-from whois import *
-from mdnsenum import *
-from dnshelper import DnsHelper
+from lib.gooenum import *
+from lib.whois import *
+from lib.mdnsenum import *
+from lib.dnshelper import DnsHelper
 
 # Global Variables for Brute force Threads
 brtdata = []
