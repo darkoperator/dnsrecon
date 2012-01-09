@@ -22,4 +22,4 @@ TODO:
 - Provide option to filter for wildcard return IP when doing a dictionary name brute force.
 - Append to the end of found hosts thru bruteforce the numbers from 1 to 9 and 01 to 09.
 - Append to dictionary hostname of hosts found thru reverse lookup.
-
+- Add IPv6 support for ranges in reverse lookup.
