@@ -32,7 +32,6 @@ requires dnspython http://www.dnspython.org/
 requires netaddr https://github.com/drkjam/netaddr/
 
 """
-import Queue
 import getopt
 import os
 import re
