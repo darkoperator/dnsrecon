@@ -20,6 +20,9 @@ import re
 from netaddr import *
 import socket
 
+WHOIS_PORT_NUMBER = 43
+WHOIS_RECEIVE_BUFFER_SIZE = 4096
+
 def get_whois(ip_addrs):
     """
     Function that returns what whois server is the one to be queried for
@@ -49,11 +52,11 @@ def whois(target,whois_srv):
     #socket.setdefaulttimeout(4.0)
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.connect((whois_srv, 43))
+        s.connect((whois_srv, WHOIS_PORT_NUMBER))
         s.send("n " + target + "\r\n")
         response = ''
         while True:
-            d = s.recv(4096)
+            d = s.recv(WHOIS_RECEIVE_BUFFER_SIZE)
             response += d
             if d == '':
                 break
