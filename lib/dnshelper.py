@@ -145,24 +145,13 @@ class DnsHelper:
         Function for NS Record resolving. Returns all NS records. Returns also the IP
         address of the host both in IPv4 and IPv6. Returns an Array.
         """
-        ns_srvs = []
-        answers = self._res.query(self._domain, 'NS')
-        for rdata in answers:
-            name = rdata.target.to_text()
-            ipv4_answers = self._res.query(name, 'A')
-            for ardata in ipv4_answers:
-                ns_srvs.append(['NS', name[:-1], ardata.address])
-
-        try:
-            for rdata in answers:
-                name = rdata.target.to_text()
-                ipv6_answers = self._res.query(name, 'AAAA')
-                for ardata in ipv6_answers:
-                    ns_srvs.append(['NS', name[:-1], ardata.address])
-
-            return ns_srvs
-        except:
-            return ns_srvs
+        answer = self._res.query(self._domain, 'NS')
+        name_servers = []
+        if answer is not None:
+            for aa in answer.response.additional:
+                if re.search(r'1|28', str(aa.rdtype)):
+                    name_servers.append(['NS', aa.name.to_text(), aa[0].address])
+        return name_servers
 
     def get_soa(self):
         """
