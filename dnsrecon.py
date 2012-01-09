@@ -121,7 +121,7 @@ class ThreadPool:
     def __init__(self, num_threads):
         self.tasks = Queue(num_threads)
         for _ in range(num_threads):
-           Worker(self.tasks)
+            Worker(self.tasks)
 
     def add_task(
         self,
@@ -528,8 +528,8 @@ def whois_ips(res,ip_list):
 
     if "a" in answer:
         for i in range(len(list)):
-             print "[*] Performing Reverse Lookup of range", list[i]['start'],'-',list[i]['end']
-             found_records.append(brute_reverse(res, \
+            print "[*] Performing Reverse Lookup of range", list[i]['start'],'-',list[i]['end']
+            found_records.append(brute_reverse(res, \
                 expand_range(list[i]['start'],list[i]['end'])))
 
     elif "n" in answer:
@@ -1115,7 +1115,7 @@ def main():
                         spf_enum, do_whois, zonewalk)
                         
                         if (output_file is not None) or (results_db is not None):
-                           returned_records.extend(std_enum_records)
+                            returned_records.extend(std_enum_records)
                     else:
                         print '[-] No Domain to target specified!'
                         sys.exit(1)
