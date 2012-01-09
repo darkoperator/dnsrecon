@@ -25,6 +25,10 @@ import dns.zone
 import socket
 from dns.dnssec import algorithm_to_text
 
+DNS_PORT_NUMBER = 53  # port number is a number, not string
+DNS_QUERY_TIMEOUT = 2  # 2 Seconds should be more than enough to check for delay.
+
+
 class DnsHelper:
     def __init__(self, domain, ns_server=None, request_timeout=1.0, ):
         self._domain = domain
@@ -46,11 +50,10 @@ class DnsHelper:
         be closed.
         """
         s = socket.socket()
-        # 2 Seconds should be more than enough to check for delay.
-        s.settimeout(2)
-        port = 53 # port number is a number, not string
+        
+        s.settimeout(DNS_QUERY_TIMEOUT)
         try:
-            s.connect((address, port)) 
+            s.connect((address, DNS_PORT_NUMBER)) 
         except Exception, e:
             return False
         else:
