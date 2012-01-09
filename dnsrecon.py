@@ -18,7 +18,7 @@
 #    along with this program; if not, write to the Free Software
 #    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
-__version__ = '0.5'
+__version__ = '0.5.1'
 __author__ = 'Carlos Perez, Carlos_Perez@darkoperator.com'
 
 __doc__ = """
@@ -759,6 +759,8 @@ def zone_walk(domain, res):
         # Zone
         except dns.resolver.NoAnswer:
             break
+        except (KeyboardInterrupt):
+            print "[-] You have pressed Crtl-C. Saving found records."
         except:
             return returned_records
     return returned_records
