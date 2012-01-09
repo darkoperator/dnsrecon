@@ -17,6 +17,7 @@ Known Issues:
 
 TODO:
 
+- Add option for output in grepable format file.
 - Look in to doing Zone Walks using DS records, can not figure out how to properly do the query with dnspython.
 - Provide option to filter for wildcard return IP when doing a dictionary name brute force.
 - Append to the end of found hosts thru bruteforce the numbers from 1 to 9 and 01 to 09.
