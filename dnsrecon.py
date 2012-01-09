@@ -863,20 +863,23 @@ def general_enum(res, domain, do_axfr, do_google, do_spf, do_whois, zw):
 
         # Save dictionary of returned record
         if spf_text_data is not None:
-            returned_records.extend([{'type':spf_text_data[0],\
-            "text":spf_text_data[1]
-            }])
+            for s in spf_text_data:
+                print '[*]\t',s[0], s[1]
+                text_data += s[1]
+            	returned_records.extend([{'type':s[0],\
+            	"text":s[1]
+            	}])
 
         txt_text_data = res.get_txt()
 
         # Save dictionary of returned record
         if txt_text_data is not None:
-            returned_records.extend([{'type':txt_text_data[0],\
-            "text":txt_text_data[1]
-            }])
-
-        if spf_text_data is not None: text_data += spf_text_data[1]
-        if txt_text_data is not None: text_data += txt_text_data[1]
+            for t in txt_text_data:
+            	print '[*]\t',t[0], t[1]
+                text_data += t[1]
+            	returned_records.extend([{'type':t[0],\
+            	"text":t[1]
+            	}])
 
         # Process ipv4 SPF records if selected
         if do_spf is not None:

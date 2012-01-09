@@ -200,7 +200,7 @@ class DnsHelper:
             answers = self._res.query(self._domain, 'SPF')
             for rdata in answers:
                 name = rdata.strings
-                spf_record.extend(['SPF', name])
+                spf_record.append(['SPF', name])
         except:
             return None
 
@@ -216,7 +216,7 @@ class DnsHelper:
             answers = self._res.query(self._domain, 'TXT')
             for rdata in answers:
                 name = "".join(rdata.strings)
-                txt_record.extend(['TXT', name])
+                txt_record.append(['TXT', name])
         except:
             return None
 
