@@ -281,7 +281,7 @@ def brute_srv(res, domain):
         '_hkps._tcp.', '_jabber._udp.','_xmpp-server._udp.', '_xmpp-client._udp.',
         '_jabber-client._tcp.', '_jabber-client._udp.','_kerberos.tcp.dc._msdcs.',
         '_ldap._tcp.ForestDNSZones.', '_ldap._tcp.dc._msdcs.', '_ldap._tcp.pdc._msdcs.',
-		'_ldap._tcp.gc._msdcs.','_kerberos._tcp.dc._msdcs.','_kpasswd._tcp.','_kpasswd._udp.'
+        '_ldap._tcp.gc._msdcs.','_kerberos._tcp.dc._msdcs.','_kpasswd._tcp.','_kpasswd._udp.'
         ]
 
     
@@ -556,19 +556,19 @@ def prettify(elem):
 
 
 def dns_record_from_dict(record_dict_list):
-	"""
-	Saves DNS Records to XML Given a a list of dictionaries each representing
-	a record to be saved, returns the XML Document formatted.
-	"""
-	xml_doc = Element("records")
-	for r in record_dict_list:
-		xml_record = Element('record')
-		for n,v in r.iteritems():
-			record_field = SubElement(xml_record,n)
-			record_field.text = v
-		xml_doc.append(xml_record)
+    """
+    Saves DNS Records to XML Given a a list of dictionaries each representing
+    a record to be saved, returns the XML Document formatted.
+    """
+    xml_doc = Element("records")
+    for r in record_dict_list:
+        xml_record = Element('record')
+        for n,v in r.iteritems():
+            record_field = SubElement(xml_record,n)
+            record_field.text = v
+        xml_doc.append(xml_record)
 
-	return prettify(xml_doc)
+    return prettify(xml_doc)
 
 
 def create_db(db):
@@ -864,20 +864,20 @@ def general_enum(res, domain, do_axfr, do_google, do_spf, do_whois, zw):
             for s in spf_text_data:
                 print '[*]\t',s[0], s[1]
                 text_data += s[1]
-            	returned_records.extend([{'type':s[0],\
-            	"text":s[1]
-            	}])
+                returned_records.extend([{'type':s[0],\
+                "text":s[1]
+                }])
 
         txt_text_data = res.get_txt()
 
         # Save dictionary of returned record
         if txt_text_data is not None:
             for t in txt_text_data:
-            	print '[*]\t',t[0], t[1]
+                print '[*]\t',t[0], t[1]
                 text_data += t[1]
-            	returned_records.extend([{'type':t[0],\
-            	"text":t[1]
-            	}])
+                returned_records.extend([{'type':t[0],\
+                "text":t[1]
+                }])
 
         # Process ipv4 SPF records if selected
         if do_spf is not None:
