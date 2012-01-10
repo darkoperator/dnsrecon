@@ -243,9 +243,10 @@ class DnsHelper:
                 ips = self.get_ip(target[:-1])
                 if ips:
                     for ip in ips:
-                        if re.search('(A|AAAA)',ip[0]):
+                        if re.search('(^A|AAAA)',ip[0]):
                             record.append(['SRV', host, a.target.to_text(), ip[2],
                                       str(a.port), str(a.weight)])
+                                                       
                 else:
                     record.append(['SRV', host, a.target.to_text(), "no_ip",
                                   str(a.port), str(a.weight)])
