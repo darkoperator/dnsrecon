@@ -593,10 +593,6 @@ def write_db(db,data):
             query = 'insert into data( type, name, target, address, port ) '+\
             'values( "%(type)s", "%(name)s" , "%(target)s", "%(address)s" ,"%(port)s" )' % n
 
-        elif re.match(r'MDNS',n['type']):
-            query = 'insert into data( type, name, target, port, text ) '+\
-            'values( "%(type)s", "%(name)s", "%(host)s, "%(port)s, "%(txtRecord)s" )' % n
-
         else:
             # Handle not common records
             t = n['type']
@@ -885,7 +881,6 @@ def usage():
     print "  -D, --dictionary  <file>    Dictionary file of sub-domain and hostnames to use for"
     print "                              brute force."
     print "  -t, --type        <types>   Specify the type of enumeration to perform:"
-    print "                              mdns     To Enumerate local subnet with mDNS.\n"
     print "                              std      To Enumerate general record types, enumerates."
     print "                                       SOA, NS, A, AAAA, MX and SRV if AXRF on the"
     print "                                       NS Servers fail.\n"
@@ -944,7 +939,6 @@ def main():
     ip_range_pattern ='([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})-([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})'
     results_db = None
     zonewalk = None
-    from_zt = None
     
     #
     # Global Vars
@@ -1102,12 +1096,6 @@ def main():
                     else:
                         print '[-] No Domain to target specified!'
                         sys.exit(1)
-                    
-                elif r == 'mdns':
-                    print '[*] Enumerating most common mDNS Records on Subnet'
-                    mdns_enum_records = mdns_enum()
-                    if (output_file is not None) or (results_db is not None):
-                        returned_records.extend(mdns_enum_records)
                     
                 elif r == 'tld':
                     if domain is not None:
