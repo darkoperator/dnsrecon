@@ -18,7 +18,7 @@
 #    along with this program; if not, write to the Free Software
 #    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
-__version__ = '0.5.1'
+__version__ = '0.6.0'
 __author__ = 'Carlos Perez, Carlos_Perez@darkoperator.com'
 
 __doc__ = """
@@ -26,8 +26,6 @@ DNSRecon http://www.darkoperator.com
 
  by Carlos Perez, Darkoperator
 
-requires bonjour for Mac, Windows, Linux
-requires pybonjour http://code.google.com/p/pybonjour/
 requires dnspython http://www.dnspython.org/
 requires netaddr https://github.com/drkjam/netaddr/
 
@@ -419,55 +417,6 @@ def in_cache(dict_file,ns):
                     else:
                         print ""
     return found_records
-
-
-
-def mdns_enum():
-    """
-    Function for enumerating several know types of mDNS records in the local
-    subnet.
-    """
-    global brtdata
-    brtdata = []
-    found_results = []
-    mdns_types = [
-        '_appletv-itunes._tcp', '_touch-able._tcp', '_sleep-proxy._tcp',
-        '_raop._tcp', '_touch-remote._tcp', '_appletv-pair._tcp', '_appletv._tcp',
-        '_rfb._tcp', '_adisk._tcp', '_daap._tcp', '_presence._tcp', '_ichat._tcp',
-        '_http._tcp', '_ftp._tcp', '_rtsp._tcp', '_distcc._tcp',
-        '_tivo_servemedia._tcp', '_airport._tcp', '_afpovertcp._tcp',
-        '_printer._tcp', '_ipp._tcp', '_pdl-datastream._tcp', '_eppc._tcp',
-        '_workstation._tcp', '_ssh._tcp', '_telnet._tcp', '_tftp._udp',
-        '_smb._tcp', '_netbios-ns._udp', '_netbios-ssn._tcp', '_apple-sasl._tcp',
-        '_ssscreenshare._tcp', '_postgresql._tcp', '_pop3._tcp', '_imaps._tcp',
-        '_imap._tcp', '_pop3s._tcp', '_bootps._udp', '_shell._tcp', '_login._tcp',
-        '_teleport._udp', '_dacp._tcp', '_dpap._tcp', '_auth._tcp',
-        '_fmpro-internal._tcp', '_h323._tcp', '_iwork._tcp', '_nfs._tcp',
-        '_ptp._tcp', '_spl-itunes._tcp', '_spr-itunes._tcp', '_upnp._tcp',
-        '_webdav._tcp', '_ws._tcp', '_exec._tcp', '_net-assistant._udp',
-        '_raop._tcp', '_servermgr._tcp', '_sftp-ssh._tcp', '_asr._tcp',
-        '_dacp._tcp', '_domain._udp', '_dns-llq._udp', '_iax._udp',
-        '_kerberos-adm._tcp', '_kerberos._tcp', '_ntp._tcp', '_rsync._tcp',
-        '_sip._udp', '_xmpp-client._tcp', '_xmpp-server._tcp', '_skype._tcp',
-        '_ica-networking._tcp', '_presence._tcp', '_ofocus-sync._tcp',
-        '_zuul1000205._udp', '_sub._ipp._tcp','_raop._tcp','_rfb._tcp','_growl._tcp',
-        '_home-sharing._tcp','_odisk._tcp','_remote-jukebox._tcp',"_eppc._tcp",
-        '_scanner._tcp', '_couchdb_location._tcp','_udisks-ssh._tcp','_presence._tcp'
-        ]
-    
-    for m in mdns_types:
-        pool.add_task(mdns_browse, m)
-    
-    pool.wait_completion()
-    
-    # Process returned data
-    for i in brtdata:
-        for e in i:
-            found_results.extend([e])
-            
-    brtdata = []
-    return found_results
-
 
 def goo_result_process(res, found_hosts):
     """
