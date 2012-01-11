@@ -553,7 +553,6 @@ def create_db(db):
         pass
 
 def make_csv(data):
-    print "[*] Creating CSV file with results."
     csv_data = ""
     for n in data:
 
@@ -1192,17 +1191,20 @@ def main():
                 sys.exit(1)
         
         # if an output xml file is specified it will write returned results.
-        if (output_file is not None): 
+        if (output_file is not None):
+            print "[*] Saving records to XML file:", output_file
             xml_enum_doc = dns_record_from_dict(returned_records)
             write_to_file(xml_enum_doc,output_file)
 
         # if an output db file is specified it will write returned results.
         if (results_db is not None):
+            print "[*] Saving records to SQLite3 file:", results_db
             create_db(results_db)
             write_db(results_db,returned_records)
             
         # if an output csv file is specified it will write returned results.
         if (csv_file is not None):
+            print "[*] Saving records to CSV file", csv_file
             write_to_file(make_csv(returned_records),csv_file)
             
         sys.exit(0)
