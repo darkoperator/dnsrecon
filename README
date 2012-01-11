@@ -1,3 +1,10 @@
+Version 0.6 1/11/12
+Changes:
+- Reoved mDNS eumeration do to that the pybonjour library has been abandoned and faster ways are available to achive enumeration of mDNS records in a subnet.
+- Removed un-used variables.
+- Applied changes for PEP8 compliance.
+- Added comma delimited value to a file for the results.
+
 Version 0.5.1 1/8/12
 Changes:
 - Additional fixes for xml formatting.
@@ -17,7 +24,6 @@ Known Issues:
 
 TODO:
 
-- Add option for output in grepable format file.
 - Look in to doing Zone Walks using DS records, can not figure out how to properly do the query with dnspython.
 - Provide option to filter for wildcard return IP when doing a dictionary name brute force.
 - Append to the end of found hosts thru bruteforce the numbers from 1 to 9 and 01 to 09.

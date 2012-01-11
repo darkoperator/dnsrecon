@@ -1,3 +1,0 @@
-dnspython==1.9.4
-netaddr==0.7.6
-pybonjour==1.1.1
