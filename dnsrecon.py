@@ -552,7 +552,40 @@ def create_db(db):
     else:
         pass
 
+def make_csv(data):
+    print "[*] Creating CSV file with results."
+    csv_data = ""
+    for n in data:
 
+        if re.search(r'PTR|^[A]$|AAAA',n['type']):
+            print n['type']+","+n['name']+","+n['address']+"\n"
+            csv_data += n['type']+","+n['name']+","+n['address']+"\n"
+
+        elif re.search(r'NS',n['type']):
+            csv_data += n['type']+","+n['target']+","+n['address']+"\n"
+
+        elif re.search(r'SOA',n['type']):
+            csv_data += n['type']+","+n['mname']+","+n['address']+"\n"
+
+        elif re.search(r'MX',n['type']):
+            csv_data += n['type']+","+n['exchange']+","+n['address']+"\n"
+
+        elif re.search(r'TXT|SPF',n['type']):
+            csv_data += n['type']+",,,,,"+n['text']+"\n"
+
+        elif re.search(r'SRV',n['type']):
+            csv_data += n['type']+","+n['name']+","+n['address']+","+n['target']+","+n['port']+"\n"
+
+        else:
+            # Handle not common records
+            t = n['type']
+            del n['type']
+            record_data =  "".join([' %s=%s,' % (key, value) for key, value in n.items()])
+            records = [t,record_data]
+            csv_data + records[0] + ",,,,," + records[1] +"\n"
+
+    return csv_data
+                
 def write_db(db,data):
     """
     Function to write DNS Records SOA, PTR, NS, A, AAAA, MX, TXT, SPF and SRV to
@@ -870,6 +903,7 @@ def general_enum(res, domain, do_axfr, do_google, do_spf, do_whois, zw):
 
 
 def usage():
+    print "Version:", __version__
     print "Usage: dnsrecon.py <options>\n"
     print "Options:"
     print "  -h, --help                  Show this help message and exit"
@@ -911,6 +945,7 @@ def usage():
     print "  --lifetime         <number> Time to wait for a server to response to a query."
     print "  --db               <file>   SQLite3 file to save found records."
     print "  --xml              <file>   XML File to save found records."
+    print "  --csv              <file>   Comma separated value file."
     sys.exit(0)
 
 
@@ -939,6 +974,7 @@ def main():
     ip_range_pattern ='([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})-([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})'
     results_db = None
     zonewalk = None
+    csv_file = None
     
     #
     # Global Vars
@@ -966,7 +1002,8 @@ def main():
                                            'do_spf',
                                            'lifetime=',
                                            'threads=',
-                                           'db='])
+                                           'db=',
+                                           'csv='])
     except getopt.GetoptError:
         print "[-] Wrong Option Provided!"
         usage()
@@ -1029,6 +1066,9 @@ def main():
         elif opt in ('--db'):
             results_db = arg
             
+        elif opt in ('--csv'):
+            csv_file = arg
+            
         elif opt in ('-h'):
             usage()
             
@@ -1045,7 +1085,6 @@ def main():
                     if domain is not None:
                         print '[*] Testing NS Servers for Zone Transfer'
                         returned_records.extend(res.zone_transfer())
-                        from_zt = True
 
                     else:
                         print '[-] No Domain to target specified!'
@@ -1057,7 +1096,7 @@ def main():
                         std_enum_records = general_enum(res, domain, xfr, goo,\
                         spf_enum, do_whois, zonewalk)
                         
-                        if (output_file is not None) or (results_db is not None):
+                        if (output_file is not None) or (results_db is not None) or (csv_file is not None):
                             returned_records.extend(std_enum_records)
                     else:
                         print '[-] No Domain to target specified!'
@@ -1068,7 +1107,7 @@ def main():
                         print '[*] Reverse Look-up of a Range'
                         rvl_enum_records = brute_reverse(res, ip_list)
 
-                        if (output_file is not None) or (results_db is not None):
+                        if (output_file is not None) or (results_db is not None) or (csv_file is not None):
                             returned_records.extend(rvl_enum_records)
                     else:
                         print '[-] Failed CIDR or Range is Required for type rvl'
@@ -1079,7 +1118,7 @@ def main():
                             domain
                         brt_enum_records = brute_domain(res, dict, domain)
 
-                        if (output_file is not None) or (results_db is not None):
+                        if (output_file is not None) or (results_db is not None) or (csv_file is not None):
                             returned_records.extend(brt_enum_records)
                     else:
                         print '[-] No Dictionary file specified!'
@@ -1091,7 +1130,7 @@ def main():
                             domain
                         srv_enum_records = brute_srv(res, domain)
 
-                        if (output_file is not None) or (results_db is not None):
+                        if (output_file is not None) or (results_db is not None) or (csv_file is not None):
                             returned_records.extend(srv_enum_records)
                     else:
                         print '[-] No Domain to target specified!'
@@ -1101,7 +1140,7 @@ def main():
                     if domain is not None:
                         print "[*] Performing TLD Brute force Enumeration against", domain
                         tld_enum_records = brute_tlds(res, domain)
-                        if (output_file is not None) or (results_db is not None):
+                        if (output_file is not None) or (results_db is not None) or (csv_file is not None):
                             returned_records.extend(tld_enum_records)
                     else:
                         print '[-] No Domain to target specified!'
@@ -1111,7 +1150,7 @@ def main():
                     if domain is not None:
                         print "[*] Performing Google Search Enumeration against", domain
                         goo_enum_records = goo_result_process(res, scrape_google(domain))
-                        if (output_file is not None) or (results_db is not None):
+                        if (output_file is not None) or (results_db is not None) or (csv_file is not None):
                             returned_records.extend(goo_enum_records)
                     else:
                         print '[-] No Domain to target specified!'
@@ -1121,7 +1160,7 @@ def main():
                     if (dict is not None) and (ns_server is not None):
                         print "[*] Performing Cache Snooping against NS Server:", ns_server
                         cache_enum_records = in_cache(dict,ns_server)
-                        if (output_file is not None) or (results_db is not None):
+                        if (output_file is not None) or (results_db is not None) or (csv_file is not None):
                             returned_records.extend(cache_enum_records)
                     else:
                         print '[-] No Domain or Name Server to target specified!'
@@ -1129,7 +1168,7 @@ def main():
 
                 elif r == "zonewalk":
                     if domain is not None:
-                        if (output_file is not None) or (results_db is not None):
+                        if (output_file is not None) or (results_db is not None) or (csv_file is not None):
                             returned_records.extend(zone_walk(domain, res))
                         else:
                             zone_walk(domain, res)
@@ -1162,6 +1201,10 @@ def main():
             create_db(results_db)
             write_db(results_db,returned_records)
             
+        # if an output csv file is specified it will write returned results.
+        if (csv_file is not None):
+            write_to_file(make_csv(returned_records),csv_file)
+            
         sys.exit(0)
         
     elif domain is not None:
@@ -1170,7 +1213,7 @@ def main():
             std_enum_records = general_enum(res, domain, xfr, goo,\
             spf_enum, do_whois, output_file, results_db)
 
-            if (output_file is not None): returned_records.extend(std_enum_records)
+            returned_records.extend(std_enum_records)
 
             # if an output xml file is specified it will write returned results.
             if (output_file is not None):
@@ -1181,6 +1224,10 @@ def main():
             if (results_db is not None):
                 create_db(results_db)
                 write_db(results_db,returned_records)
+            
+            # if an output csv file is specified it will write returned results.
+            if (csv_file is not None):
+                write_to_file(make_csv(returned_records),csv_file)
 
             sys.exit(0)
         except dns.resolver.NXDOMAIN:

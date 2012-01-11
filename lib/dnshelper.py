@@ -59,11 +59,17 @@ class DnsHelper:
         else:
             return True
 
-    def resolve(self, target, type):
+    def resolve(self, target, type, ns = None):
         """
         Function for performing general resolution types returning the RDATA
         """
-        answers = self._res.query(target, type)
+        if ns:
+            res = dns.resolver.Resolver(configure=False)
+            res.nameservers = [ns]
+        else:
+            res = dns.resolver.Resolver(configure=True)
+        
+        answers = res.query(target, type)
         return answers
 
     def get_a(self, host_trg):
