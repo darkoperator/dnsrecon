@@ -499,7 +499,7 @@ def prettify(elem):
     """
     rough_string = ElementTree.tostring(elem, 'utf-8')
     reparsed = minidom.parseString(rough_string)
-    return reparsed.toprettyxml(indent="  ")
+    return reparsed.toprettyxml(indent="", newl= "")
 
 
 def dns_record_from_dict(record_dict_list):
@@ -569,7 +569,7 @@ def make_csv(data):
             csv_data += n['type']+","+n['exchange']+","+n['address']+"\n"
 
         elif re.search(r'TXT|SPF',n['type']):
-            csv_data += n['type']+",,,,,"+n['text']+"\n"
+            csv_data += n['type']+","+n['name']+",,,,\'"+n['text']+"\'\n"
 
         elif re.search(r'SRV',n['type']):
             csv_data += n['type']+","+n['name']+","+n['address']+","+n['target']+","+n['port']+"\n"
@@ -617,8 +617,8 @@ def write_db(db,data):
             'values( "%(type)s", "%(exchange)s", "%(address)s" )' % n
 
         elif re.match(r'TXT|SPF',n['type']):
-            query = 'insert into data( type, text) '+\
-            'values( "%(type)s", "%(text)s" )' % n
+            query = 'insert into data( type, name, text) '+\
+            'values( "%(type)s", "%(text)s" ,"%(text)s" )' % n
 
         elif re.match(r'SRV',n['type']):
             query = 'insert into data( type, name, target, address, port ) '+\
@@ -721,7 +721,14 @@ def zone_walk(domain, res):
                         }])
 
                 elif re.search('( TXT|SPF)',rdata.to_text()):
-                    print "[*]\t", rdata.to_text()
+                    try:
+                        for rcd in res.get_txt(rdata.next.to_text()):
+                            print "[*]\t"," ".join(rcd)
+                            returned_records.extend([{'type':rcd[0],\
+                            'name':rcd[1],'text':rcd[2]
+                            }])
+                    except:
+                        print "[*]\t",rdata.to_text()
                 # Save record in list of found hosts
                 found_records.append(rdata.next.to_text())
 
@@ -841,9 +848,9 @@ def general_enum(res, domain, do_axfr, do_google, do_spf, do_whois, zw):
         # Save dictionary of returned record
         if spf_text_data is not None:
             for s in spf_text_data:
-                print '[*]\t',s[0], s[1]
-                text_data += s[1]
-                returned_records.extend([{'type':s[0],\
+                print '[*]\t',s[0], s[1], s[2]
+                text_data += s[2]
+                returned_records.extend([{'type':s[0], 'name':s[1],\
                 "text":s[1]
                 }])
 
@@ -852,10 +859,10 @@ def general_enum(res, domain, do_axfr, do_google, do_spf, do_whois, zw):
         # Save dictionary of returned record
         if txt_text_data is not None:
             for t in txt_text_data:
-                print '[*]\t',t[0], t[1]
-                text_data += t[1]
-                returned_records.extend([{'type':t[0],\
-                "text":t[1]
+                print '[*]\t',t[0], t[1], t[2]
+                text_data += t[2]
+                returned_records.extend([{'type':t[0], 'name':t[1],\
+                "text":t[2]
                 }])
 
         # Process ipv4 SPF records if selected

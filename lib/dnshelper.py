@@ -205,16 +205,18 @@ class DnsHelper:
         return spf_record
 
 
-    def get_txt(self):
+    def get_txt(self, target = None):
         """
         Function for TXT Record resolving returns the string.
         """
         txt_record = []
+        if target == None:
+            target = self._domain
         try:
-            answers = self._res.query(self._domain, 'TXT')
+            answers = self._res.query(target, 'TXT')
             for rdata in answers:
-                name = "".join(rdata.strings)
-                txt_record.append(['TXT', name])
+                string = "".join(rdata.strings)
+                txt_record.append(['TXT', target, string])
         except:
             return None
 
@@ -561,6 +563,7 @@ def main():
     print resolver.get_aaaa('baddata-cname-to-baddata-aaaa.test.dnssec-tools.org')
 #    print resolver.get_mx()
     print resolver.get_ip('www.google.com')
+    print resolver.get_txt("3rdparty1._spf.paypal.com")
 #    print resolver.get_ns()
 #    print resolver.get_soa()
 #    print resolver.get_txt()
