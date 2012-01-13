@@ -734,8 +734,12 @@ def zone_walk(domain, res):
             break
         except (KeyboardInterrupt):
             print "[-] You have pressed Crtl-C. Saving found records."
+            print "[*]",len(found_records),"Records Found"
+            return found_records
         except:
+            print "[*]",len(found_records),"Records Found"
             return returned_records
+    print "[*]",len(found_records),"Records Found"
     return returned_records
 
 def general_enum(res, domain, do_axfr, do_google, do_spf, do_whois, zw):
