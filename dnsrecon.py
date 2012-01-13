@@ -60,7 +60,6 @@ from netaddr import *
 
 from lib.gooenum import *
 from lib.whois import *
-from lib.mdnsenum import *
 from lib.dnshelper import DnsHelper
 
 # Global Variables for Brute force Threads
