@@ -422,10 +422,12 @@ def brute_domain(res, dict, dom, filter = None):
             f = open(dict, 'r+')
 
             # Thread brute-force.
-
-            for line in f:
-                target = line.strip() + '.' + dom.strip()
-                pool.add_task(res.get_ip, target)
+            try:
+                for line in f:
+                    target = line.strip() + '.' + dom.strip()
+                    pool.add_task(res.get_ip, target)
+            except (KeyboardInterrupt):
+                print "[-] You have pressed Crtl-C. Saving found records."
                 
         # Wait for threads to finish
         pool.wait_completion()
@@ -434,12 +436,18 @@ def brute_domain(res, dict, dom, filter = None):
         for rcd_found in brtdata:
             for rcd in rcd_found:
                 if re.search(r'^A',rcd[0]):
-               # print "[*]\t"," ".join(rcd)
-                    found_hosts.extend([{'type':rcd[0],'name':rcd[1],'address':rcd[2]}])
+               
+                    # Filter Records if filtering was enabled
+                    if filter:
+                        if not filter == rcd[2]:
+                            found_hosts.extend([{'type':rcd[0],'name':rcd[1],'address':rcd[2]}])
+                    else:
+                        found_hosts.extend([{'type':rcd[0],'name':rcd[1],'address':rcd[2]}])
         
         # Clear Global variable
         brtdata = []
         
+    print "[*]",len(found_hosts),"Records Found"
     return found_hosts
 
 
@@ -984,7 +992,7 @@ def usage():
     print("   -D, --dictionary  <file>    Dictionary file of sub-domain and hostnames to use for")
     print("                               brute force.")
     print("   -f                          Filter out of Brute Force Domain lookup records that resolve to")
-    print("                               the wildcard defined IP Address.")
+    print("                               the wildcard defined IP Address when saving records.")
     print("   -t, --type        <types>   Specify the type of enumeration to perform:")
     print("                               std      To Enumerate general record types, enumerates.")
     print("                                        SOA, NS, A, AAAA, MX and SRV if AXRF on the")
