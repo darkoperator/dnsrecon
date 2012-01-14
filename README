@@ -1,3 +1,11 @@
+Version 0.6.1
+Changes:
+- IPv6 support for ranges in reverse lookup.
+- Enhanced parsing of SPF records ranges to cover includes and IPv6.
+- Specific host query for TXT RR.
+- Better handling and logging of TXT and SPF RR.
+- Started changes for Python 3.x compatibility.
+
 Version 0.6 1/11/12
 Changes:
 - Reoved mDNS eumeration do to that the pybonjour library has been abandoned and faster ways are available to achive enumeration of mDNS records in a subnet.

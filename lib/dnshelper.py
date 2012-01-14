@@ -218,7 +218,7 @@ class DnsHelper:
                 string = "".join(rdata.strings)
                 txt_record.append(['TXT', target, string])
         except:
-            return None
+            return []
 
         return txt_record
 

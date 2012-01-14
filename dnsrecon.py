@@ -18,7 +18,7 @@
 #    along with this program; if not, write to the Free Software
 #    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
-__version__ = '0.6.0'
+__version__ = '0.6.1'
 __author__ = 'Carlos Perez, Carlos_Perez@darkoperator.com'
 
 __doc__ = """
@@ -135,7 +135,67 @@ class ThreadPool:
 
         self.tasks.join()
 
-    
+def process_range(arg):
+    """
+    Function will take a string representation of a range for IPv4 or IPv6 in
+    CIDR or Range format and return a list of IPs.
+    """
+    try:
+        ip_list = None
+        range_vals = []
+        if re.match(r'\S*\/\S*', arg):
+            ip_list = IPNetwork(arg)
+
+        range_vals.extend(arg.split("-"))
+        if len(range_vals) == 2:
+            ip_list = IPRange(range_vals[0],range_vals[1])
+    except:
+        print "[-] Range provided is not valid:", arg
+        return []
+    return [str(ip) for ip in ip_list]
+
+def process_spf_data(res, data):
+    """
+    This function will take the text info of a TXT or SPF record, extract the
+    IPv4, IPv6 addresses and ranges, request process include records and return
+    a list of IP Addresses for the records specified in the SPF Record.
+    """
+    # Declare lists that will be used in the function.
+    ipv4=[]
+    ipv6 = []
+    includes = []
+    ip_list = []
+
+    # check first if it is a sfp record
+    if not re.search(r'v\=spf', data):
+        print "Not an spf record"
+        return
+
+    # Parse the record for IPv4 Ranges, individual IPs and include TXT Records.
+    ipv4.extend(re.findall(\
+            'ip4:(\S*) ',"".join(data)))
+    ipv6.extend(re.findall(\
+            'ip6:(\S*)',"".join(data)))
+
+    # Create a list of IPNetwork objects.
+    for ip in ipv4:
+        for i in IPNetwork(ip):
+            ip_list.append(i)
+
+    for ip in ipv6:
+        for i in IPNetwork(ip):
+            ip_list.append(i)
+
+    # Extract and process include values.
+    includes.extend(re.findall(\
+            'include:(\S*)',"".join(data)))
+    for inc_ranges in includes:
+        for spr_rec in res.get_txt(inc_ranges):
+            ip_list.extend(process_spf_data(res, spr_rec[2]))
+
+    # Return a list of IP Addresses
+    return [str(ip) for ip in ip_list]
+
 def expand_cidr(cidr_to_expand):
     """
     Function to expand a given CIDR and return an Array of IP Addresses that
@@ -161,7 +221,7 @@ def expand_range(startip,endip):
 
 def range2cidr(ip1,ip2):
     """
-    Function to return the maximun CIDR given a range of IP's
+    Function to return the maximum CIDR given a range of IP's
     """
     r1 = IPRange(ip1, ip2)
     return str(r1.cidrs()[-1])
@@ -240,7 +300,7 @@ def brute_tlds(res, domain):
         pool.wait_completion()
         
     except (KeyboardInterrupt):
-        print "[-] You have pressed Crtl-C. Saving found records."
+        print "[-] You have pressed Ctrl-C. Saving found records."
         
     # Process the output of the threads.
     for rcd_found in brtdata:
@@ -341,19 +401,19 @@ def brute_reverse(res,ip_list):
 
     return returned_records
 
-def brute_domain(res, dict, dom):
+def brute_domain(res, dict, dom, filter = None):
     """
     Main Function for domain brute forcing
     """
     global brtdata
     brtdata = []
-    
+    wildcard_ip = None
     found_hosts = []
     continue_brt = 'y'
    
     # Check if wildcard resolution is enabled
-
-    if check_wildcard(res, dom):
+    wildcard_ip = check_wildcard(res, dom)
+    if wildcard_ip:
         continue_brt = raw_input('[*] Do you wish to continue? y/n ')
     if continue_brt == 'y':
         # Check if Dictionary file exists
@@ -437,7 +497,7 @@ def goo_result_process(res, found_hosts):
 def get_whois_nets_iplist(ip_list):
     """
     This function will perform whois queries against a list of IP's and extract
-    the net ranges and if available the orgasation list of each and remover any
+    the net ranges and if available the organization list of each and remover any
     duplicate entries.
     """
     seen = {}
@@ -459,7 +519,7 @@ def get_whois_nets_iplist(ip_list):
 
 def whois_ips(res,ip_list):
     """
-    This function will proess the results of the whois lookups and present the 
+    This function will process the results of the whois lookups and present the 
     user with the list of net ranges found and ask the user if he wishes to perform
     a reverse lookup on any of the ranges or all the ranges.
     """
@@ -501,7 +561,6 @@ def prettify(elem):
     reparsed = minidom.parseString(rough_string)
     return reparsed.toprettyxml(indent="", newl= "")
 
-
 def dns_record_from_dict(record_dict_list):
     """
     Saves DNS Records to XML Given a a list of dictionaries each representing
@@ -516,7 +575,6 @@ def dns_record_from_dict(record_dict_list):
         xml_doc.append(xml_record)
 
     return prettify(xml_doc)
-
 
 def create_db(db):
     """
@@ -556,7 +614,6 @@ def make_csv(data):
     for n in data:
 
         if re.search(r'PTR|^[A]$|AAAA',n['type']):
-            print n['type']+","+n['name']+","+n['address']+"\n"
             csv_data += n['type']+","+n['name']+","+n['address']+"\n"
 
         elif re.search(r'NS',n['type']):
@@ -636,6 +693,7 @@ def write_db(db,data):
         # Execute Query and commit
         cur.execute(query)
         con.commit()
+        
 def dns_sec_check(domain,res):
     nsec_algos = [1,2,3,4,5]
     nsec3_algos = [6,7]
@@ -668,6 +726,10 @@ def dns_sec_check(domain,res):
         print "[-] DNSSEC is not configured for", domain
 
 def zone_walk(domain, res):
+    """
+    Function to perform DNSSEC Zone Walk to enumerate an entire zone using NSEC
+    Records.
+    """
     returned_records = []
     found_records = []
     print "[*] Performing NSEC Zone Walk for", domain
@@ -865,18 +927,15 @@ def general_enum(res, domain, do_axfr, do_google, do_spf, do_whois, zw):
                 "text":t[2]
                 }])
 
-        # Process ipv4 SPF records if selected
+        # Process SPF records if selected
         if do_spf is not None:
-            found_spf_ranges.extend(re.findall(\
-            '([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}/\d*)',"".join(text_data)))
+            print "[*] Expanding IP ranges found in DNS and TXT records for Reverse Look-up"
+            found_spf_ranges.extend(process_spf_data(res, text_data))
             if len(found_spf_ranges) > 0:
-                print "[*] Performing Reverse Look-up of SPF ipv4 Ranges"
-                for c in found_spf_ranges:
-                    ip = IPNetwork(c)
-                    ip_list = list(ip)
-                    for i in ip_list:
-                        ip_spf_list.append(str(i))
-                returned_records.extend(brute_reverse(res,unique(ip_spf_list)))
+                print "[*] Performing Reverse Look-up of SPF Ranges"
+                returned_records.extend(brute_reverse(res,unique(found_spf_ranges)))
+            else:
+                print "[*] No IP Ranges where found in SPF and TXT Records"
 
 
         # Enumerate SRV Records for the targeted Domain
@@ -912,49 +971,52 @@ def general_enum(res, domain, do_axfr, do_google, do_spf, do_whois, zw):
 
 
 def usage():
-    print "Version:", __version__
-    print "Usage: dnsrecon.py <options>\n"
-    print "Options:"
-    print "  -h, --help                  Show this help message and exit"
-    print "  -d, --domain      <domain>  Domain to Target for enumeration."
-    print "  -c, --cidr        <range>   CIDR for reverse look-up brute force (range/bitmask)."
-    print "  -r, --range       <range>   IP Range for reverse look-up brute force (first-last)."
-    print "  -n, --name_server <name>    Domain server to use, if none is given the SOA of the"
-    print "                              target will be used"
-    print "  -D, --dictionary  <file>    Dictionary file of sub-domain and hostnames to use for"
-    print "                              brute force."
-    print "  -t, --type        <types>   Specify the type of enumeration to perform:"
-    print "                              std      To Enumerate general record types, enumerates."
-    print "                                       SOA, NS, A, AAAA, MX and SRV if AXRF on the"
-    print "                                       NS Servers fail.\n"
-    print "                              rvl      To Reverse Look Up a given CIDR IP range.\n"
-    print "                              brt      To Brute force Domains and Hosts using a given"
-    print "                                       dictionary.\n"
-    print "                              srv      To Enumerate common SRV Records for a given \n"
-    print "                                       domain.\n"
-    print "                              axfr     Test all NS Servers in a domain for misconfigured"
-    print "                                       zone transfers.\n"
-    print "                              goo      Perform Google search for sub-domains and hosts.\n"
-    print "                              snoop    To Perform a Cache Snooping against all NS "
-    print "                                       servers for a given domain, testing all with"
-    print "                                       file containing the domains, file given with -D"
-    print "                                       option.\n"
-    print "                              tld      Will remove the TLD of given domain and test against"
-    print "                                       all TLD's registered in IANA\n"
-    print "                              zonewalk Will perform a DNSSEC Zone Walk using NSEC Records.\n"
-    print "  -a                          Perform AXFR with the standard enumeration."
-    print "  -s                          Perform Reverse Look-up of ipv4 ranges in the SPF Record of the"
-    print "                              targeted domain with the standard enumeration."
-    print "  -g                          Perform Google enumeration with the standard enumeration."
-    print "  -w                          Do deep whois record analysis and reverse look-up of IP"
-    print "                              ranges found thru whois when doing standard query."
-    print "  -z                          Perforns a DNSSEC Zone Walk with the standard enumeration."
-    print "  --threads          <number> Number of threads to use in Range Reverse Look-up, Forward"
-    print "                              Look-up Brute force and SRV Record Enumeration"
-    print "  --lifetime         <number> Time to wait for a server to response to a query."
-    print "  --db               <file>   SQLite3 file to save found records."
-    print "  --xml              <file>   XML File to save found records."
-    print "  --csv              <file>   Comma separated value file."
+    print("Version: {0}".format(__version__))
+    print("Usage: dnsrecon.py <options>\n")
+    print("Options:")
+    print("   -h, --help                  Show this help message and exit")
+    print("   -d, --domain      <domain>  Domain to Target for enumeration.")
+    print("   -c, --cidr        <range>   CIDR for reverse look-up brute force (range/bitmask).")
+    print("   -r, --range       <range>   IP Range for reverse look-up brute force in formats (first-last)")
+    print("                               or in (range/bitmask).")
+    print("   -n, --name_server <name>    Domain server to use, if none is given the SOA of the")
+    print("                               target will be used")
+    print("   -D, --dictionary  <file>    Dictionary file of sub-domain and hostnames to use for")
+    print("                               brute force.")
+    print("   -f                          Filter out of Brute Force Domain lookup records that resolve to")
+    print("                               the wildcard defined IP Address.")
+    print("   -t, --type        <types>   Specify the type of enumeration to perform:")
+    print("                               std      To Enumerate general record types, enumerates.")
+    print("                                        SOA, NS, A, AAAA, MX and SRV if AXRF on the")
+    print("                                        NS Servers fail.\n")
+    print("                               rvl      To Reverse Look Up a given CIDR IP range.\n")
+    print("                               brt      To Brute force Domains and Hosts using a given")
+    print("                                        dictionary.\n")
+    print("                               srv      To Enumerate common SRV Records for a given \n")
+    print("                                        domain.\n")
+    print("                               axfr     Test all NS Servers in a domain for misconfigured")
+    print("                                        zone transfers.\n")
+    print("                               goo      Perform Google search for sub-domains and hosts.\n")
+    print("                               snoop    To Perform a Cache Snooping against all NS ")
+    print("                                        servers for a given domain, testing all with")
+    print("                                        file containing the domains, file given with -D")
+    print("                                        option.\n")
+    print("                               tld      Will remove the TLD of given domain and test against")
+    print("                                        all TLD's registered in IANA\n")
+    print("                               zonewalk Will perform a DNSSEC Zone Walk using NSEC Records.\n")
+    print("   -a                          Perform AXFR with the standard enumeration.")
+    print("   -s                          Perform Reverse Look-up of ipv4 ranges in the SPF Record of the")
+    print("                               targeted domain with the standard enumeration.")
+    print("   -g                          Perform Google enumeration with the standard enumeration.")
+    print("   -w                          Do deep whois record analysis and reverse look-up of IP")
+    print("                               ranges found thru whois when doing standard query.")
+    print("   -z                          Performs a DNSSEC Zone Walk with the standard enumeration.")
+    print("   --threads          <number> Number of threads to use in Range Reverse Look-up, Forward")
+    print("                               Look-up Brute force and SRV Record Enumeration")
+    print("   --lifetime         <number> Time to wait for a server to response to a query.")
+    print("   --db               <file>   SQLite 3 file to save found records.")
+    print("   --xml              <file>   XML File to save found records.")
+    print("   --csv              <file>   Comma separated value file.")
     sys.exit(0)
 
 
@@ -980,10 +1042,10 @@ def main():
     request_timeout = 3.0
     ip_list = []
     ip_range = None
-    ip_range_pattern ='([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})-([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})'
     results_db = None
     zonewalk = None
     csv_file = None
+    wildcard_filter = None
     
     #
     # Global Vars
@@ -995,11 +1057,10 @@ def main():
     # Define options
     #
     try:
-        options, args = getopt.getopt(sys.argv[1:], 'hzd:c:n:x:D:t:aq:gwr:s',
+        options, args = getopt.getopt(sys.argv[1:], 'hzd:n:x:D:t:aq:gwr:fsc:',
                                            ['help',
                                            'zone_walk'
                                            'domain=',
-                                           'cidr=',
                                            'name_server=',
                                            'xml=',
                                            'dictionary=',
@@ -1009,10 +1070,11 @@ def main():
                                            'do_whois',
                                            'range=',
                                            'do_spf',
+                                           'csv=',
                                            'lifetime=',
                                            'threads=',
-                                           'db=',
-                                           'csv='])
+                                           'db='
+                                           ])
     except getopt.GetoptError:
         print "[-] Wrong Option Provided!"
         usage()
@@ -1025,10 +1087,7 @@ def main():
             
         elif opt in ('-d','--domain'):
             domain = arg
-            
-        elif opt in ('-c','--cidr'):
-            ip_list.extend(expand_cidr(arg))
-            
+                        
         elif opt in ('-n','--name_server'):
             ns_server = arg
             
@@ -1059,13 +1118,14 @@ def main():
             spf_enum = True
             
         elif opt in ('-r','--range'):
-            ip_range = re.findall(ip_range_pattern,arg)
-            try:
-                ip_list.extend(expand_range(ip_range[0][0],ip_range[0][1]))
-            except:
-                print "[-] Make sure that you specified <start IP>-<end IP> with no spaces."
+            ip_range = process_range(arg)
+            if len(ip_range) > 0:
+                ip_list.extend(ip_range)
+            else:
                 sys.exit(1)
-            
+        elif opt in ('-f'):
+            wildcard_filter = True
+
         elif opt in ('--theads'):
             thread_num = int(arg)
             
@@ -1075,7 +1135,7 @@ def main():
         elif opt in ('--db'):
             results_db = arg
             
-        elif opt in ('--csv'):
+        elif opt in ('-c', '--csv'):
             csv_file = arg
             
         elif opt in ('-h'):
@@ -1125,7 +1185,7 @@ def main():
                     if (dict is not None) and (domain is not None):
                         print '[*] Performing host and subdomain brute force against', \
                             domain
-                        brt_enum_records = brute_domain(res, dict, domain)
+                        brt_enum_records = brute_domain(res, dict, domain, wildcard_filter)
 
                         if (output_file is not None) or (results_db is not None) or (csv_file is not None):
                             returned_records.extend(brt_enum_records)
@@ -1171,6 +1231,7 @@ def main():
                         cache_enum_records = in_cache(dict,ns_server)
                         if (output_file is not None) or (results_db is not None) or (csv_file is not None):
                             returned_records.extend(cache_enum_records)
+                            
                     else:
                         print '[-] No Domain or Name Server to target specified!'
                         sys.exit(1)
