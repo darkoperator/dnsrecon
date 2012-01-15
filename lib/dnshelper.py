@@ -157,9 +157,12 @@ class DnsHelper:
         answer = self._res.query(self._domain, 'NS')
         name_servers = []
         if answer is not None:
-            for aa in answer.response.additional:
-                if re.search(r'1|28', str(aa.rdtype)):
-                    name_servers.append(['NS', aa.name.to_text(), aa[0].address])
+            for aa in answer:
+                name = aa.target.to_text()
+                ip_addrs = self.get_ip(name)
+                for addresses in ip_addrs:
+                    if re.search(r'^A',addresses[0]):
+                        name_servers.append(['NS', name, addresses[2]])
         return name_servers
 
     def get_soa(self):
