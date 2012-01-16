@@ -21,7 +21,13 @@ import urllib
 import re
 import time
 
-class AppURLopener(urllib.FancyURLopener):
+try:
+    url_opener = urllib.FancyURLopener
+except AttributeError:
+    import urllib.request
+    url_opener = urllib.request.FancyURLopener  
+
+class AppURLopener(url_opener):
 
     version = 'Mozilla/5.0 (compatible; Googlebot/2.1; + http://www.google.com/bot.html)'
 
@@ -38,7 +44,10 @@ def scrape_google(dom):
     #opener.addheaders = [('User-Agent','Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)')]
     for n in searches:
         url = "http://google.com/search?hl=en&lr=&ie=UTF-8&q=%2B"+dom+"&start="+n+"&sa=N&filter=0&num=100"
-        sock = urllib.urlopen(url)
+        try:
+            sock = urllib.urlopen(url)
+        except AttributeError:
+            sock = urllib.request.urlopen(url)
         data += sock.read()
         sock.close()
     results.extend(unique(re.findall("href=\"htt\w{1,2}:\/\/([^:?]*[a-b0-9]*[^:?]*\."+dom+")\/", data)))

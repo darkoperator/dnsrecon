@@ -50,18 +50,21 @@ def whois(target,whois_srv):
     """
     response = ""
     #socket.setdefaulttimeout(4.0)
+    counter = 1
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.connect((whois_srv, WHOIS_PORT_NUMBER))
-        s.send("n " + target + "\r\n")
+        s.send(("n " + target + "\r\n").encode("utf-8"))
         response = ''
         while True:
             d = s.recv(WHOIS_RECEIVE_BUFFER_SIZE)
-            response += d
-            if d == '':
+            response += str(d)
+            counter += 1
+            if str(d) == '' or counter == 5:
                 break
         s.close()
-    except:
+    except Exception as e:
+        print(e)
         pass
     return response
 
@@ -78,7 +81,7 @@ def get_whois_nets(data):
     return results
 
 def get_whois_orgname(data):
-    org_pattern = "OrgName\:\s*(.*)"
+    org_pattern = "OrgName\:\s*(.*)\n"
     result = re.findall(org_pattern,data)
     if not result:
         result.append("Not Found")
