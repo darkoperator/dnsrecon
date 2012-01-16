@@ -38,7 +38,12 @@ import sys
 import time
 import sqlite3
 
-from Queue import Queue
+# Manage the change in Python3 of the name of the Queue Library
+try:
+    from Queue import Queue
+except ImportError:
+    from queue import Queue
+    
 from random import Random
 from threading import Lock, Thread
 from xml.dom import minidom
@@ -104,7 +109,7 @@ class Worker(Thread):
                                 print_status("\t{}:{}".format(k,v))
                             print_status()
                         else:
-                            print_status("\t {}".format("".join(r)))
+                            print_status("\t {}".format(" ".join(r)))
                     Worker.lck.release()
 
             except Exception is e:
@@ -241,7 +246,7 @@ def check_wildcard(res, domain_trg):
     Function for checking if Wildcard resolution is configured for a Domain
     """
     wildcard = None
-    test_name = ''.join(Random().sample(string.letters + string.digits,
+    test_name = ''.join(Random().sample(string.hexdigits + string.digits,
                         12)) + '.' + domain_trg
     ips = res.get_a(test_name)
     
@@ -309,7 +314,7 @@ def brute_tlds(res, domain):
                 print_status("\t{0}".format("".join(rcd)))
                 found_tlds.extend([{'type':rcd[0],'name':rcd[1],'address':rcd[2]}])
     
-    print_status("{} Records Found".format(len(found_tlds)))
+    print_good("{0} Records Found".format(len(found_tlds)))
 
     return found_tlds
 
@@ -365,7 +370,7 @@ def brute_srv(res, domain):
     else:
         print_error("No SRV Records Found for {0}".format(domain))
 
-    print_error("{0} Records Found".format(len(returned_records)))
+    print_good("{0} Records Found".format(len(returned_records)))
     
     return returned_records
 
@@ -397,7 +402,7 @@ def brute_reverse(res,ip_list):
             "name":rcd[1],'address':rcd[2]
             }])
 
-    print_status("{0} Records Found".format(len(returned_records)))
+    print_good("{0} Records Found".format(len(returned_records)))
 
     return returned_records
 
@@ -447,7 +452,7 @@ def brute_domain(res, dict, dom, filter = None):
         # Clear Global variable
         brtdata = []
         
-    print_status("{} Records Found".format(len(found_hosts)))
+    print_good("{0} Records Found".format(len(found_hosts)))
     return found_hosts
 
 
@@ -536,8 +541,9 @@ def whois_ips(res,ip_list):
     for i in range(len(list)):
         print_status("\t {0} {1}-{2} {3}".format(str(i)+")", list[i]['start'], list[i]['end'], list[i]['orgname']))
     print_status('What Range do you wish to do a Revers Lookup for?')
-    print_status('(number, comma separated list, a for all or n for none)',
-    answer = input().split(","))
+    print_status('number, comma separated list, a for all or n for none')
+    val = sys.stdin.readline()[:-1]
+    answer = str(val).split(",")
 
     if "a" in answer:
         for i in range(len(list)):
@@ -775,7 +781,7 @@ def zone_walk(domain, res):
                                 print_status('\t {0} {1} {2}'.format(a_rcrd[0], a_rcrd[1], a_rcrd[2]))
                                 returned_records.extend([{'type':a_rcrd[0],'name':a_rcrd[1],'address':a_rcrd[2]}])
                             elif a_rcrd[0] == "CNAME":
-                                print_status('\t {0} {1} {2}'.fotmat(a_rcrd[0], a_rcrd[1], a_rcrd[2]))
+                                print_status('\t {0} {1} {2}'.format(a_rcrd[0], a_rcrd[1], a_rcrd[2]))
                                 returned_records.extend([{'type':a_rcrd[0],'name':a_rcrd[1],'target':a_rcrd[2]}])
                     else:
                         print_status("\t {0} {1} no_ip".format(rcd_type.group(0).strip(), rdata.next.to_text()))
@@ -805,6 +811,7 @@ def zone_walk(domain, res):
         # Break out of the loop once there are no more records given for the
         # Zone
         except dns.resolver.NoAnswer:
+            print_status("Finished")
             break
         except (KeyboardInterrupt):
             print_error("You have pressed Crtl-C. Saving found records.")
@@ -870,7 +877,7 @@ def general_enum(res, domain, do_axfr, do_google, do_spf, do_whois, zw):
         # Enumerate Name Servers
         try:
             for ns_rcrd in res.get_ns():
-                print_status('\t', ns_rcrd[0], ns_rcrd[1], ns_rcrd[2])
+                print_status('\t {0} {1} {2}'.format(ns_rcrd[0], ns_rcrd[1], ns_rcrd[2]))
 
                 # Save dictionary of returned record
                 returned_records.extend([{'type':ns_rcrd[0],\
@@ -880,12 +887,12 @@ def general_enum(res, domain, do_axfr, do_google, do_spf, do_whois, zw):
                 ip_for_whois.append(ns_rcrd[2])
 
         except dns.resolver.NoAnswer:
-            print("[-] Could not Resolve NS Records for",domain)
+            print_error("Could not Resolve NS Records for {0}".format(domain))
 
         # Enumerate MX Records
         try:
             for mx_rcrd in res.get_mx():
-                print_status('\t', mx_rcrd[0], mx_rcrd[1], mx_rcrd[2])
+                print_status('\t {0} {1} {2}'.format(mx_rcrd[0], mx_rcrd[1], mx_rcrd[2]))
 
                 # Save dictionary of returned record
                 returned_records.extend([{'type':mx_rcrd[0],\
@@ -895,11 +902,11 @@ def general_enum(res, domain, do_axfr, do_google, do_spf, do_whois, zw):
                 ip_for_whois.append(mx_rcrd[2])
 
         except dns.resolver.NoAnswer:
-            print("[-] Could not Resolve MX Records for",domain)
+            print_error("Could not Resolve MX Records for {0}".format(domain))
 
         # Enumerate A Record for the targeted Domain
         for a_rcrd in res.get_ip(domain):
-            print_status('\t', a_rcrd[0], a_rcrd[1], a_rcrd[2])
+            print_status('\t {0} {1} {2}'.format(a_rcrd[0], a_rcrd[1], a_rcrd[2]))
 
             # Save dictionary of returned record
             returned_records.extend([{'type':a_rcrd[0],\
@@ -915,7 +922,7 @@ def general_enum(res, domain, do_axfr, do_google, do_spf, do_whois, zw):
         # Save dictionary of returned record
         if spf_text_data is not None:
             for s in spf_text_data:
-                print_status('\t',s[0], s[1], s[2])
+                print_status('\t {0} {1} {2}'.format(s[0], s[1], s[2]))
                 text_data += s[2]
                 returned_records.extend([{'type':s[0], 'name':s[1],\
                 "text":s[1]
@@ -926,7 +933,7 @@ def general_enum(res, domain, do_axfr, do_google, do_spf, do_whois, zw):
         # Save dictionary of returned record
         if txt_text_data is not None:
             for t in txt_text_data:
-                print_status('\t',t[0], t[1], t[2])
+                print_status('\t {0} {1} {2}'.format(t[0], t[1], t[2]))
                 text_data += t[2]
                 returned_records.extend([{'type':t[0], 'name':t[1],\
                 "text":t[2]
@@ -934,13 +941,13 @@ def general_enum(res, domain, do_axfr, do_google, do_spf, do_whois, zw):
 
         # Process SPF records if selected
         if do_spf is not None:
-            print("[*] Expanding IP ranges found in DNS and TXT records for Reverse Look-up")
+            print_status("Expanding IP ranges found in DNS and TXT records for Reverse Look-up")
             found_spf_ranges.extend(process_spf_data(res, text_data))
             if len(found_spf_ranges) > 0:
-                print("[*] Performing Reverse Look-up of SPF Ranges")
+                print_status("Performing Reverse Look-up of SPF Ranges")
                 returned_records.extend(brute_reverse(res,unique(found_spf_ranges)))
             else:
-                print("[*] No IP Ranges where found in SPF and TXT Records")
+                print_status("No IP Ranges where found in SPF and TXT Records")
 
 
         # Enumerate SRV Records for the targeted Domain
@@ -1081,7 +1088,7 @@ def main():
                                            'db='
                                            ])
     except getopt.GetoptError:
-        print("[-] Wrong Option Provided!")
+        print_error("Wrong Option Provided!")
         usage()
     #
     # Parse options
@@ -1104,7 +1111,7 @@ def main():
             if os.path.isfile(arg):
                 dict = arg
             else:
-                print("[-] File",arg,"does not exist!")
+                print_error("File {0} does not exist!".format(arg))
                 exit(1)
                 
         elif opt in ('-a','--axfr'):
@@ -1161,19 +1168,19 @@ def main():
                         returned_records.extend(res.zone_transfer())
 
                     else:
-                        print('[-] No Domain to target specified!')
+                        print_error('No Domain to target specified!')
                         sys.exit(1)
                     
                 elif r == 'std':
                     if domain is not None:
-                        print("[*] Performing General Enumeration of Domain:",domain)
+                        print_status("Performing General Enumeration of Domain:".format(domain))
                         std_enum_records = general_enum(res, domain, xfr, goo,\
                         spf_enum, do_whois, zonewalk)
                         
                         if (output_file is not None) or (results_db is not None) or (csv_file is not None):
                             returned_records.extend(std_enum_records)
                     else:
-                        print('[-] No Domain to target specified!')
+                        print_error('No Domain to target specified!')
                         sys.exit(1)
                     
                 elif r == 'rvl':
@@ -1184,24 +1191,22 @@ def main():
                         if (output_file is not None) or (results_db is not None) or (csv_file is not None):
                             returned_records.extend(rvl_enum_records)
                     else:
-                        print('[-] Failed CIDR or Range is Required for type rvl')
+                        print_error('Failed CIDR or Range is Required for type rvl')
                         
                 elif r == 'brt':
                     if (dict is not None) and (domain is not None):
-                        print_status('Performing host and subdomain brute force against', \
-                            domain)
+                        print_status('Performing host and subdomain brute force against {0}'.format(domain))
                         brt_enum_records = brute_domain(res, dict, domain, wildcard_filter)
 
                         if (output_file is not None) or (results_db is not None) or (csv_file is not None):
                             returned_records.extend(brt_enum_records)
                     else:
-                        print('[-] No Dictionary file specified!')
+                        print_error('No Dictionary file specified!')
                         sys.exit(1)
                         
                 elif r == 'srv':
                     if domain is not None:
-                        print_status('Enumerating Common SRV Records against', \
-                            domain)
+                        print_status('Enumerating Common SRV Records against {0}'.format(domain))
                         srv_enum_records = brute_srv(res, domain)
 
                         if (output_file is not None) or (results_db is not None) or (csv_file is not None):
@@ -1212,7 +1217,7 @@ def main():
                     
                 elif r == 'tld':
                     if domain is not None:
-                        print("[*] Performing TLD Brute force Enumeration against", domain)
+                        print_status("Performing TLD Brute force Enumeration against {0}".format(domain))
                         tld_enum_records = brute_tlds(res, domain)
                         if (output_file is not None) or (results_db is not None) or (csv_file is not None):
                             returned_records.extend(tld_enum_records)
@@ -1222,7 +1227,7 @@ def main():
                         
                 elif r == 'goo':
                     if domain is not None:
-                        print("[*] Performing Google Search Enumeration against", domain)
+                        print_status("Performing Google Search Enumeration against{0}".format(domain))
                         goo_enum_records = goo_result_process(res, scrape_google(domain))
                         if (output_file is not None) or (results_db is not None) or (csv_file is not None):
                             returned_records.extend(goo_enum_records)
@@ -1232,13 +1237,13 @@ def main():
                         
                 elif r == "snoop":
                     if (dict is not None) and (ns_server is not None):
-                        print("[*] Performing Cache Snooping against NS Server:", ns_server)
+                        print_status("Performing Cache Snooping against NS Server: {0}".format(ns_server))
                         cache_enum_records = in_cache(dict,ns_server)
                         if (output_file is not None) or (results_db is not None) or (csv_file is not None):
                             returned_records.extend(cache_enum_records)
                             
                     else:
-                        print('[-] No Domain or Name Server to target specified!')
+                        print_error('No Domain or Name Server to target specified!')
                         sys.exit(1)
 
                 elif r == "zonewalk":
@@ -1248,46 +1253,46 @@ def main():
                         else:
                             zone_walk(domain, res)
                     else:
-                        print('[-] No Domain or Name Server to target specified!')
+                        print_error('No Domain or Name Server to target specified!')
                         sys.exit(1)
 
                 else:
-                    print("[-] This type of scan is not in the list", r)
+                    print_error("This type of scan is not in the list", r)
                     usage()
             
                     
             except dns.resolver.NXDOMAIN:
-                print("[-] Could not resolve domain:",domain)
+                print_error("Could not resolve domain: {0}".format(domain))
                 sys.exit(1)
 
             except dns.exception.Timeout:
-                print("[-] A timeout error occurred please make sure you can reach the target DNS Servers")
-                print("[-] directly and requests are not being filtered. Increase the timeout from", request_timeout, "second")
-                print("[-] to a higher number with --lifetime <time> option.")
+                print_error("A timeout error occurred please make sure you can reach the target DNS Servers")
+                print_error("directly and requests are not being filtered. Increase the timeout from {0} second".format(request_timeout))
+                print_error("to a higher number with --lifetime <time> option.")
                 sys.exit(1)
         
         # if an output xml file is specified it will write returned results.
         if (output_file is not None):
-            print("[*] Saving records to XML file:", output_file)
+            print_status("Saving records to XML file: {0}".format(output_file))
             xml_enum_doc = dns_record_from_dict(returned_records)
             write_to_file(xml_enum_doc,output_file)
 
         # if an output db file is specified it will write returned results.
         if (results_db is not None):
-            print("[*] Saving records to SQLite3 file:", results_db)
+            print_status("Saving records to SQLite3 file: {0}".format(results_db))
             create_db(results_db)
             write_db(results_db,returned_records)
             
         # if an output csv file is specified it will write returned results.
         if (csv_file is not None):
-            print("[*] Saving records to CSV file", csv_file)
+            print_status("Saving records to CSV file: {0}".format(csv_file))
             write_to_file(make_csv(returned_records),csv_file)
             
         sys.exit(0)
         
     elif domain is not None:
         try:
-            print("[*] Performing General Enumeration of Domain:",domain)
+            print_status("Performing General Enumeration of Domain: {0}".format(domain))
             std_enum_records = std_enum_records = general_enum(res, domain, xfr, goo,\
                                                                spf_enum, do_whois, zonewalk)
 
@@ -1309,13 +1314,13 @@ def main():
 
             sys.exit(0)
         except dns.resolver.NXDOMAIN:
-            print("[-] Could not resolve domain:",domain)
+            print_error("Could not resolve domain: {0}".format(domain))
             sys.exit(1)
 
         except dns.exception.Timeout:
-            print("[-] A timeout error occurred please make sure you can reach the target DNS Servers")
-            print("[-] directly and requests are not being filtered. Increase the timeout")
-            print("[-] to a higher number with --lifetime <time> option.")
+            print_error("A timeout error occurred please make sure you can reach the target DNS Servers")
+            print_error("directly and requests are not being filtered. Increase the timeout")
+            print_error("to a higher number with --lifetime <time> option.")
             sys.exit(1)
     else:
         usage()
