@@ -31,7 +31,3 @@ def print_debug(message=""):
 def print_line(message=""):
     print("{0}".format(message))
           
-
-print_status("Hello world")
-print_error("This is an error")
-print_good("Nice!!!")
