@@ -106,13 +106,13 @@ class Worker(Thread):
                     for r in found_recrd:
                         if type(r).__name__ == "dict":
                             for k,v in r.iteritems():
-                                print_status("\t{}:{}".format(k,v))
+                                print_status("\t{0}:{1}".format(k,v))
                             print_status()
                         else:
-                            print_status("\t {}".format(" ".join(r)))
+                            print_status("\t {0}".format(" ".join(r)))
                     Worker.lck.release()
 
-            except Exception is e:
+            except Exception as e:
                 print_debug(e)
             self.tasks.task_done()
 
@@ -156,7 +156,7 @@ def process_range(arg):
         if len(range_vals) == 2:
             ip_list = IPRange(range_vals[0],range_vals[1])
     except:
-        print_error("Range provided is not valid: {}".format(arg()))
+        print_error("Range provided is not valid: {0}".format(arg()))
         return []
     return [str(ip) for ip in ip_list]
 
@@ -292,7 +292,7 @@ def brute_tlds(res, domain):
     domain_main = domain.split(".")[0]
     
     # Let the user know how long it could take
-    print_status("The operation could take up to: {}".format(time.strftime('%H:%M:%S', \
+    print_status("The operation could take up to: {0}".format(time.strftime('%H:%M:%S', \
     time.gmtime(len(tlds)/4))))
     
     try:
@@ -1258,7 +1258,7 @@ def main():
                         sys.exit(1)
 
                 else:
-                    print_error("This type of scan is not in the list", r)
+                    print_error("This type of scan is not in the list {0}".format(r))
                     usage()
             
                     
