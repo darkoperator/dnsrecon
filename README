@@ -1,6 +1,15 @@
 Version 0.6.1
 Date: 1/14/12
 Changes:
+- Fixed problem with get_ns.
+- Python 3.2 support.
+- Color printing of messages like Metasploit.
+- New library for printing color messages.
+- Improved parsing of records when it is a zone transfer.
+
+Version 0.6.1
+Date: 1/14/12
+Changes:
 - IPv6 support for ranges in reverse look-up.
 - Enhanced parsing of SPF records ranges to cover includes and IPv6.
 - Specific host query for TXT RR.
@@ -37,6 +46,7 @@ Changes:
 
 Known Issues:
 - For some reason the python getopt is not parsing the options correctly in some cases. Considering changing to optparse even if it is  more complicated to manage. 
+- When Running on version 3.x of Python the Whois wuery does not show the organozation.
 
 TODO:
 
