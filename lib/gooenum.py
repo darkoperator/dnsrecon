@@ -41,15 +41,19 @@ def scrape_google(dom):
     searches = ["100", "200","300","400","500"]
     data = ""
     urllib._urlopener = AppURLopener()
+    user_agent = 'Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.9.0.7) Gecko/2009021910 Firefox/3.0.7'
+    headers={'User-Agent':user_agent,} 
     #opener.addheaders = [('User-Agent','Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)')]
     for n in searches:
         url = "http://google.com/search?hl=en&lr=&ie=UTF-8&q=%2B"+dom+"&start="+n+"&sa=N&filter=0&num=100"
         try:
             sock = urllib.urlopen(url)
+            data += sock.read()
+            sock.close()
         except AttributeError:
-            sock = urllib.request.urlopen(url)
-        data += sock.read()
-        sock.close()
+            request = urllib.request.Request(url,None,headers) 
+            response = urllib.request.urlopen(request)
+            data += str(response.read())
     results.extend(unique(re.findall("href=\"htt\w{1,2}:\/\/([^:?]*[a-b0-9]*[^:?]*\."+dom+")\/", data)))
     # Make sure we are only getting the host
     for f in results:
