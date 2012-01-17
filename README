@@ -1,5 +1,5 @@
 Version 0.6.5
-Date: 1/14/12
+Date: 1/16/12
 Changes:
 - Fixed problem with get_ns.
 - Python 3.2 support.
