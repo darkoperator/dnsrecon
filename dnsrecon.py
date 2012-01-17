@@ -502,6 +502,7 @@ def goo_result_process(res, found_hosts):
                 returned_records.extend([{'type':sdip[0], 'name':sdip[1], \
                 'address':sdip[2]
                 }])
+    print_good("{0} Records Found".format(len(returned_records)))
     return returned_records
 
 def get_whois_nets_iplist(ip_list):
