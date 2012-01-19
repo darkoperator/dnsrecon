@@ -55,7 +55,7 @@ class DnsHelper:
         s.settimeout(DNS_QUERY_TIMEOUT)
         try:
             s.connect((address, DNS_PORT_NUMBER)) 
-        except Exception is e:
+        except Exception as e:
             return False
         else:
             return True
