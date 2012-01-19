@@ -294,7 +294,7 @@ class DnsHelper:
                 try:
                     zone = dns.zone.from_xfr(dns.query.xfr(ns_srv, self._domain))
                     print_good('Zone Transfer was successful!!')
-                    zone_records.append({'zone_transfer':'success', 'ns_server':ns_srv})
+                    zone_records.append({'type':'info', 'zone_transfer':'success', 'ns_server':ns_srv})
                     for (name, rdataset) in \
                         zone.iterate_rdatasets(dns.rdatatype.SOA):
                         for rdata in rdataset:
@@ -584,7 +584,7 @@ class DnsHelper:
 
                 except:
                     print_error('[-] Zone Transfer Failed!')
-                zone_records.append({'zone_transfer':'failed', 'ns_server':ns_srv})
+                zone_records.append({'type':'info','zone_transfer':'failed', 'ns_server':ns_srv})
         return zone_records
 
 
