@@ -285,7 +285,7 @@ class DnsHelper:
         zone_records = []
         print_status('Checking for Zone Transfer for {0} name servers'.format(self._domain))
         ns_srvs = self.get_ns()
-        
+        print ns_srvs
         for ns in ns_srvs:
             ns_srv = ''.join(ns[2])
             if self.check_tcp_dns(ns_srv):
@@ -582,8 +582,9 @@ class DnsHelper:
                                                 'precedence':rdata.precedence
                                                 })
 
-                except:
-                    print_error('[-] Zone Transfer Failed!')
+                except Exception as e:
+                    print_error('Zone Transfer Failed!')
+                    print_error(e)
                 zone_records.append({'type':'info','zone_transfer':'failed', 'ns_server':ns_srv})
         return zone_records
 
