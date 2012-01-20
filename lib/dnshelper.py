@@ -307,10 +307,27 @@ class DnsHelper:
         # I tried to include those I thought where the most common.
 
         zone_records = []
+        ns_records = []
         print_status('Checking for Zone Transfer for {0} name servers'.format(self._domain))
-        ns_srvs = self.get_ns()
-        for ns in ns_srvs:
-            ns_srv = ''.join(ns[2])
+        print_status("Resolving SOA Record")
+        try:
+            soa_srvs = self.get_soa()
+            ns_records.append(soa_srvs[2])
+            print_good("\t{0}".format(" ".join(soa_srvs)))
+        except:
+            print_error("Could not obtain the domains SOA Record.")
+            return
+        
+        print_status("Resolving NS Records")
+        try:
+            ns_srvs = self.get_ns()
+            for ns in ns_srvs:
+                ns_records.append(''.join(ns[2]))
+        except:
+            print_error("Could not Resolve NS Records")
+
+        ns_records = list(set(ns_records))
+        for ns_srv in ns_records:
             if self.check_tcp_dns(ns_srv):
                 print_status('Trying NS server {0}'.format(ns_srv))
                 print_good('{0} Has port 53 TCP Open'.format(ns_srv))
