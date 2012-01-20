@@ -21,7 +21,7 @@ import re
 import dns.query
 import dns.resolver
 import dns.reversename
-import dns.zone
+from dns.zone import *
 import socket
 from dns.dnssec import algorithm_to_text
 from .msf_print import *
@@ -274,6 +274,30 @@ class DnsHelper:
         answer = self._res.query(host, 'NSEC')
         return answer
 
+    def from_wire(self, xfr, zone_factory=Zone, relativize=True):
+        z = None
+        for r in xfr:
+            if z is None:
+                if relativize:
+                    origin = r.origin
+                else:
+                    origin = r.answer[0].name
+                rdclass = r.answer[0].rdclass
+                z = zone_factory(origin, rdclass, relativize=relativize)
+            for rrset in r.answer:
+                znode = z.nodes.get(rrset.name)
+                if not znode:
+                    znode = z.node_factory()
+                    z.nodes[rrset.name] = znode
+                zrds = znode.find_rdataset(rrset.rdclass, rrset.rdtype,
+                                           rrset.covers, True)
+                zrds.update_ttl(rrset.ttl)
+                for rd in rrset:
+                    rd.choose_relativity(z.origin, relativize)
+                    zrds.add(rd)
+    
+        return z
+    
     def zone_transfer(self):
         """
         Function for testing for zone transfers for a given Domain, it will parse the
@@ -285,14 +309,13 @@ class DnsHelper:
         zone_records = []
         print_status('Checking for Zone Transfer for {0} name servers'.format(self._domain))
         ns_srvs = self.get_ns()
-        print ns_srvs
         for ns in ns_srvs:
             ns_srv = ''.join(ns[2])
             if self.check_tcp_dns(ns_srv):
                 print_status('Trying NS server {0}'.format(ns_srv))
                 print_good('{0} Has port 53 TCP Open'.format(ns_srv))
                 try:
-                    zone = dns.zone.from_xfr(dns.query.xfr(ns_srv, self._domain))
+                    zone = self.from_wire(dns.query.xfr(ns_srv, self._domain))
                     print_good('Zone Transfer was successful!!')
                     zone_records.append({'type':'info', 'zone_transfer':'success', 'ns_server':ns_srv})
                     for (name, rdataset) in \
@@ -583,8 +606,8 @@ class DnsHelper:
                                                 })
 
                 except Exception as e:
+                    print e
                     print_error('Zone Transfer Failed!')
-                    print_error(e)
                 zone_records.append({'type':'info','zone_transfer':'failed', 'ns_server':ns_srv})
         return zone_records
 
