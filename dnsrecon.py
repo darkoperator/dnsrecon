@@ -571,7 +571,7 @@ def prettify(elem):
     """
     rough_string = ElementTree.tostring(elem, 'utf-8')
     reparsed = minidom.parseString(rough_string)
-    return reparsed.toprettyxml(indent="", newl= "")
+    return reparsed.toprettyxml(indent="    ")
 
 def dns_record_from_dict(record_dict_list):
     """
@@ -580,11 +580,10 @@ def dns_record_from_dict(record_dict_list):
     """
     xml_doc = Element("records")
     for r in record_dict_list:
-        xml_record = Element('record')
-        for n,v in r.iteritems():
-            record_field = SubElement(xml_record,n)
-            record_field.text = v
-        xml_doc.append(xml_record)
+        elem = Element("record")
+        for k,v in r.iteritems():
+           elem.attrib[k] = v
+        xml_doc.append(elem)
 
     return prettify(xml_doc)
 
