@@ -275,10 +275,10 @@ class DnsHelper:
         return answer
 
     def from_wire(self, xfr, zone_factory=Zone, relativize=True):
-		"""
-		Method for turning returned data from a DNS AXFR in to RRSET, this method will not perform a
-		check origin on the zone data as the method included with dnspython
-		"""
+        """
+        Method for turning returned data from a DNS AXFR in to RRSET, this method will not perform a
+        check origin on the zone data as the method included with dnspython
+        """
         z = None
         for r in xfr:
             if z is None:
