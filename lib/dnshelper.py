@@ -28,7 +28,7 @@ from .msf_print import *
 
 DNS_PORT_NUMBER = 53
 # 3 Seconds should be more than enough to check for delay for a regular connection.
-DNS_QUERY_TIMEOUT = 3  
+DNS_QUERY_TIMEOUT = 3
 
 class DnsHelper:
     def __init__(self, domain, ns_server=None, request_timeout=1.0, ):
@@ -43,7 +43,7 @@ class DnsHelper:
         # Set timing
         self._res.timeout = request_timeout
         self._res.lifetime = request_timeout
-    
+
     def check_tcp_dns(self,address):
         """
         Function to check if a server is listening at port 53 TCP. This will aid
@@ -51,10 +51,10 @@ class DnsHelper:
         be closed.
         """
         s = socket.socket()
-        
+
         s.settimeout(DNS_QUERY_TIMEOUT)
         try:
-            s.connect((address, DNS_PORT_NUMBER)) 
+            s.connect((address, DNS_PORT_NUMBER))
         except Exception as e:
             return False
         else:
@@ -69,7 +69,7 @@ class DnsHelper:
             res.nameservers = [ns]
         else:
             res = dns.resolver.Resolver(configure=True)
-        
+
         answers = res.query(target, type)
         return answers
 
@@ -226,7 +226,7 @@ class DnsHelper:
 
         return txt_record
 
-    
+
     def get_ptr(self, ipaddress):
         """
         Function for resolving PTR Record given it's IPv4 or IPv6 Address.
@@ -241,7 +241,7 @@ class DnsHelper:
         except:
             return None
 
-            
+
     def get_srv(self, host):
         """
         Function for resolving SRV Records.
@@ -258,7 +258,7 @@ class DnsHelper:
                         if re.search('(^A|AAAA)',ip[0]):
                             record.append(['SRV', host, a.target.to_text(), ip[2],
                                       str(a.port), str(a.weight)])
-                                                       
+
                 else:
                     record.append(['SRV', host, a.target.to_text(), "no_ip",
                                   str(a.port), str(a.weight)])
@@ -275,6 +275,10 @@ class DnsHelper:
         return answer
 
     def from_wire(self, xfr, zone_factory=Zone, relativize=True):
+		"""
+		Method for turning returned data from a DNS AXFR in to RRSET, this method will not perform a
+		check origin on the zone data as the method included with dnspython
+		"""
         z = None
         for r in xfr:
             if z is None:
@@ -295,9 +299,9 @@ class DnsHelper:
                 for rd in rrset:
                     rd.choose_relativity(z.origin, relativize)
                     zrds.add(rd)
-    
+
         return z
-    
+
     def zone_transfer(self):
         """
         Function for testing for zone transfers for a given Domain, it will parse the
@@ -309,6 +313,8 @@ class DnsHelper:
         zone_records = []
         ns_records = []
         print_status('Checking for Zone Transfer for {0} name servers'.format(self._domain))
+
+        # Find SOA for Domain
         print_status("Resolving SOA Record")
         try:
             soa_srvs = self.get_soa()
@@ -317,7 +323,8 @@ class DnsHelper:
         except:
             print_error("Could not obtain the domains SOA Record.")
             return
-        
+
+        # Find NS for Domain
         print_status("Resolving NS Records")
         try:
             ns_srvs = self.get_ns()
@@ -326,7 +333,10 @@ class DnsHelper:
         except:
             print_error("Could not Resolve NS Records")
 
+        # Remove duplicates
         ns_records = list(set(ns_records))
+
+        # Test each NS Server
         for ns_srv in ns_records:
             if self.check_tcp_dns(ns_srv):
                 print_status('Trying NS server {0}'.format(ns_srv))

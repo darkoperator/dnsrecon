@@ -1,3 +1,11 @@
+Version 0.6.6
+Date: 1/20/12
+Changes:
+- Does not fo a Origin Check for zones transfered since some admin may have configured their zones without NS Servers as experienced by a user.
+- Handles exception if NS records can not be resolved when performing a zone transfer test.
+- Will always for a test for the SOA and test it for zone transfer.
+- Fixed problem when generating an XML from a zone transfer with the new parsing method, info type was added to the XML output.
+
 Version 0.6.5
 Date: 1/16/12
 Changes:
@@ -45,11 +53,11 @@ Changes:
 - Changes to the options.
 
 Known Issues:
-- For some reason the python getopt is not parsing the options correctly in some cases. Considering changing to optparse even if it is  more complicated to manage. 
-- When Running on version 3.x of Python the Whois wuery does not show the organozation.
+- For some reason the python getopt is not parsing the options correctly in some cases. Considering changing to optparse even if it is  more complicated to manage.
+- When Running on version 3.x of Python the Whois wuery does not show the organization.
 
 TODO:
 
 - Look in to doing Zone Walks using DS records, can not figure out how to properly do the query with dnspython.
-- Append to the end of found hosts thrue brute-force the numbers from 1 to 9 and 01 to 09.
+- Append to the end of found hosts via brute-force the numbers from 1 to 9 and 01 to 09.
 - Append to dictionary host-name of hosts found thru reverse look-up.
