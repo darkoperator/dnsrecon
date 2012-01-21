@@ -85,7 +85,7 @@ class DnsHelper:
                 for rdata in ardata:
                     if rdata.rdtype == 5:
                         address.append(["CNAME", host_trg, rdata.target.to_text()])
-                        host_trg = rdata.target.to_text()
+                        host_trg = rdata.target.to_text()[:-1]
                     else:
                         address.append(["A", host_trg, rdata.address])
         except:
@@ -104,7 +104,7 @@ class DnsHelper:
                 for rdata in ardata:
                     if rdata.rdtype == 5:
                         address.append(["CNAME", host_trg, rdata.target.to_text()])
-                        host_trg = rdata.target.to_text()
+                        host_trg = rdata.target.to_text()[:-1]
                     else:
                         address.append(["AAAA", host_trg, rdata.address])
         except:
@@ -159,7 +159,7 @@ class DnsHelper:
         name_servers = []
         if answer is not None:
             for aa in answer:
-                name = aa.target.to_text()
+                name = aa.target.to_text()[:-1]
                 ip_addrs = self.get_ip(name)
                 for addresses in ip_addrs:
                     if re.search(r'^A',addresses[0]):
@@ -236,7 +236,7 @@ class DnsHelper:
         try:
             answers = self._res.query(n, 'PTR')
             for a in answers:
-                found_ptr.append(['PTR', a.target.to_text(), ipaddress])
+                found_ptr.append(['PTR', a.target.to_text()[:-1], ipaddress])
             return found_ptr
         except:
             return None
