@@ -1,6 +1,26 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+#    DNSRecon Data Parser
+#
+#    Copyright (C) 2012  Carlos Perez
+#
+#    This program is free software; you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation; Applies version 2 of the License.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program; if not, write to the Free Software
+#    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+
+__version__ = '0.0.1'
+__author__ = 'Carlos Perez, Carlos_Perez@darkoperator.com'
+
 import xml.etree.cElementTree as cElementTree
 import csv
 import os
@@ -11,7 +31,7 @@ import re
 from netaddr import *
 
 # Function Definitions
-# -------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
 def print_status(message=""):
     print("\033[1;34m[*]\033[1;m {0}".format(message))
@@ -54,33 +74,43 @@ def xml_parse(xm_file, ifilter, tfilter, nfilter, list):
             if "address" in elem.attrib:
                 if elem.attrib['address'] not in ifilter:
                     if re.search(tfilter, elem.attrib['type'], re.I):
-                        if re.search(r'PTR|^[A]$|AAAA',elem.attrib['type']) and re.search(nfilter, elem.attrib['name'], re.I):
+                        if re.search(r'PTR|^[A]$|AAAA',elem.attrib['type']) \
+                        and re.search(nfilter, elem.attrib['name'], re.I):
                             if list:
-                                if elem.attrib['address'] not in iplist: iplist.append(elem.attrib['address'])
+                                if elem.attrib['address'] not in iplist:
+                                    iplist.append(elem.attrib['address'])
                             else:
                                 print_good("{0} {1} {2}".format(elem.attrib['type'], elem.attrib['name'], elem.attrib['address']))
                     
-                        elif re.search(r'NS', elem.attrib['type']) and re.search(nfilter, elem.attrib['target'], re.I):
+                        elif re.search(r'NS', elem.attrib['type']) and \
+                        re.search(nfilter, elem.attrib['target'], re.I):
                             if list:
-                                if elem.attrib['address'] not in iplist: iplist.append(elem.attrib['address'])
+                                if elem.attrib['address'] not in iplist:
+                                    iplist.append(elem.attrib['address'])
                             else:
                                 print_good("{0} {1} {2}".format(elem.attrib['type'], elem.attrib['target'], elem.attrib['address']))
     
-                        elif re.search(r'SOA', elem.attrib['type']) and re.search(nfilter, elem.attrib['mname'], re.I):
+                        elif re.search(r'SOA', elem.attrib['type']) and \
+                        re.search(nfilter, elem.attrib['mname'], re.I):
                             if list:
-                                if elem.attrib['address'] not in iplist: iplist.append(elem.attrib['address'])
+                                if elem.attrib['address'] not in iplist:
+                                    iplist.append(elem.attrib['address'])
                             else:
                                 print_good("{0} {1} {2}".format(elem.attrib['type'], elem.attrib['mname'], elem.attrib['address']))
     
-                        elif re.search(r'MX', elem.attrib['type']) and re.search(nfilter, elem.attrib['exchange'], re.I):
+                        elif re.search(r'MX', elem.attrib['type']) and \
+                        re.search(nfilter, elem.attrib['exchange'], re.I):
                             if list:
-                                if elem.attrib['address'] not in iplist: iplist.append(elem.attrib['address'])
+                                if elem.attrib['address'] not in iplist:
+                                    iplist.append(elem.attrib['address'])
                             else:
                                 print_good("{0} {1} {2}".format(elem.attrib['type'], elem.attrib['exchange'], elem.attrib['address']))
     
-                        elif re.search(r'SRV', elem.attrib['type']) and re.search(nfilter, elem.attrib['target'], re.I):
+                        elif re.search(r'SRV', elem.attrib['type']) and \
+                        re.search(nfilter, elem.attrib['target'], re.I):
                             if list:
-                                if elem.attrib['address'] not in iplist: iplist.append(elem.attrib['address'])
+                                if elem.attrib['address'] not in iplist:
+                                    iplist.append(elem.attrib['address'])
                             else:
                                  print_good("{0} {1} {2} {3}".format(elem.attrib['type'], elem.attrib['name'], elem.attrib['address'], elem.attrib['target'], elem.attrib['port']))
             
@@ -122,6 +152,18 @@ def detect_type(file):
         raise Exception("Unsupported File Type")
     return ftype
 
+def usage():
+    print("Version: {0}".format(__version__))
+    print("Usage: parser.py <options>\n")
+    print("Options:")
+    print("   -h, --help               Show this help message and exit")
+    print("   -f, --file    <file>     DNSRecon XML or CSV output file to parse.")
+    print("   -l, --list               Output an unique IP List that can be used with other tools.")
+    print("   -i, --ips     <ranges>   IP Ranges in a comma separated list each in formats (first-last)")
+    print("                            or in (range/bitmask) for ranges to be excluded from output.")
+    print("   -t, --type    <type>     Resource Record Types in comma separated list to filter output.")
+    print("   -s, --str     <regex>    Regular expression between quotes for filtering host names on.")
+    sys.exit(0)
 
 # Main
 #-------------------------------------------------------------------------------
@@ -188,7 +230,7 @@ def main():
             else:
                 sys.exit(1)
         elif opt in ('-h'):
-            print usage
+            print usage()
     
     # start execution based on options
     if file:
@@ -199,7 +241,7 @@ def main():
             csv_parse(file, ip_filter, type_filter, name_filter,target_list)
     else:
         print_error("A DNSRecon XML or CSV output file must be provided to be parsed")
-            
+        usage()
         
 if __name__ == "__main__":
     main()
