@@ -68,12 +68,20 @@ def process_range(arg):
     return [str(ip) for ip in ip_list]
     
 def xml_parse(xm_file, ifilter, tfilter, nfilter, list):
+    """
+    Function for parsing XML files created by DNSRecon and apply filters. 
+    """
     iplist = []
     for event, elem in cElementTree.iterparse(xm_file):
+        # Check if it is a record
         if elem.tag == "record":
+            # Check that it is a RR Type that has an IP Address
             if "address" in elem.attrib:
+                # Check if the IP is in the filter list of IPs to ignore
                 if elem.attrib['address'] not in ifilter:
+                    # Check if the RR Type against the types
                     if re.search(tfilter, elem.attrib['type'], re.I):
+                        # Process A, AAAA and PTR Records
                         if re.search(r'PTR|^[A]$|AAAA',elem.attrib['type']) \
                         and re.search(nfilter, elem.attrib['name'], re.I):
                             if list:
@@ -82,6 +90,7 @@ def xml_parse(xm_file, ifilter, tfilter, nfilter, list):
                             else:
                                 print_good("{0} {1} {2}".format(elem.attrib['type'], elem.attrib['name'], elem.attrib['address']))
                     
+                        # Process NS Records
                         elif re.search(r'NS', elem.attrib['type']) and \
                         re.search(nfilter, elem.attrib['target'], re.I):
                             if list:
@@ -90,6 +99,7 @@ def xml_parse(xm_file, ifilter, tfilter, nfilter, list):
                             else:
                                 print_good("{0} {1} {2}".format(elem.attrib['type'], elem.attrib['target'], elem.attrib['address']))
     
+                        # Process SOA Records
                         elif re.search(r'SOA', elem.attrib['type']) and \
                         re.search(nfilter, elem.attrib['mname'], re.I):
                             if list:
@@ -98,6 +108,7 @@ def xml_parse(xm_file, ifilter, tfilter, nfilter, list):
                             else:
                                 print_good("{0} {1} {2}".format(elem.attrib['type'], elem.attrib['mname'], elem.attrib['address']))
     
+                        # Process MS Records
                         elif re.search(r'MX', elem.attrib['type']) and \
                         re.search(nfilter, elem.attrib['exchange'], re.I):
                             if list:
@@ -106,6 +117,7 @@ def xml_parse(xm_file, ifilter, tfilter, nfilter, list):
                             else:
                                 print_good("{0} {1} {2}".format(elem.attrib['type'], elem.attrib['exchange'], elem.attrib['address']))
     
+                        # Process SRV Records
                         elif re.search(r'SRV', elem.attrib['type']) and \
                         re.search(nfilter, elem.attrib['target'], re.I):
                             if list:
@@ -114,28 +126,40 @@ def xml_parse(xm_file, ifilter, tfilter, nfilter, list):
                             else:
                                  print_good("{0} {1} {2} {3}".format(elem.attrib['type'], elem.attrib['name'], elem.attrib['address'], elem.attrib['target'], elem.attrib['port']))
             
+            # Process TXT and SPF Records
             elif re.search(r'TXT|SPF', elem.attrib['type']):
                 if not list:
                     print_good("{0} {1} {2}".format(elem.attrib['type'], elem.attrib['name'], elem.attrib['text']))
+    # Process IPs in list 
     if len(iplist ) > 0:
         for ip in iplist:
             print_line(ip)
         
 def csv_parse(csv_file, ifilter, tfilter, nfilter, list):
+    """
+    Function for parsing CSV files created by DNSRecon and apply filters. 
+    """
     iplist = []
     reader = csv.reader(open(csv_file, 'rb'), delimiter=',')
     for row in reader:
+        # Check if IP is in the filter list of addresses to ignore
         if row[2] not in ifilter:
+            # Check Host Name regex and type list
             if re.search(tfilter, row[0], re.I) and re.search(nfilter, row[1], re.I):
                 if list:
                     if row[2] not in iplist: iplist.append(row[2])
                 else:
                     print_good(" ".join(row))
+    # Process IPs for target list if available
     if len(iplist ) > 0:
         for ip in iplist:
             print_line(ip)
     
 def detect_type(file):
+    """
+    Function for detecting the file type by checking the first line of the file.
+    Returns xml, csv or None.
+    """
     ftype = None
     
     # Get the fist lile of the file for checking
