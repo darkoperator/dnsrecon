@@ -48,16 +48,54 @@ def process_range(arg):
     return [str(ip) for ip in ip_list]
     
 def xml_parse(xm_file, ifilter, tfilter, nfilter, list):
+    iplist = []
     for event, elem in cElementTree.iterparse(xm_file):
         if elem.tag == "record":
-            print elem.attrib['type']
-            break
+            if "address" in elem.attrib:
+                if elem.attrib['address'] not in ifilter:
+                    if re.search(tfilter, elem.attrib['type'], re.I):
+                        if re.search(r'PTR|^[A]$|AAAA',elem.attrib['type']) and re.search(nfilter, elem.attrib['name'], re.I):
+                            if list:
+                                if elem.attrib['address'] not in iplist: iplist.append(elem.attrib['address'])
+                            else:
+                                print_good("{0} {1} {2}".format(elem.attrib['type'], elem.attrib['name'], elem.attrib['address']))
+                    
+                        elif re.search(r'NS', elem.attrib['type']) and re.search(nfilter, elem.attrib['target'], re.I):
+                            if list:
+                                if elem.attrib['address'] not in iplist: iplist.append(elem.attrib['address'])
+                            else:
+                                print_good("{0} {1} {2}".format(elem.attrib['type'], elem.attrib['target'], elem.attrib['address']))
+    
+                        elif re.search(r'SOA', elem.attrib['type']) and re.search(nfilter, elem.attrib['mname'], re.I):
+                            if list:
+                                if elem.attrib['address'] not in iplist: iplist.append(elem.attrib['address'])
+                            else:
+                                print_good("{0} {1} {2}".format(elem.attrib['type'], elem.attrib['mname'], elem.attrib['address']))
+    
+                        elif re.search(r'MX', elem.attrib['type']) and re.search(nfilter, elem.attrib['exchange'], re.I):
+                            if list:
+                                if elem.attrib['address'] not in iplist: iplist.append(elem.attrib['address'])
+                            else:
+                                print_good("{0} {1} {2}".format(elem.attrib['type'], elem.attrib['exchange'], elem.attrib['address']))
+    
+                        elif re.search(r'SRV', elem.attrib['type']) and re.search(nfilter, elem.attrib['target'], re.I):
+                            if list:
+                                if elem.attrib['address'] not in iplist: iplist.append(elem.attrib['address'])
+                            else:
+                                 print_good("{0} {1} {2} {3}".format(elem.attrib['type'], elem.attrib['name'], elem.attrib['address'], elem.attrib['target'], elem.attrib['port']))
+            
+            elif re.search(r'TXT|SPF', elem.attrib['type']):
+                if not list:
+                    print_good("{0} {1} {2}".format(elem.attrib['type'], elem.attrib['name'], elem.attrib['text']))
+    if len(iplist ) > 0:
+        for ip in iplist:
+            print_line(ip)
         
 def csv_parse(csv_file, ifilter, tfilter, nfilter, list):
     iplist = []
     reader = csv.reader(open(csv_file, 'rb'), delimiter=',')
     for row in reader:
-        if row[2] not in  ifilter:
+        if row[2] not in ifilter:
             if re.search(tfilter, row[0], re.I) and re.search(nfilter, row[1], re.I):
                 if list:
                     if row[2] not in iplist: iplist.append(row[2])
