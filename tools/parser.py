@@ -185,7 +185,7 @@ def usage():
     print("   -l, --list               Output an unique IP List that can be used with other tools.")
     print("   -i, --ips     <ranges>   IP Ranges in a comma separated list each in formats (first-last)")
     print("                            or in (range/bitmask) for ranges to be excluded from output.")
-    print("   -t, --type    <type>     Resource Record Types in comma separated list to filter output.")
+    print("   -t, --type    <type>     Resource Record Types as a regular expression to filter output.")
     print("   -s, --str     <regex>    Regular expression between quotes for filtering host names on.")
     sys.exit(0)
 
