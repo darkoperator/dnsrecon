@@ -252,9 +252,9 @@ def check_wildcard(res, domain_trg):
 
     if len(ips) > 0:
         print_debug('Wildcard resolution is enabled on this domain')
-        print_debug('It is resolving to'.format(''.join(ips)))
+        print_debug('It is resolving to {0}'.format(''.join(ips[0][2])))
         print_debug("All queries will resolve to this address!!")
-        wildcard = ''.join(ips)
+        wildcard = ''.join(ips[0][2])
 
     return wildcard
 
@@ -419,8 +419,9 @@ def brute_domain(res, dict, dom, filter = None):
     # Check if wildcard resolution is enabled
     wildcard_ip = check_wildcard(res, dom)
     if wildcard_ip:
-        continue_brt = input('[*] Do you wish to continue? y/n ')
-    if continue_brt == 'y':
+        print_status('Do you wish to continue? y/n ')
+        continue_brt = str(sys.stdin.readline()[:-1])
+    if re.search(r'y',continue_brt, re.I):
         # Check if Dictionary file exists
 
         if os.path.isfile(dict):
