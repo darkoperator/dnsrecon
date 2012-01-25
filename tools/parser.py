@@ -18,7 +18,7 @@
 #    along with this program; if not, write to the Free Software
 #    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
-__version__ = '0.0.1'
+__version__ = '0.0.2'
 __author__ = 'Carlos Perez, Carlos_Perez@darkoperator.com'
 
 import xml.etree.cElementTree as cElementTree
@@ -41,10 +41,10 @@ def print_good(message=""):
 
 def print_error(message=""):
     print("\033[1;31m[-]\033[1;m {0}".format(message))
-    
+
 def print_debug(message=""):
     print("\033[1;31m[!]\033[1;m {0}".format(message))
-    
+
 def print_line(message=""):
     print("{0}".format(message))
 
@@ -66,10 +66,10 @@ def process_range(arg):
         print_error("Range provided is not valid: {0}".format(arg()))
         return []
     return [str(ip) for ip in ip_list]
-    
+
 def xml_parse(xm_file, ifilter, tfilter, nfilter, list):
     """
-    Function for parsing XML files created by DNSRecon and apply filters. 
+    Function for parsing XML files created by DNSRecon and apply filters.
     """
     iplist = []
     for event, elem in cElementTree.iterparse(xm_file):
@@ -89,7 +89,7 @@ def xml_parse(xm_file, ifilter, tfilter, nfilter, list):
                                     iplist.append(elem.attrib['address'])
                             else:
                                 print_good("{0} {1} {2}".format(elem.attrib['type'], elem.attrib['name'], elem.attrib['address']))
-                    
+
                         # Process NS Records
                         elif re.search(r'NS', elem.attrib['type']) and \
                         re.search(nfilter, elem.attrib['target'], re.I):
@@ -98,7 +98,7 @@ def xml_parse(xm_file, ifilter, tfilter, nfilter, list):
                                     iplist.append(elem.attrib['address'])
                             else:
                                 print_good("{0} {1} {2}".format(elem.attrib['type'], elem.attrib['target'], elem.attrib['address']))
-    
+
                         # Process SOA Records
                         elif re.search(r'SOA', elem.attrib['type']) and \
                         re.search(nfilter, elem.attrib['mname'], re.I):
@@ -107,7 +107,7 @@ def xml_parse(xm_file, ifilter, tfilter, nfilter, list):
                                     iplist.append(elem.attrib['address'])
                             else:
                                 print_good("{0} {1} {2}".format(elem.attrib['type'], elem.attrib['mname'], elem.attrib['address']))
-    
+
                         # Process MS Records
                         elif re.search(r'MX', elem.attrib['type']) and \
                         re.search(nfilter, elem.attrib['exchange'], re.I):
@@ -116,7 +116,7 @@ def xml_parse(xm_file, ifilter, tfilter, nfilter, list):
                                     iplist.append(elem.attrib['address'])
                             else:
                                 print_good("{0} {1} {2}".format(elem.attrib['type'], elem.attrib['exchange'], elem.attrib['address']))
-    
+
                         # Process SRV Records
                         elif re.search(r'SRV', elem.attrib['type']) and \
                         re.search(nfilter, elem.attrib['target'], re.I):
@@ -125,19 +125,22 @@ def xml_parse(xm_file, ifilter, tfilter, nfilter, list):
                                     iplist.append(elem.attrib['address'])
                             else:
                                  print_good("{0} {1} {2} {3}".format(elem.attrib['type'], elem.attrib['name'], elem.attrib['address'], elem.attrib['target'], elem.attrib['port']))
-            
+
             # Process TXT and SPF Records
             elif re.search(r'TXT|SPF', elem.attrib['type']):
                 if not list:
                     print_good("{0} {1} {2}".format(elem.attrib['type'], elem.attrib['name'], elem.attrib['text']))
-    # Process IPs in list 
+    # Process IPs in list
     if len(iplist ) > 0:
-        for ip in iplist:
-            print_line(ip)
-        
+        try:
+            for ip in iplist:
+                print_line(ip)
+        except IOError:
+            sys.exit(0)
+
 def csv_parse(csv_file, ifilter, tfilter, nfilter, list):
     """
-    Function for parsing CSV files created by DNSRecon and apply filters. 
+    Function for parsing CSV files created by DNSRecon and apply filters.
     """
     iplist = []
     reader = csv.reader(open(csv_file, 'rb'), delimiter=',')
@@ -154,18 +157,56 @@ def csv_parse(csv_file, ifilter, tfilter, nfilter, list):
     if len(iplist ) > 0:
         for ip in iplist:
             print_line(ip)
-    
+
+def extract_hostnames(file):
+    host_names = []
+    hostname_pattern = re.compile("(^[^.]*)")
+    file_type = detect_type(file)
+    if file_type == "xml":
+        for event, elem in cElementTree.iterparse(file):
+            # Check if it is a record
+            if elem.tag == "record":
+                # Check that it is a RR Type that has an IP Address
+                if "address" in elem.attrib:
+                    # Process A, AAAA and PTR Records
+                    if re.search(r'PTR|^[A]$|AAAA',elem.attrib['type']):
+                        host_names.append(re.search(hostname_pattern, elem.attrib['name']).group(1))
+
+                    # Process NS Records
+                    elif re.search(r'NS', elem.attrib['type']):
+                        host_names.append(re.search(hostname_pattern, elem.attrib['target']).group(1))
+
+                    # Process SOA Records
+                    elif re.search(r'SOA', elem.attrib['type']):
+                        host_names.append(re.search(hostname_pattern, elem.attrib['mname']).group(1))
+
+                    # Process MS Records
+                    elif re.search(r'MX', elem.attrib['type']):
+                        host_names.append(re.search(hostname_pattern, elem.attrib['exchange']).group(1))
+
+                    # Process SRV Records
+                    elif re.search(r'SRV', elem.attrib['type']):
+                        host_names.append(re.search(hostname_pattern, elem.attrib['target']).group(1))
+
+    elif file_type == "csv":
+        reader = csv.reader(open(file, 'rb'), delimiter=',')
+        for row in reader:
+            host_names.append(re.search(hostname_pattern, row[1]).group(1))
+
+    host_names = list(set(host_names))
+    return host_names
+
 def detect_type(file):
     """
     Function for detecting the file type by checking the first line of the file.
     Returns xml, csv or None.
     """
     ftype = None
-    
+
     # Get the fist lile of the file for checking
     f = open(file, 'rb')
     firs_line = f.readline()
-    
+
     # Determine file type based on the fist line content
     import re
     if re.search("(xml version)", firs_line):
@@ -187,6 +228,7 @@ def usage():
     print("                            or in (range/bitmask) for ranges to be excluded from output.")
     print("   -t, --type    <type>     Resource Record Types as a regular expression to filter output.")
     print("   -s, --str     <regex>    Regular expression between quotes for filtering host names on.")
+    print("   -n, --name               Return list of unique host names.")
     sys.exit(0)
 
 # Main
@@ -201,25 +243,27 @@ def main():
     type_filter = "(.*)"
     target_list = False
     file = None
-    
+    names = False
+
     #
     # Define options
     #
     try:
-        options, args = getopt.getopt(sys.argv[1:], 'hi:t:s:lf:',
+        options, args = getopt.getopt(sys.argv[1:], 'hi:t:s:lf:n',
                                            ['help',
                                            'ips='
                                            'type=',
                                            'str=',
                                            'list',
-                                           'file='
+                                           'file=',
+                                           'name'
                                            ])
-        
+
     except getopt.GetoptError as error:
         print_error("Wrong Option Provided!")
         print_error(error)
         return
- 
+
     #
     # Parse options
     #
@@ -253,19 +297,31 @@ def main():
                 ip_list.extend(ip_range)
             else:
                 sys.exit(1)
+        elif opt in ('-n','--name'):
+            names = True
+
         elif opt in ('-h'):
             print usage()
-    
+
     # start execution based on options
     if file:
-        file_type = detect_type(file)
-        if file_type == "xml":
-            xml_parse(file, ip_filter, type_filter, name_filter,target_list)
-        elif file_type == "csv":
-            csv_parse(file, ip_filter, type_filter, name_filter,target_list)
+        if names:
+            try:
+                found_names = extract_hostnames(file)
+                found_names.sort()
+                for n in found_names:
+                    print_line(n)
+            except IOError:
+                sys.exit(0)
+        else:
+            file_type = detect_type(file)
+            if file_type == "xml":
+                xml_parse(file, ip_filter, type_filter, name_filter,target_list)
+            elif file_type == "csv":
+                csv_parse(file, ip_filter, type_filter, name_filter,target_list)
     else:
         print_error("A DNSRecon XML or CSV output file must be provided to be parsed")
         usage()
-        
+
 if __name__ == "__main__":
     main()
