@@ -48,7 +48,7 @@ from random import Random
 from threading import Lock, Thread
 from xml.dom import minidom
 from xml.etree import ElementTree
-from xml.etree.ElementTree import Element, SubElement
+from xml.etree.ElementTree import Element
 
 import dns.message
 import dns.query
