@@ -18,7 +18,7 @@
 #    along with this program; if not, write to the Free Software
 #    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
-__version__ = '0.6.6'
+__version__ = '0.6.7'
 __author__ = 'Carlos Perez, Carlos_Perez@darkoperator.com'
 
 __doc__ = """
@@ -539,30 +539,33 @@ def whois_ips(res,ip_list):
     found_records = []
     print_status("Performing Whois lookup against records found.")
     list = get_whois_nets_iplist(unique(ip_list))
-    print_status("The following IP Ranges where found:")
-    for i in range(len(list)):
-        print_status("\t {0} {1}-{2} {3}".format(str(i)+")", list[i]['start'], list[i]['end'], list[i]['orgname']))
-    print_status('What Range do you wish to do a Revers Lookup for?')
-    print_status('number, comma separated list, a for all or n for none')
-    val = sys.stdin.readline()[:-1]
-    answer = str(val).split(",")
-
-    if "a" in answer:
+    if len(list) > 0:
+        print_status("The following IP Ranges where found:")
         for i in range(len(list)):
-            print_status("Performing Reverse Lookup of range {0}-{1}".format(list[i]['start'],list[i]['end']))
-            found_records.append(brute_reverse(res, \
-                expand_range(list[i]['start'],list[i]['end'])))
-
-    elif "n" in answer:
-        print_status("No Reverse Lookups will be performed.")
-        pass
+            print_status("\t {0} {1}-{2} {3}".format(str(i)+")", list[i]['start'], list[i]['end'], list[i]['orgname']))
+        print_status('What Range do you wish to do a Revers Lookup for?')
+        print_status('number, comma separated list, a for all or n for none')
+        val = sys.stdin.readline()[:-1]
+        answer = str(val).split(",")
+    
+        if "a" in answer:
+            for i in range(len(list)):
+                print_status("Performing Reverse Lookup of range {0}-{1}".format(list[i]['start'],list[i]['end']))
+                found_records.append(brute_reverse(res, \
+                    expand_range(list[i]['start'],list[i]['end'])))
+    
+        elif "n" in answer:
+            print_status("No Reverse Lookups will be performed.")
+            pass
+        else:
+            for a in answer:
+                net_selected = list[int(a)]
+                print_status(net_selected['orgname'])
+                print_status("Performing Reverse Lookup of range {0}-{1}".format(net_selected['start'],net_selected['end']))
+                found_records.append(brute_reverse(res, \
+                    expand_range(net_selected['start'],net_selected['end'])))
     else:
-        for a in answer:
-            net_selected = list[int(a)]
-            print_status(net_selected['orgname'])
-            print_status("Performing Reverse Lookup of range {0}-{1}".format(net_selected['start'],net_selected['end']))
-            found_records.append(brute_reverse(res, \
-                expand_range(net_selected['start'],net_selected['end'])))
+        print_error("No IP Ranges where found in the Whois query results")
 
     return found_records
 
@@ -665,7 +668,6 @@ def write_db(db,data):
     cur = con.cursor()
     records = []
 
-
     # Normalize the dictionary data
     for n in data:
 
@@ -736,93 +738,6 @@ def dns_sec_check(domain,res):
         sys.exit(1)
     except dns.resolver.NoAnswer:
         print_error("DNSSEC is not configured for".format(domain))
-
-def zone_walk(domain, res):
-    """
-    Function to perform DNSSEC Zone Walk to enumerate an entire zone using NSEC
-    Records.
-    """
-    returned_records = []
-    found_records = []
-    print_status("Performing NSEC Zone Walk for".format(domain))
-
-    # Check for the presense of a NSEC record, if none exit.
-    try:
-        answer = res.get_nsec(domain)
-    except dns.resolver.NoAnswer:
-        print_error("This Zone can not be walked!")
-        return
-
-    # Process initial information from request
-    for arc in answer.response.authority:
-        for ns in arc:
-            name = ns.target.to_text()
-            for ip in res.get_ip(name):
-                print_status("\tNS {0}".format(name,ip[-1]))
-                returned_records.extend([{'type':"NS",\
-                "target":name,'address':ip[2]
-                }])
-
-    while answer:
-        try:
-            for rdata in answer:
-                # Make sure we do not end up in a loop where the the NSEC record
-                # keeps repeating the zone.
-                if rdata.next in found_records:
-                    answer = None
-                    break
-                #print rdata.to_text()
-                rcd_type = None
-                rcd_type = re.search('( A | AAAA)',rdata.to_text())
-                if rcd_type:
-                    ip_info = res.get_ip(rdata.next.to_text())
-                    if len(ip_info) > 0:
-                        for a_rcrd in ip_info:
-                            if a_rcrd[0] == "A":
-                                print_status('\t {0} {1} {2}'.format(a_rcrd[0], a_rcrd[1], a_rcrd[2]))
-                                returned_records.extend([{'type':a_rcrd[0],'name':a_rcrd[1],'address':a_rcrd[2]}])
-                            elif a_rcrd[0] == "CNAME":
-                                print_status('\t {0} {1} {2}'.format(a_rcrd[0], a_rcrd[1], a_rcrd[2]))
-                                returned_records.extend([{'type':a_rcrd[0],'name':a_rcrd[1],'target':a_rcrd[2]}])
-                    else:
-                        print_status("\t {0} {1} no_ip".format(rcd_type.group(0).strip(), rdata.next.to_text()))
-
-                elif re.search(' SRV ',rdata.to_text()):
-                    for rcd in res.get_srv(rdata.next.to_text()):
-                        print_status("\t {0}".format(" ".join(rcd)))
-                        returned_records.extend([{'type':rcd[0],\
-                        'name':rcd[1],'target':rcd[2],'address':rcd[3],'port':rcd[4]
-                        }])
-
-                elif re.search('( TXT|SPF)',rdata.to_text()):
-                    try:
-                        for rcd in res.get_txt(rdata.next.to_text()):
-                            print_status("\t {0}".format(" ".join(rcd)))
-                            returned_records.extend([{'type':rcd[0],\
-                            'name':rcd[1],'text':rcd[2]
-                            }])
-                    except:
-                        print_status("\t {0}".format(rdata.to_text()))
-                # Save record in list of found hosts
-                found_records.append(rdata.next.to_text())
-
-                # Get the next record
-                #answer = None
-                answer = res.get_nsec(rdata.next.to_text())
-        # Break out of the loop once there are no more records given for the
-        # Zone
-        except dns.resolver.NoAnswer:
-            print_status("Finished")
-            break
-        except (KeyboardInterrupt):
-            print_error("You have pressed Crtl-C. Saving found records.")
-            print_good("{0} Records Found".format(len(found_records)))
-            return found_records
-        except:
-            print_good("{0} Records Found".format(len(found_records)))
-            return returned_records
-    print_good("{0} Records Found".format(len(found_records)))
-    return returned_records
 
 def general_enum(res, domain, do_axfr, do_google, do_spf, do_whois, zw):
     """
@@ -981,6 +896,137 @@ def general_enum(res, domain, do_axfr, do_google, do_spf, do_whois, zw):
 
         #sys.exit(0)
 
+def query_ds(target,ns, timeout = 5.0):
+    """
+    Function for performing DS Record queries. Retuns answer object. Since a
+    timeout will break the DS NSEC chain of a zone walk it will exit if a timeout
+    happens.
+    """
+    try:
+        query = dns.message.make_query(target, dns.rdatatype.DS, dns.rdataclass.IN)
+        query.flags += dns.flags.CD
+        query.use_edns(edns=True, payload=4096)
+        query.want_dnssec(True)
+        answer = dns.query.udp(query,ns,timeout)
+    except dns.exception.Timeout:
+        print_error("A timeout error occurred please make sure you can reach the target DNS Servers")
+        print_error("directly and requests are not being filtered. Increase the timeout from {0} second".format(timeout))
+        print_error("to a higher number with --lifetime <time> option.")
+        sys.exit(1)
+    return answer
+
+def query_nsec(target, res):
+    """
+    Function for performing NSEC Record queries. Retuns answer object.
+    """
+    try:
+        answer = res.get_nsec(target)
+    except:
+        return None
+    return answer
+
+def parse_nsec(answer, res):
+    """
+    Function for parsing the NSEC record answer object to determine the record
+    type and query the DNS for additional information so as to provide the proper
+    format for use during an audit or pentest.
+    """
+    found_records = []
+    returned_records = []
+    if answer == None:
+        return []
+    for rdata in answer:
+        # Make sure we do not end up in a loop where the the NSEC record
+        # keeps repeating the zone.
+        if rdata.next in found_records:
+            answer = None
+            break
+        #print rdata.to_text()
+        rcd_type = None
+        rcd_type = re.search('( A | AAAA)',rdata.to_text())
+        if rcd_type:
+            ip_info = res.get_ip(rdata.next.to_text())
+            if len(ip_info) > 0:
+                for a_rcrd in ip_info:
+                    if a_rcrd[0] == "A":
+                        print_status('\t {0} {1} {2}'.format(a_rcrd[0], a_rcrd[1], a_rcrd[2]))
+                        returned_records.extend([{'type':a_rcrd[0],'name':a_rcrd[1],'address':a_rcrd[2]}])
+                    
+                    elif a_rcrd[0] == "AAAA":
+                        print_status('\t {0} {1} {2}'.format(a_rcrd[0], a_rcrd[1], a_rcrd[2]))
+                        returned_records.extend([{'type':a_rcrd[0],'name':a_rcrd[1],'address':a_rcrd[2]}])
+                    
+                    elif a_rcrd[0] == "CNAME":
+                        print_status('\t {0} {1} {2}'.format(a_rcrd[0], a_rcrd[1], a_rcrd[2]))
+                        returned_records.extend([{'type':a_rcrd[0],'name':a_rcrd[1],'target':a_rcrd[2]}])
+            else:
+                print_status("\t {0} {1} no_ip".format(rcd_type.group(0).strip(), rdata.next.to_text()))
+
+        elif re.search(' SRV ',rdata.to_text()):
+            for rcd in res.get_srv(rdata.next.to_text()):
+                print_status("\t {0}".format(" ".join(rcd)))
+                returned_records.extend([{'type':rcd[0],\
+                'name':rcd[1],'target':rcd[2],'address':rcd[3],'port':rcd[4]
+                }])
+
+        elif re.search('( TXT|SPF)',rdata.to_text()):
+            try:
+                for rcd in res.get_txt(rdata.next.to_text()):
+                    print_status("\t {0}".format(" ".join(rcd)))
+                    returned_records.extend([{'type':rcd[0],\
+                    'name':rcd[1],'text':rcd[2]
+                    }])
+            except:
+                print_status("\t {0}".format(rdata.to_text()))
+        # Save record in list of found hosts
+        found_records.append(rdata.next.to_text())
+    return found_records
+
+def ds_zone_walk(domain, res, timeout):
+    """
+    Function to perform DNSSEC Zone Walk to enumerate an entire zone using NSEC
+    Records.
+    """
+    returned_records = []
+    found_ds = []
+    print_status("Performing NSEC Zone Walk for".format(domain))
+
+    # Check for the presense of a NSEC record, if none exit.
+    try:
+        res.get_nsec(domain)
+    except dns.resolver.NoAnswer:
+        print_error("This Zone can not be walked!")
+        return
+
+    print_status("Getting SOA record for {0}".format(domain))
+    soa_rcd = res.get_soa()[2]
+    print_status("Name Server {0} will be used".format(soa_rcd))
+    res = DnsHelper(domain, soa_rcd, 3)
+    answer = query_ds(domain, soa_rcd, timeout)
+    print_status("Collecting NSEC Next Records using DS Queries")
+    while answer.flags == 34067 or answer.flags == 34064:
+    #if answer.authority.count > 0:
+        # Look for NSEC Record in the Authority part of the response
+        for a in answer.authority:
+            if a.rdtype == 47:
+                for r in a:
+                    if r.next.to_text()[:-1] not in found_ds:
+                        # Set the next host in the zone
+                        next_host = r.next.to_text()[:-1]
+                        # Parse the hostname and the domain
+                        hostname = re.search('(^[^.]*)(\S*)', next_host)
+                        # Save the next record name to make sure we do not fall
+                        # in to a loop
+                        found_ds.append(next_host)
+                        # Query the NSEC record to get details on the type of
+                        # record.
+                        nsec_data = query_nsec(next_host, res)
+                        # Process the NSEC Record, return no_ip for host that
+                        # return no answer
+                        returned_records.append(parse_nsec(nsec_data, res))
+                        # Append null char to get proper response with NSEC records
+                        answer = query_ds("{0}\x00{1}".format(hostname.group(1),hostname.group(2)),soa_rcd)        
+    return returned_records
 
 
 def usage():
@@ -1250,9 +1296,9 @@ def main():
                 elif r == "zonewalk":
                     if domain is not None:
                         if (output_file is not None) or (results_db is not None) or (csv_file is not None):
-                            returned_records.extend(zone_walk(domain, res))
+                            returned_records.extend(ds_zone_walk(domain, res, request_timeout))
                         else:
-                            zone_walk(domain, res)
+                            ds_zone_walk(domain, res, request_timeout)
                     else:
                         print_error('No Domain or Name Server to target specified!')
                         sys.exit(1)

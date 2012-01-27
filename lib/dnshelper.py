@@ -31,11 +31,11 @@ DNS_PORT_NUMBER = 53
 DNS_QUERY_TIMEOUT = 3
 
 class DnsHelper:
-    def __init__(self, domain, ns_server=None, request_timeout=1.0, ):
+    def __init__(self, domain, ns_server=None, request_timeout=3.0, ):
         self._domain = domain
         if ns_server:
-            print_status("Changing to server: {0}".format(ns_server))
-            print_status("Timeout set to: {0}".format(request_timeout))
+            #print_status("Changing to server: {0}".format(ns_server))
+            #print_status("Timeout set to: {0}".format(request_timeout))
             self._res = dns.resolver.Resolver(configure=False)
             self._res.nameservers = [ns_server]
         else:
