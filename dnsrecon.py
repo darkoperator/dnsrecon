@@ -913,87 +913,92 @@ def query_ds(target,ns, timeout = 5.0):
         print_error("directly and requests are not being filtered. Increase the timeout from {0} second".format(timeout))
         print_error("to a higher number with --lifetime <time> option.")
         sys.exit(1)
-    return answer
-
-def query_nsec(target, res):
-    """
-    Function for performing NSEC Record queries. Retuns answer object.
-    """
-    try:
-        answer = res.get_nsec(target)
     except:
-        return None
+        print "Unexpected error:", sys.exc_info()[0]
+        raise
     return answer
 
-def parse_nsec(answer, res):
-    """
-    Function for parsing the NSEC record answer object to determine the record
-    type and query the DNS for additional information so as to provide the proper
-    format for use during an audit or pentest.
-    """
-    found_records = []
+def get_constants(prefix):
+    """Create a dictionary mapping socket module constants to their names."""
+    return dict( (getattr(socket, n), n)
+                for n in dir(socket)
+                if n.startswith(prefix))
+
+def socket_resolv(target):
+    found_recs = []
+    families = get_constants('AF_')
+    types = get_constants('SOCK_')
+    try:
+        for response in socket.getaddrinfo(target, 0):
+            # Unpack the response tuple
+            family, socktype, proto, canonname, sockaddr = response
+            if families[family] == "AF_INET" and types[socktype] == "SOCK_DGRAM":
+                found_recs.append(["A", target,sockaddr[0]])
+            elif families[family] == "AF_INET6" and types[socktype] == "SOCK_DGRAM":
+                found_recs.append(["AAAA", target,sockaddr[0]])
+    except:
+        return found_recs
+    return found_recs
+
+def lookup_next(target, res):
+    res_sys = DnsHelper(target)
     returned_records = []
-    if answer == None:
-        return []
-    for rdata in answer:
-        # Make sure we do not end up in a loop where the the NSEC record
-        # keeps repeating the zone.
-        if rdata.next in found_records:
-            answer = None
-            break
-        #print rdata.to_text()
-        rcd_type = None
-        rcd_type = re.search('( A | AAAA)',rdata.to_text())
-        if rcd_type:
-            ip_info = res.get_ip(rdata.next.to_text())
-            if len(ip_info) > 0:
-                for a_rcrd in ip_info:
-                    if a_rcrd[0] == "A":
-                        print_status('\t {0} {1} {2}'.format(a_rcrd[0], a_rcrd[1], a_rcrd[2]))
-                        returned_records.extend([{'type':a_rcrd[0],'name':a_rcrd[1],'address':a_rcrd[2]}])
-                    
-                    elif a_rcrd[0] == "AAAA":
-                        print_status('\t {0} {1} {2}'.format(a_rcrd[0], a_rcrd[1], a_rcrd[2]))
-                        returned_records.extend([{'type':a_rcrd[0],'name':a_rcrd[1],'address':a_rcrd[2]}])
-                    
-                    elif a_rcrd[0] == "CNAME":
-                        print_status('\t {0} {1} {2}'.format(a_rcrd[0], a_rcrd[1], a_rcrd[2]))
-                        returned_records.extend([{'type':a_rcrd[0],'name':a_rcrd[1],'target':a_rcrd[2]}])
+
+    if re.search("^_\\w*[^.]._\\w*[^.].", target, re.I):
+        srv_answer = res.get_srv(target)
+        if len(srv_answer) > 0:
+            for r in srv_answer:
+                print_status("\t {0}".format(" ".join(r)))
+                returned_records.append({'type':r[0],\
+                'name':r[1],'target':r[2],'address':r[3],'port':r[4]
+                })
+
+    elif re.search("(_autodiscover\\.|_spf\\.|_domainkey\\.)", target, re.I):
+        txt_answer = res.get_txt(target)
+        if len(txt_answer) > 0:
+            for r in txt_answer:
+                print_status("\t {0}".format(" ".join(r)))
+                returned_records.append({'type':r[0],\
+                'name':r[1],'text':r[2]
+                })
+        else:
+            txt_answer = res_sys.get_tx(target)
+            if len(txt_answer) > 0:
+                for r in txt_answer:
+                    print_status("\t {0}".format(" ".join(r)))
+                    returned_records.append({'type':r[0],\
+                    'name':r[1],'text':r[2]
+                    })
             else:
-                print_status("\t {0} {1} no_ip".format(rcd_type.group(0).strip(), rdata.next.to_text()))
+                print_status('\t A {0} no_ip'.format(target))
+                returned_records.append({'type':'A','name':target,'address':"no_ip"})
 
-        elif re.search(' SRV ',rdata.to_text()):
-            for rcd in res.get_srv(rdata.next.to_text()):
-                print_status("\t {0}".format(" ".join(rcd)))
-                returned_records.extend([{'type':rcd[0],\
-                'name':rcd[1],'target':rcd[2],'address':rcd[3],'port':rcd[4]
-                }])
+    else:
+        a_answer = res.get_ip(target)
+        if len(a_answer) > 0:
+            for r in a_answer:
+                print_status('\t {0} {1} {2}'.format(r[0], r[1], r[2]))
+                returned_records.append({'type':r[0],'name':r[1],'address':r[2]})
+        else:
+            a_answer = socket_resolv(target)
+            if len(a_answer) > 0:
+                for r in a_answer:
+                    print_status('\t {0} {1} {2}'.format(r[0], r[1], r[2]))
+                    returned_records.append({'type':r[0],'name':r[1],'address':r[2]})
+            else:
+                print_status('\t A {0} no_ip'.format(target))
+                returned_records.append({'type':'A','name':target,'address':"no_ip"})
+                
+    return returned_records
 
-        elif re.search('( TXT|SPF)',rdata.to_text()):
-            try:
-                for rcd in res.get_txt(rdata.next.to_text()):
-                    print_status("\t {0}".format(" ".join(rcd)))
-                    returned_records.extend([{'type':rcd[0],\
-                    'name':rcd[1],'text':rcd[2]
-                    }])
-            except:
-                print_status("\t {0}".format(rdata.to_text()))
-        # Save record in list of found hosts
-        found_records.append(rdata.next.to_text())
-    return found_records
-
-def ds_zone_walk(domain, res, timeout):
-    """
-    Function to perform DNSSEC Zone Walk to enumerate an entire zone using NSEC
-    Records.
-    """
+def ds_zone_walk(res, domain):
     returned_records = []
-    found_ds = []
+    found = []
     print_status("Performing NSEC Zone Walk for".format(domain))
 
     # Check for the presense of a NSEC record, if none exit.
     try:
-        res.get_nsec(domain)
+        answer = res.get_nsec(domain)
     except dns.resolver.NoAnswer:
         print_error("This Zone can not be walked!")
         return
@@ -1001,31 +1006,24 @@ def ds_zone_walk(domain, res, timeout):
     print_status("Getting SOA record for {0}".format(domain))
     soa_rcd = res.get_soa()[2]
     print_status("Name Server {0} will be used".format(soa_rcd))
-    res = DnsHelper(domain, soa_rcd, 3)
-    answer = query_ds(domain, soa_rcd, timeout)
-    print_status("Collecting NSEC Next Records using DS Queries")
-    while answer.flags == 34067 or answer.flags == 34064:
-    #if answer.authority.count > 0:
-        # Look for NSEC Record in the Authority part of the response
-        for a in answer.authority:
-            if a.rdtype == 47:
-                for r in a:
-                    if r.next.to_text()[:-1] not in found_ds:
-                        # Set the next host in the zone
-                        next_host = r.next.to_text()[:-1]
-                        # Parse the hostname and the domain
-                        hostname = re.search('(^[^.]*)(\S*)', next_host)
-                        # Save the next record name to make sure we do not fall
-                        # in to a loop
-                        found_ds.append(next_host)
-                        # Query the NSEC record to get details on the type of
-                        # record.
-                        nsec_data = query_nsec(next_host, res)
-                        # Process the NSEC Record, return no_ip for host that
-                        # return no answer
-                        returned_records.append(parse_nsec(nsec_data, res))
-                        # Append null char to get proper response with NSEC records
-                        answer = query_ds("{0}\x00{1}".format(hostname.group(1),hostname.group(2)),soa_rcd)        
+    res = DnsHelper(domain,soa_rcd,3)
+    try:
+        answer = query_ds(domain, soa_rcd, 10.0)
+        while answer.flags == 34067 or answer.flags == 34064:
+        #if answer.authority.count > 0:
+            for a in answer.authority:
+                if a.rdtype == 47:
+                    for r in a:
+                        if r.next not in found:
+                            next_host = r.next.to_text()[:-1]
+                            hostname = re.search('(^[^.]*)(\S*)', next_host)
+                            found.append(r.next)
+                            returned_records.extend(lookup_next(next_host, res))
+                            # Append null char to get proper response with NSEC records
+                            answer = query_ds("{0}\x00{1}".format(hostname.group(1),hostname.group(2)),soa_rcd)
+    except (KeyboardInterrupt):
+        print_error("You have pressed Crtl-C. Saving found records.")
+        
     return returned_records
 
 
@@ -1296,9 +1294,9 @@ def main():
                 elif r == "zonewalk":
                     if domain is not None:
                         if (output_file is not None) or (results_db is not None) or (csv_file is not None):
-                            returned_records.extend(ds_zone_walk(domain, res, request_timeout))
+                            returned_records.extend(ds_zone_walk(res, domain))
                         else:
-                            ds_zone_walk(domain, res, request_timeout)
+                            ds_zone_walk(res, domain)
                     else:
                         print_error('No Domain or Name Server to target specified!')
                         sys.exit(1)
