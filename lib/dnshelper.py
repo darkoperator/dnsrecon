@@ -24,7 +24,7 @@ import dns.reversename
 from dns.zone import *
 import socket
 from dns.dnssec import algorithm_to_text
-from .msf_print import *
+from msf_print import *
 
 DNS_PORT_NUMBER = 53
 # 3 Seconds should be more than enough to check for delay for a regular connection.
@@ -175,14 +175,14 @@ class DnsHelper:
             name = rdata.mname.to_text()
             ipv4_answers = self._res.query(name, 'A')
             for ardata in ipv4_answers:
-                soa_records.extend(['SOA', name[:-1], ardata.address])
+                soa_records.append(['SOA', name[:-1], ardata.address])
 
         try:
             for rdata in answers:
                 name = rdata.mname.to_text()
                 ipv4_answers = self._res.query(name, 'AAAA')
                 for ardata in ipv4_answers:
-                    soa_records.extend(['SOA', name[:-1], ardata.address])
+                    soa_records.append(['SOA', name[:-1], ardata.address])
 
             return soa_records
         except:
@@ -316,8 +316,9 @@ class DnsHelper:
         print_status("Resolving SOA Record")
         try:
             soa_srvs = self.get_soa()
-            ns_records.append(soa_srvs[2])
-            print_good("\t{0}".format(" ".join(soa_srvs)))
+            for s in soa_srvs:
+                print_good("\t {0}".format(" ".join(s)))
+                ns_records.append(s[2])
         except:
             print_error("Could not obtain the domains SOA Record.")
             return
@@ -630,8 +631,7 @@ class DnsHelper:
                                                 'precedence':rdata.precedence
                                                 })
 
-                except Exception as e:
-                    print e
+                except:
                     print_error('Zone Transfer Failed!')
                 zone_records.append({'type':'info','zone_transfer':'failed', 'ns_server':ns_srv})
         return zone_records

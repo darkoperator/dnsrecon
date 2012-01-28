@@ -780,15 +780,16 @@ def general_enum(res, domain, do_axfr, do_google, do_spf, do_whois, zw):
         # Enumerate SOA Record
 
         try:
-            found_soa_record = res.get_soa()
-            print_status('\t {0} {1} {2}'.format(found_soa_record[0], found_soa_record[1], found_soa_record[2]))
+            found_soa_records = res.get_soa()
+            for found_soa_record in found_soa_records:
+                print_status('\t {0} {1} {2}'.format(found_soa_record[0], found_soa_record[1], found_soa_record[2]))
 
-            # Save dictionary of returned record
-            returned_records.extend([{'type':found_soa_record[0],\
-            "mname":found_soa_record[1],'address':found_soa_record[2]
-            }])
+                # Save dictionary of returned record
+                returned_records.extend([{'type':found_soa_record[0],\
+                "mname":found_soa_record[1],'address':found_soa_record[2]
+                }])
 
-            ip_for_whois.append(found_soa_record[2])
+                ip_for_whois.append(found_soa_record[2])
 
         except:
             print_error("Could not Resolve SOA Recor for {0}".format(domain))
@@ -1019,7 +1020,7 @@ def ds_zone_walk(res, domain):
         return
 
     print_status("Getting SOA record for {0}".format(domain))
-    soa_rcd = res.get_soa()[2]
+    soa_rcd = res.get_soa()[0][2]
     print_status("Name Server {0} will be used".format(soa_rcd))
     res = DnsHelper(domain,soa_rcd,3)
     try:
