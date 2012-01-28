@@ -709,6 +709,9 @@ def write_db(db,data):
         con.commit()
 
 def dns_sec_check(domain,res):
+    """
+    Check if a zone is configured for DNSSEC and if so if NSEC or NSEC3 is used.
+    """
     nsec_algos = [1,2,3,4,5]
     nsec3_algos = [6,7]
     try:
@@ -919,12 +922,17 @@ def query_ds(target,ns, timeout = 5.0):
     return answer
 
 def get_constants(prefix):
-    """Create a dictionary mapping socket module constants to their names."""
+    """
+    Create a dictionary mapping socket module constants to their names.
+    """
     return dict( (getattr(socket, n), n)
                 for n in dir(socket)
                 if n.startswith(prefix))
 
 def socket_resolv(target):
+    """
+    Resolve IPv4 and IPv6 .
+    """
     found_recs = []
     families = get_constants('AF_')
     types = get_constants('SOCK_')
@@ -941,6 +949,9 @@ def socket_resolv(target):
     return found_recs
 
 def lookup_next(target, res):
+    """
+    Try to get the most accurate information for the record found.
+    """
     res_sys = DnsHelper(target)
     returned_records = []
 
@@ -992,6 +1003,10 @@ def lookup_next(target, res):
     return returned_records
 
 def ds_zone_walk(res, domain):
+    """
+    Perform DNSSEC Zone Walk using NSEC records found the the error additional
+    records section of the message to find the next host to query int he zone.
+    """
     returned_records = []
     found = []
     print_status("Performing NSEC Zone Walk for".format(domain))
