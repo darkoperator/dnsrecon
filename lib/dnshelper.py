@@ -27,8 +27,7 @@ from dns.dnssec import algorithm_to_text
 from msf_print import *
 
 DNS_PORT_NUMBER = 53
-# 3 Seconds should be more than enough to check for delay for a regular connection.
-DNS_QUERY_TIMEOUT = 3
+DNS_QUERY_TIMEOUT = 4.0
 
 class DnsHelper:
     def __init__(self, domain, ns_server=None, request_timeout=3.0, ):
@@ -53,7 +52,7 @@ class DnsHelper:
         s.settimeout(DNS_QUERY_TIMEOUT)
         try:
             s.connect((address, DNS_PORT_NUMBER))
-        except Exception as e:
+        except Exception:
             return False
         else:
             return True

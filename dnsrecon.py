@@ -715,7 +715,7 @@ def dns_sec_check(domain,res):
     nsec_algos = [1,2,3,4,5]
     nsec3_algos = [6,7]
     try:
-        answer = res.resolve(domain, 'DNSKEY')
+        answer = res._res.query(domain, 'DNSKEY')
         print_status("DNSSEC is configured for {0}".format(domain))
         print_status("DNSKEYs:")
         for rdata in answer:
@@ -736,7 +736,7 @@ def dns_sec_check(domain,res):
 
     except dns.exception.Timeout:
         print_error("A timeout error occurred please make sure you can reach the target DNS Servers")
-        print_error("directly and requests are not being filtered. Increase the timeout from {0} second".format(request_timeout))
+        print_error("directly and requests are not being filtered. Increase the timeout from {0} second".format(res._res.timeout))
         print_error("to a higher number with --lifetime <time> option.")
         sys.exit(1)
     except dns.resolver.NoAnswer:
@@ -754,7 +754,6 @@ def general_enum(res, domain, do_axfr, do_google, do_spf, do_whois, zw):
 
     # Var for SPF Record Range Reverse Look-up
     found_spf_ranges = []
-    ip_spf_list = []
 
     # Var to hold the IP Addresses that will be queried in Whois
     ip_for_whois = []
