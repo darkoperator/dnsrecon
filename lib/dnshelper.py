@@ -336,7 +336,6 @@ class DnsHelper:
         ns_records = list(set(ns_records))
         # Test each NS Server
         for ns_srv in ns_records:
-            print ns_srv
             print_status('Trying NS server {0}'.format(ns_srv))
             if self.check_tcp_dns(ns_srv):
                 
