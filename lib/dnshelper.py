@@ -152,8 +152,8 @@ class DnsHelper:
         Function for NS Record resolving. Returns all NS records. Returns also the IP
         address of the host both in IPv4 and IPv6. Returns an Array.
         """
-        answer = self._res.query(self._domain, 'NS')
         name_servers = []
+        answer = self._res.query(self._domain, 'NS')
         if answer is not None:
             for aa in answer:
                 name = aa.target.to_text()[:-1]
@@ -324,20 +324,22 @@ class DnsHelper:
 
         # Find NS for Domain
         print_status("Resolving NS Records")
+        ns_srvs = []
         try:
             ns_srvs = self.get_ns()
             for ns in ns_srvs:
                 ns_records.append(''.join(ns[2]))
-        except:
+        except Exception as s:
             print_error("Could not Resolve NS Records")
 
         # Remove duplicates
         ns_records = list(set(ns_records))
-
         # Test each NS Server
         for ns_srv in ns_records:
+            print ns_srv
+            print_status('Trying NS server {0}'.format(ns_srv))
             if self.check_tcp_dns(ns_srv):
-                print_status('Trying NS server {0}'.format(ns_srv))
+                
                 print_good('{0} Has port 53 TCP Open'.format(ns_srv))
                 try:
                     zone = self.from_wire(dns.query.xfr(ns_srv, self._domain))
@@ -629,16 +631,19 @@ class DnsHelper:
                                                 'key':rdata.key, \
                                                 'precedence':rdata.precedence
                                                 })
-
                 except:
                     print_error('Zone Transfer Failed!')
+                zone_records.append({'type':'info','zone_transfer':'failed', 'ns_server':ns_srv})
+            else:
+                print_error('Zone Transfer Failed for {0}!'.format(ns_srv))
+                print_error('Port 53 TCP is being filtered')
                 zone_records.append({'type':'info','zone_transfer':'failed', 'ns_server':ns_srv})
         return zone_records
 
 
 def main():
     resolver = DnsHelper('google.com')
-    print(resolver.get_a("www.google.com"))
+    print(resolver.get_a("www.yahoo.com"))
     print(resolver.get_aaaa('baddata-cname-to-baddata-aaaa.test.dnssec-tools.org'))
     print(resolver.get_mx())
     print(resolver.get_ip('www.google.com'))
@@ -647,7 +652,8 @@ def main():
     print(resolver.get_soa())
     print(resolver.get_txt())
     print(resolver.get_spf())
-    tresolver = DnsHelper('owasp.org')
+    #tresolver = DnsHelper('weightmans.com')
+    tresolver = DnsHelper('google.com')
     print(tresolver.zone_transfer())
 if __name__ == "__main__":
     main()
