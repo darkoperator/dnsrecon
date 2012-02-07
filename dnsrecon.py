@@ -259,7 +259,7 @@ def check_wildcard(res, domain_trg):
     return wildcard
 
 
-def brute_tlds(res, domain):
+def brute_tlds(res, domain, verbose = False):
     """
     This function performs a check of a given domain for known TLD values.
     prints and returns a dictionary of the results.
@@ -297,8 +297,12 @@ def brute_tlds(res, domain):
 
     try:
         for t in tlds:
+            if verbose:
+                print_status("Trying {0}".format(domain_main + "." + t))
             pool.add_task(res.get_ip, domain_main + "." + t)
             for g in gtld:
+                if verbose:
+                    print_status("Trying {0}".format(domain_main+ "." + g + "." + t))
                 pool.add_task(res.get_ip, domain_main+ "." + g + "." + t)
 
         # Wait for threads to finish.
@@ -319,7 +323,7 @@ def brute_tlds(res, domain):
     return found_tlds
 
 
-def brute_srv(res, domain):
+def brute_srv(res, domain, verbose = False):
     """
     Brute-force most common SRV records for a given Domain. Returns an Array with
     records found.
@@ -348,6 +352,8 @@ def brute_srv(res, domain):
 
     try:
         for srvtype in srvrcd:
+            if verbose:
+                print_status("Trying {0}".format(res.get_srv, srvtype + domain))
             pool.add_task(res.get_srv, srvtype + domain)
 
             # Wait for threads to finish.
@@ -375,7 +381,7 @@ def brute_srv(res, domain):
     return returned_records
 
 
-def brute_reverse(res,ip_list):
+def brute_reverse(res, ip_list, verbose = False):
     """
     Reverse look-up brute force for given CIDR example 192.168.1.1/24. Returns an
     Array of found records.
@@ -389,6 +395,8 @@ def brute_reverse(res,ip_list):
     # Resolve each IP in a separate thread.
     try:
         for x in ip_list:
+            if verbose:
+                print_status("Trying {0}".format(x))
             pool.add_task(res.get_ptr, x)
 
         # Wait for threads to finish.
@@ -406,7 +414,7 @@ def brute_reverse(res,ip_list):
 
     return returned_records
 
-def brute_domain(res, dict, dom, filter = None):
+def brute_domain(res, dict, dom, filter = None, verbose = False):
     """
     Main Function for domain brute forcing
     """
@@ -430,6 +438,8 @@ def brute_domain(res, dict, dom, filter = None):
             # Thread brute-force.
             try:
                 for line in f:
+                    if verbose:
+                        print_status("Trying {0}".format(line.strip() + '.' + dom.strip()))
                     target = line.strip() + '.' + dom.strip()
                     pool.add_task(res.get_ip, target)
             except (KeyboardInterrupt):
@@ -1089,6 +1099,7 @@ def usage():
     print("   --db               <file>   SQLite 3 file to save found records.")
     print("   --xml              <file>   XML File to save found records.")
     print("   --csv              <file>   Comma separated value file.")
+    print("   -v                          Show attempts in the bruteforce modes.")
     sys.exit(0)
 
 
@@ -1118,6 +1129,7 @@ def main():
     zonewalk = None
     csv_file = None
     wildcard_filter = None
+    verbose = False
 
     #
     # Global Vars
@@ -1129,7 +1141,7 @@ def main():
     # Define options
     #
     try:
-        options, args = getopt.getopt(sys.argv[1:], 'hzd:n:x:D:t:aq:gwr:fsc:',
+        options, args = getopt.getopt(sys.argv[1:], 'hzd:n:x:D:t:aq:gwr:fsc:v',
                                            ['help',
                                            'zone_walk'
                                            'domain=',
@@ -1145,7 +1157,8 @@ def main():
                                            'csv=',
                                            'lifetime=',
                                            'threads=',
-                                           'db='
+                                           'db=',
+                                           'verbose'
                                            ])
     except getopt.GetoptError:
         print_error("Wrong Option Provided!")
@@ -1210,6 +1223,9 @@ def main():
         elif opt in ('-c', '--csv'):
             csv_file = arg
 
+        elif opt in ('-v'):
+            verbose = True
+
         elif opt in ('-h'):
             usage()
 
@@ -1246,7 +1262,7 @@ def main():
                 elif r == 'rvl':
                     if len(ip_list) > 0:
                         print_status('Reverse Look-up of a Range')
-                        rvl_enum_records = brute_reverse(res, ip_list)
+                        rvl_enum_records = brute_reverse(res, ip_list, verbose)
 
                         if (output_file is not None) or (results_db is not None) or (csv_file is not None):
                             returned_records.extend(rvl_enum_records)
@@ -1256,7 +1272,7 @@ def main():
                 elif r == 'brt':
                     if (dict is not None) and (domain is not None):
                         print_status('Performing host and subdomain brute force against {0}'.format(domain))
-                        brt_enum_records = brute_domain(res, dict, domain, wildcard_filter)
+                        brt_enum_records = brute_domain(res, dict, domain, wildcard_filter, verbose)
 
                         if (output_file is not None) or (results_db is not None) or (csv_file is not None):
                             returned_records.extend(brt_enum_records)
@@ -1267,7 +1283,7 @@ def main():
                 elif r == 'srv':
                     if domain is not None:
                         print_status('Enumerating Common SRV Records against {0}'.format(domain))
-                        srv_enum_records = brute_srv(res, domain)
+                        srv_enum_records = brute_srv(res, domain, verbose)
 
                         if (output_file is not None) or (results_db is not None) or (csv_file is not None):
                             returned_records.extend(srv_enum_records)
@@ -1278,7 +1294,7 @@ def main():
                 elif r == 'tld':
                     if domain is not None:
                         print_status("Performing TLD Brute force Enumeration against {0}".format(domain))
-                        tld_enum_records = brute_tlds(res, domain)
+                        tld_enum_records = brute_tlds(res, domain, verbose)
                         if (output_file is not None) or (results_db is not None) or (csv_file is not None):
                             returned_records.extend(tld_enum_records)
                     else:
