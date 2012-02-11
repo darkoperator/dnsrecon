@@ -327,12 +327,16 @@ class DnsHelper:
         ns_srvs = []
         try:
             ns_srvs = self.get_ns()
+            print_status("NS Servers found:")
             for ns in ns_srvs:
-                ns_records.append(''.join(ns[2]))
+                print_status("\t{0}".format(" ".join(ns)))
+                ns_ip = ''.join(ns[2])
+                ns_records.append(ns_ip)
         except Exception as s:
             print_error("Could not Resolve NS Records")
 
         # Remove duplicates
+        print_status("Removing any duplicate NS server IP Addresses...")
         ns_records = list(set(ns_records))
         # Test each NS Server
         for ns_srv in ns_records:
@@ -378,6 +382,15 @@ class DnsHelper:
                             print_status('\t SPF {0}'.format(''.join(rdata.strings)))
                             zone_records.append({'zone_server':ns_srv, 'type':'SPF', \
                                                 'strings':''.join(rdata.strings)
+                                                })
+                    for (name, rdataset) in \
+                        zone.iterate_rdatasets(dns.rdatatype.PTR):
+                        for rdata in rdataset:
+                            for n_ip in self.get_ip(rdata.target.to_text()+"."+self._domain):
+                                if re.search(r'^A',n_ip[0]):
+                                    print_status('\t PTR {0} {1}'.format(rdata.target.to_text()+"."+self._domain,n_ip[2]))
+                                    zone_records.append({'zone_server':ns_srv, 'type':'PTR', \
+                                                'target':rdata.target.to_text()+"."+self._domain,'address':n_ip[2]
                                                 })
 
                     for (name, rdataset) in \
@@ -630,7 +643,8 @@ class DnsHelper:
                                                 'key':rdata.key, \
                                                 'precedence':rdata.precedence
                                                 })
-                except:
+                except Exception as e:
+                    print e
                     print_error('Zone Transfer Failed!')
                 zone_records.append({'type':'info','zone_transfer':'failed', 'ns_server':ns_srv})
             else:
