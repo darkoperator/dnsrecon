@@ -18,7 +18,7 @@
 #    along with this program; if not, write to the Free Software
 #    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
-__version__ = '0.6.8'
+__version__ = '0.6.9'
 __author__ = 'Carlos Perez, Carlos_Perez@darkoperator.com'
 
 __doc__ = """
@@ -869,7 +869,7 @@ def general_enum(res, domain, do_axfr, do_google, do_spf, do_whois, zw):
                 }])
 
         # Process SPF records if selected
-        if do_spf is not None:
+        if do_spf is not None and len(text_data) > 0:
             print_status("Expanding IP ranges found in DNS and TXT records for Reverse Look-up")
             found_spf_ranges.extend(process_spf_data(res, text_data))
             if len(found_spf_ranges) > 0:
