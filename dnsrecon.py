@@ -18,7 +18,7 @@
 #    along with this program; if not, write to the Free Software
 #    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
-__version__ = '0.6.9'
+__version__ = '0.7.0'
 __author__ = 'Carlos Perez, Carlos_Perez@darkoperator.com'
 
 __doc__ = """
@@ -761,7 +761,7 @@ def general_enum(res, domain, do_axfr, do_google, do_spf, do_whois, zw):
     perform an A and AAA query against them.
     """
     returned_records = []
-
+    
     # Var for SPF Record Range Reverse Look-up
     found_spf_ranges = []
 
@@ -868,6 +868,17 @@ def general_enum(res, domain, do_axfr, do_google, do_spf, do_whois, zw):
                 "text":t[2]
                 }])
 
+        domainkey_text_data = res.get_txt("_domainkey." + domain)
+
+        # Save dictionary of returned record
+        if domainkey_text_data is not None:
+            for t in domainkey_text_data:
+                print_status('\t {0} {1} {2}'.format(t[0], t[1], t[2]))
+                text_data += t[2]
+                returned_records.extend([{'type':t[0], 'name':t[1],\
+                "text":t[2]
+                }])
+                
         # Process SPF records if selected
         if do_spf is not None and len(text_data) > 0:
             print_status("Expanding IP ranges found in DNS and TXT records for Reverse Look-up")
@@ -901,7 +912,7 @@ def general_enum(res, domain, do_axfr, do_google, do_spf, do_whois, zw):
             returned_records.extend(whois_rcd)
 
         if zw:
-            zone_info = zone_walk(domain, res)
+            zone_info = ds_zone_walk(res, domain)
             if zone_info:
                 returned_records.extend(zone_info)
 

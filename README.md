@@ -1,3 +1,10 @@
+##Version 0.7.0
+
+###Date: 3/2/12
+###Changes:
+- Fixes to Zone Walk option.
+- Query for _domainkey record in standard enumeration.
+
 ##Version 0.6.8
 
 ###Date: 2/15/12
