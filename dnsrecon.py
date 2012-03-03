@@ -18,7 +18,7 @@
 #    along with this program; if not, write to the Free Software
 #    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
-__version__ = '0.7.0'
+__version__ = '0.7.1'
 __author__ = 'Carlos Perez, Carlos_Perez@darkoperator.com'
 
 __doc__ = """
@@ -1023,45 +1023,78 @@ def lookup_next(target, res):
                 
     return returned_records
 
+def get_a_answer(target,ns,timeout):
+    query = dns.message.make_query(target, dns.rdatatype.A, dns.rdataclass.IN)
+    query.flags += dns.flags.CD
+    query.use_edns(edns=True, payload=4096)
+    query.want_dnssec(True)
+    answer = dns.query.udp(query,ns,timeout)
+    return answer
+
 def ds_zone_walk(res, domain):
     """
     Perform DNSSEC Zone Walk using NSEC records found the the error additional
     records section of the message to find the next host to query int he zone.
     """
     returned_records = []
-    found = []
-    print_status("Performing NSEC Zone Walk for".format(domain))
-
-    # Check for the presense of a NSEC record, if none exit.
-    try:
-        answer = res.get_nsec(domain)
-    except dns.resolver.NoAnswer:
-        print_error("This Zone can not be walked!")
-        return
-
+    target = "0." + domain
+    next_host = ""
+    start_next = domain
+    timeout = res._res.timeout
+    print_status("Performing NSEC Zone Walk for {0}".format(domain))
     print_status("Getting SOA record for {0}".format(domain))
     soa_rcd = res.get_soa()[0][2]
     print_status("Name Server {0} will be used".format(soa_rcd))
     res = DnsHelper(domain,soa_rcd,3)
-    try:
-        answer = query_ds(domain, soa_rcd, 10.0)
-        while answer.flags == 34067 or answer.flags == 34064:
-        #if answer.authority.count > 0:
-            for a in answer.authority:
-                if a.rdtype == 47:
-                    for r in a:
-                        if r.next not in found:
-                            next_host = r.next.to_text()[:-1]
-                            hostname = re.search('(^[^.]*)(\S*)', next_host)
-                            found.append(r.next)
-                            returned_records.extend(lookup_next(next_host, res))
-                            # Append null char to get proper response with NSEC records
-                            answer = query_ds("{0}\x00{1}".format(hostname.group(1),hostname.group(2)),soa_rcd)
-    except (KeyboardInterrupt):
-        print_error("You have pressed Crtl-C. Saving found records.")
-        
+    ns = soa_rcd
+    response = get_a_answer(target,ns,timeout)
+    
+    while next_host != domain:
+        next_host = ""
+        nsec_found = False
+        run = 0
+        try:
+            while not nsec_found:
+                for a in response.authority:
+                    if a.rdtype == 47:
+                        nsec_found = True
+                        run = 0
+                        for r in a:
+                            next_host =  r.next.to_text()[:-1]
+                            start_next = next_host
+                if start_next == domain:
+                    if len(returned_records) > 0:
+                        print_good("{0} Records Found".format(len(returned_records)))
+                    else:
+                        print_error("Zone could not be walked")
+                    return returned_records
+                elif run == 0:
+                    # Try getting an error by appending a host named 0
+                    next_target = "0." + start_next
+                    run = run + 1
+                elif run == 1:
+                    # Try getting an error by appending - to the hostname
+                    hostname = re.search('(^[^.]*)(\S*)', start_next)
+                    next_target = "{0}-{1}".format(hostname.group(1),hostname.group(2))
+                    run = run + 1
+                elif run == 2:
+                    # Move one level down
+                    if hostname.group(2) != domain:
+                        next_target = hostname.group(2)[1:]
+                        start_next = hostname.group(2)[1:]
+                    else:
+                        if len(returned_records) > 0:
+                            print_good("{0} Records Found".format(len(returned_records)))
+                        else:
+                            print_error("Zone could not be walked")
+                        return returned_records
+                    run = 0 
+                response = get_a_answer(next_target,ns,timeout)
+            returned_records.extend(lookup_next(next_host, res))    
+        except (KeyboardInterrupt):
+            print_error("You have pressed Crtl-C. Saving found records.")
+            break
     return returned_records
-
 
 def usage():
     print("Version: {0}".format(__version__))
