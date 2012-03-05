@@ -346,7 +346,8 @@ def brute_srv(res, domain, verbose = False):
         '_hkps._tcp.', '_jabber._udp.','_xmpp-server._udp.', '_xmpp-client._udp.',
         '_jabber-client._tcp.', '_jabber-client._udp.','_kerberos.tcp.dc._msdcs.',
         '_ldap._tcp.ForestDNSZones.', '_ldap._tcp.dc._msdcs.', '_ldap._tcp.pdc._msdcs.',
-        '_ldap._tcp.gc._msdcs.','_kerberos._tcp.dc._msdcs.','_kpasswd._tcp.','_kpasswd._udp.'
+        '_ldap._tcp.gc._msdcs.','_kerberos._tcp.dc._msdcs.','_kpasswd._tcp.','_kpasswd._udp.',
+        '_imap._tcp.'
         ]
 
 
@@ -976,7 +977,7 @@ def lookup_next(target, res):
     res_sys = DnsHelper(target)
     returned_records = []
 
-    if re.search("^_\\w*[^.]._\\w*[^.].", target, re.I):
+    if re.search("^_[A-Za-z0-9_-]*._[A-Za-z0-9_-]*.", target, re.I):
         srv_answer = res.get_srv(target)
         if len(srv_answer) > 0:
             for r in srv_answer:

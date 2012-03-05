@@ -90,7 +90,7 @@ module Msf
 
 						when /SRV/
 							srv_info = []
-							srv_info = node.attribute('name').strip.scan(/^_(\S*)\._(tcp|udp|tls)\./)[0]
+							srv_info = node.attribute('name').strip.scan(/^_([A-Za-z0-9_-]*)\._(tcp|udp|tls)\./)[0]
 							port = node.attribute('port').strip.to_i
 							if srv_info[1] == "tls"
 								proto = "tcp"
