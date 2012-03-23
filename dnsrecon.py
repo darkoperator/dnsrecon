@@ -1286,7 +1286,11 @@ def main():
                 if r == 'axfr':
                     if domain is not None:
                         print_status('Testing NS Servers for Zone Transfer')
-                        returned_records.extend(res.zone_transfer())
+                        zonercds = res.zone_transfer()
+                        if zonercds:
+                            returned_records.extend(zonercds)
+                        else:
+                            print_error("No records where returned in the zone trasfer attempt.")
 
                     else:
                         print_error('No Domain to target specified!')
