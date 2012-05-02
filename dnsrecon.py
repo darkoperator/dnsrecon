@@ -596,7 +596,7 @@ def dns_record_from_dict(record_dict_list):
     xml_doc = Element("records")
     for r in record_dict_list:
         elem = Element("record")
-        for k,v in r.iteritems():
+        for k,v in r.items():
            elem.attrib[k] = v
         xml_doc.append(elem)
 

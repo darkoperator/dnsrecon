@@ -24,7 +24,7 @@ import dns.reversename
 from dns.zone import *
 import socket
 from dns.dnssec import algorithm_to_text
-from msf_print import *
+from .msf_print import *
 
 DNS_PORT_NUMBER = 53
 DNS_QUERY_TIMEOUT = 4.0
@@ -390,7 +390,7 @@ class DnsHelper:
                                 if re.search(r'^A',n_ip[0]):
                                     print_status('\t PTR {0} {1}'.format(rdata.target.to_text()+"."+self._domain,n_ip[2]))
                                     zone_records.append({'zone_server':ns_srv, 'type':'PTR', \
-                                                'target':rdata.target.to_text()+"."+self._domain,'address':n_ip[2]
+                                                'name':rdata.target.to_text()+"."+self._domain,'address':n_ip[2]
                                                 })
 
                     for (name, rdataset) in \
