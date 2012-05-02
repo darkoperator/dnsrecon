@@ -644,7 +644,6 @@ class DnsHelper:
                                                 'precedence':rdata.precedence
                                                 })
                 except Exception as e:
-                    print e
                     print_error('Zone Transfer Failed!')
                 zone_records.append({'type':'info','zone_transfer':'failed', 'ns_server':ns_srv})
             else:
