@@ -18,7 +18,7 @@
 #    along with this program; if not, write to the Free Software
 #    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
-__version__ = '0.0.2'
+__version__ = '0.0.3'
 __author__ = 'Carlos Perez, Carlos_Perez@darkoperator.com'
 
 import xml.etree.cElementTree as cElementTree
@@ -143,7 +143,7 @@ def csv_parse(csv_file, ifilter, tfilter, nfilter, list):
     Function for parsing CSV files created by DNSRecon and apply filters.
     """
     iplist = []
-    reader = csv.reader(open(csv_file, 'rb'), delimiter=',')
+    reader = csv.reader(open(csv_file, 'r'), delimiter=',')
     for row in reader:
         # Check if IP is in the filter list of addresses to ignore
         if row[2] not in ifilter:
@@ -189,7 +189,7 @@ def extract_hostnames(file):
                         host_names.append(re.search(hostname_pattern, elem.attrib['target']).group(1))
 
     elif file_type == "csv":
-        reader = csv.reader(open(file, 'rb'), delimiter=',')
+        reader = csv.reader(open(file, 'r'), delimiter=',')
         for row in reader:
             host_names.append(re.search(hostname_pattern, row[1]).group(1))
 
@@ -204,7 +204,7 @@ def detect_type(file):
     ftype = None
 
     # Get the fist lile of the file for checking
-    f = open(file, 'rb')
+    f = open(file, 'r')
     firs_line = f.readline()
 
     # Determine file type based on the fist line content
@@ -301,7 +301,7 @@ def main():
             names = True
 
         elif opt in ('-h'):
-            print usage()
+            usage()
 
     # start execution based on options
     if file:
