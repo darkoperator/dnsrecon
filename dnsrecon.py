@@ -652,7 +652,10 @@ def make_csv(data):
             csv_data += n['type']+","+n['exchange']+","+n['address']+"\n"
 
         elif re.search(r'TXT|SPF',n['type']):
-            csv_data += n['type']+","+n['name']+",,,,\'"+n['text']+"\'\n"
+            if "zone_server" in n:
+                csv_data += n['type']+",,,,,\'"+n['strings']+"\'\n"
+            else:
+                csv_data += n['type']+","+n['name']+",,,,\'"+n['strings']+"\'\n"
 
         elif re.search(r'SRV',n['type']):
             csv_data += n['type']+","+n['name']+","+n['address']+","+n['target']+","+n['port']+"\n"
@@ -688,7 +691,7 @@ def write_db(db,data):
 
         elif re.match(r'NS',n['type']):
             query = 'insert into data( type, name, address ) '+\
-            'values( "%(type)s", "%(target)s", "%(address)s" )' % n
+            'values( "%(type)s", "%(mname)s", "%(address)s" )' % n
 
         elif re.match(r'SOA',n['type']):
             query = 'insert into data( type, name, address ) '+\
@@ -855,7 +858,7 @@ def general_enum(res, domain, do_axfr, do_google, do_spf, do_whois, zw):
                 print_status('\t {0} {1} {2}'.format(s[0], s[1], s[2]))
                 text_data += s[2]
                 returned_records.extend([{'type':s[0], 'name':s[1],\
-                "text":s[1]
+                "strings":s[1]
                 }])
 
         txt_text_data = res.get_txt()
@@ -866,7 +869,7 @@ def general_enum(res, domain, do_axfr, do_google, do_spf, do_whois, zw):
                 print_status('\t {0} {1} {2}'.format(t[0], t[1], t[2]))
                 text_data += t[2]
                 returned_records.extend([{'type':t[0], 'name':t[1],\
-                "text":t[2]
+                "strings":t[2]
                 }])
 
         domainkey_text_data = res.get_txt("_domainkey." + domain)
@@ -939,7 +942,7 @@ def query_ds(target,ns, timeout = 5.0):
         print_error("to a higher number with --lifetime <time> option.")
         sys.exit(1)
     except:
-        print "Unexpected error:", sys.exc_info()[0]
+        print("Unexpected error: {0}".format(sys.exc_info()[0]))
         raise
     return answer
 

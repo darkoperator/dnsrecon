@@ -365,7 +365,7 @@ class DnsHelper:
                                 if re.search(r'^A',n_ip[0]):
                                     print_status('\t NS {0} {1}'.format(rdata.target.to_text(),n_ip[2]))
                                     zone_records.append({'zone_server':ns_srv, 'type':'NS', \
-                                                'mname':rdata.target.to_text(),'address':n_ip[2]
+                                                'target':rdata.target.to_text(),'address':n_ip[2]
                                                 })
 
                     for (name, rdataset) in \
