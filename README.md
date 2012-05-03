@@ -1,3 +1,10 @@
+##Version 0.7.3
+
+###Date: 5/2/12
+###Changes:
+- Fixes for Python3 compatibility.
+- fix key values for when saving results to XML and CSV.
+
 ##Version 0.7.0
 
 ###Date: 3/2/12
