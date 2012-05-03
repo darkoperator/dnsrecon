@@ -18,7 +18,7 @@
 #    along with this program; if not, write to the Free Software
 #    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
-__version__ = '0.0.3'
+__version__ = '0.0.4'
 __author__ = 'Carlos Perez, Carlos_Perez@darkoperator.com'
 
 import xml.etree.cElementTree as cElementTree
@@ -78,7 +78,7 @@ def xml_parse(xm_file, ifilter, tfilter, nfilter, list):
             # Check that it is a RR Type that has an IP Address
             if "address" in elem.attrib:
                 # Check if the IP is in the filter list of IPs to ignore
-                if elem.attrib['address'] not in ifilter:
+                if elem.attrib['address'] not in ifilter and elem.attrib['address'] != "no_ip":
                     # Check if the RR Type against the types
                     if re.search(tfilter, elem.attrib['type'], re.I):
                         # Process A, AAAA and PTR Records
@@ -133,7 +133,7 @@ def xml_parse(xm_file, ifilter, tfilter, nfilter, list):
     # Process IPs in list
     if len(iplist ) > 0:
         try:
-            for ip in iplist:
+            for ip in filter(None,iplist):
                 print_line(ip)
         except IOError:
             sys.exit(0)
@@ -146,7 +146,7 @@ def csv_parse(csv_file, ifilter, tfilter, nfilter, list):
     reader = csv.reader(open(csv_file, 'r'), delimiter=',')
     for row in reader:
         # Check if IP is in the filter list of addresses to ignore
-        if row[2] not in ifilter:
+        if row[2] not in ifilter and row[2] != "no_ip":
             # Check Host Name regex and type list
             if re.search(tfilter, row[0], re.I) and re.search(nfilter, row[1], re.I):
                 if list:
@@ -155,7 +155,7 @@ def csv_parse(csv_file, ifilter, tfilter, nfilter, list):
                     print_good(" ".join(row))
     # Process IPs for target list if available
     if len(iplist ) > 0:
-        for ip in iplist:
+        for ip in filter(None,iplist):
             print_line(ip)
 
 def extract_hostnames(file):
@@ -194,7 +194,8 @@ def extract_hostnames(file):
             host_names.append(re.search(hostname_pattern, row[1]).group(1))
 
     host_names = list(set(host_names))
-    return host_names
+    # Return list with no empty values
+    return filter(None, host_names)
 
 def detect_type(file):
     """
