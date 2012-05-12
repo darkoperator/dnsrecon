@@ -499,6 +499,29 @@ def in_cache(dict_file,ns):
                         print_status()
     return found_records
 
+def scrape_google(dom):
+    """
+    Function for enumerating sub-domains and hosts by scrapping Google.
+    """
+    results = []
+    filtered = []
+    searches = ["100", "200","300","400","500"]
+    data = ""
+    urllib._urlopener = AppURLopener()
+    #opener.addheaders = [('User-Agent','Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)')]
+    for n in searches:
+        url = "http://google.com/search?hl=en&lr=&ie=UTF-8&q=%2B"+dom+"&start="+n+"&sa=N&filter=0&num=100"
+        sock = urllib.urlopen(url)
+        data += sock.read()
+        sock.close()
+    results.extend(unique(re.findall("htt\w{1,2}:\/\/([^:?]*[a-b0-9]*[^:?]*\."+dom+")\/", data)))
+    # Make sure we are only getting the host
+    for f in results:
+        filtered.extend(re.findall("^([a-z.0-9^]*"+dom+")", f))
+    time.sleep(2)
+    return unique(filtered)
+
+
 def goo_result_process(res, found_hosts):
     """
     This function processes the results returned from the Google Search and does

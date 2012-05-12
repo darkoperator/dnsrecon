@@ -129,7 +129,7 @@ def xml_parse(xm_file, ifilter, tfilter, nfilter, list):
             # Process TXT and SPF Records
             elif re.search(r'TXT|SPF', elem.attrib['type']):
                 if not list:
-                    print_good("{0} {1} {2}".format(elem.attrib['type'], elem.attrib['name'], elem.attrib['text']))
+                    print_good("{0} {1}".format(elem.attrib['type'], elem.attrib['strings']))
     # Process IPs in list
     if len(iplist ) > 0:
         try:
