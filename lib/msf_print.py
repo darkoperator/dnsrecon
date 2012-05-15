@@ -22,7 +22,7 @@ def print_status(message=""):
         print("\033[1;34m[*]\033[1;m {0}".format(message))
     else:
         print("[*] {0}".format(message))
-        
+
 def print_good(message=""):
     if sys.stdout.isatty():
         print("\033[1;32m[*]\033[1;m {0}".format(message))
@@ -34,13 +34,12 @@ def print_error(message=""):
         print("\033[1;31m[-]\033[1;m {0}".format(message))
     else:
         print("[-] {0}".format(message))
-    
+
 def print_debug(message=""):
     if sys.stdout.isatty():
         print("\033[1;31m[!]\033[1;m {0}".format(message))
     else:
         print("[!] {0}".format(message))
-    
+
 def print_line(message=""):
     print("{0}".format(message))
-          
