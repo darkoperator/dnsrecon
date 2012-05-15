@@ -18,7 +18,7 @@
 #    along with this program; if not, write to the Free Software
 #    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
-__version__ = '0.7.4'
+__version__ = '0.7.5'
 __author__ = 'Carlos Perez, Carlos_Perez@darkoperator.com'
 
 __doc__ = """
@@ -140,6 +140,16 @@ class ThreadPool:
         """Wait for completion of all the tasks in the queue"""
 
         self.tasks.join()
+
+    def count(self):
+        """Return number of tasks in the queue"""
+
+        return self.tasks.qsize()
+
+def exit_brute(pool):
+    print_error("You have pressed Ctrl-C. Saving found records.")
+    print_status("Waiting for {0} remaining threads to finish.".format(pool.count()))
+    pool.wait_completion()
 
 def process_range(arg):
     """
@@ -309,13 +319,12 @@ def brute_tlds(res, domain, verbose = False):
         pool.wait_completion()
 
     except (KeyboardInterrupt):
-        print_error("You have pressed Ctrl-C. Saving found records.")
+        exit_brute(pool)
 
     # Process the output of the threads.
     for rcd_found in brtdata:
         for rcd in rcd_found:
             if re.search(r'^A',rcd[0]):
-                print_status("\t{0}".format("".join(rcd)))
                 found_tlds.extend([{'type':rcd[0],'name':rcd[1],'address':rcd[2]}])
 
     print_good("{0} Records Found".format(len(found_tlds)))
@@ -357,11 +366,11 @@ def brute_srv(res, domain, verbose = False):
                 print_status("Trying {0}".format(res.get_srv, srvtype + domain))
             pool.add_task(res.get_srv, srvtype + domain)
 
-            # Wait for threads to finish.
+        # Wait for threads to finish.
         pool.wait_completion()
 
     except (KeyboardInterrupt):
-        print_error("You have pressed Crtl-C. Saving found records.")
+        exit_brute(pool)
 
 
 
@@ -402,8 +411,9 @@ def brute_reverse(res, ip_list, verbose = False):
 
         # Wait for threads to finish.
         pool.wait_completion()
+        
     except (KeyboardInterrupt):
-        print_error("You have pressed Crtl-C. Saving found records.")
+        exit_brute(pool)
 
     for rcd_found in brtdata:
         for rcd in rcd_found:
@@ -443,11 +453,12 @@ def brute_domain(res, dict, dom, filter = None, verbose = False):
                         print_status("Trying {0}".format(line.strip() + '.' + dom.strip()))
                     target = line.strip() + '.' + dom.strip()
                     pool.add_task(res.get_ip, target)
-            except (KeyboardInterrupt):
-                print_error("You have pressed Crtl-C. Saving found records.")
 
-        # Wait for threads to finish
-        pool.wait_completion()
+                # Wait for threads to finish
+                pool.wait_completion()
+                
+            except (KeyboardInterrupt):
+                exit_brute(pool)
 
         # Process the output of the threads.
         for rcd_found in brtdata:
