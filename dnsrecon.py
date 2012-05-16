@@ -411,7 +411,7 @@ def brute_reverse(res, ip_list, verbose = False):
 
         # Wait for threads to finish.
         pool.wait_completion()
-        
+
     except (KeyboardInterrupt):
         exit_brute(pool)
 
@@ -456,7 +456,7 @@ def brute_domain(res, dict, dom, filter = None, verbose = False):
 
                 # Wait for threads to finish
                 pool.wait_completion()
-                
+
             except (KeyboardInterrupt):
                 exit_brute(pool)
 
@@ -1317,33 +1317,29 @@ def main():
     # Set the resolver
     res = DnsHelper(domain, ns_server, request_timeout)
 
+    domain_req = ['axfr','std','srv','tld','goo','zonewalk']
+
     if type is not None:
         for r in type.split(','):
+            if r in domain_req and domain is None:
+                print_error('No Domain to target specified!')
+                sys.exit(1)
             try:
                 if r == 'axfr':
-                    if domain is not None:
-                        print_status('Testing NS Servers for Zone Transfer')
-                        zonercds = res.zone_transfer()
-                        if zonercds:
-                            returned_records.extend(zonercds)
-                        else:
-                            print_error("No records where returned in the zone trasfer attempt.")
-
+                    print_status('Testing NS Servers for Zone Transfer')
+                    zonercds = res.zone_transfer()
+                    if zonercds:
+                        returned_records.extend(zonercds)
                     else:
-                        print_error('No Domain to target specified!')
-                        sys.exit(1)
+                        print_error("No records where returned in the zone trasfer attempt.")
 
                 elif r == 'std':
-                    if domain is not None:
-                        print_status("Performing General Enumeration of Domain:".format(domain))
-                        std_enum_records = general_enum(res, domain, xfr, goo,\
-                        spf_enum, do_whois, zonewalk)
+                    print_status("Performing General Enumeration of Domain:".format(domain))
+                    std_enum_records = general_enum(res, domain, xfr, goo,\
+                    spf_enum, do_whois, zonewalk)
 
-                        if (output_file is not None) or (results_db is not None) or (csv_file is not None):
-                            returned_records.extend(std_enum_records)
-                    else:
-                        print_error('No Domain to target specified!')
-                        sys.exit(1)
+                    if (output_file is not None) or (results_db is not None) or (csv_file is not None):
+                        returned_records.extend(std_enum_records)
 
                 elif r == 'rvl':
                     if len(ip_list) > 0:
@@ -1367,35 +1363,23 @@ def main():
                         sys.exit(1)
 
                 elif r == 'srv':
-                    if domain is not None:
-                        print_status('Enumerating Common SRV Records against {0}'.format(domain))
-                        srv_enum_records = brute_srv(res, domain, verbose)
+                    print_status('Enumerating Common SRV Records against {0}'.format(domain))
+                    srv_enum_records = brute_srv(res, domain, verbose)
 
-                        if (output_file is not None) or (results_db is not None) or (csv_file is not None):
-                            returned_records.extend(srv_enum_records)
-                    else:
-                        print('[-] No Domain to target specified!')
-                        sys.exit(1)
+                    if (output_file is not None) or (results_db is not None) or (csv_file is not None):
+                        returned_records.extend(srv_enum_records)
 
                 elif r == 'tld':
-                    if domain is not None:
-                        print_status("Performing TLD Brute force Enumeration against {0}".format(domain))
-                        tld_enum_records = brute_tlds(res, domain, verbose)
-                        if (output_file is not None) or (results_db is not None) or (csv_file is not None):
-                            returned_records.extend(tld_enum_records)
-                    else:
-                        print('[-] No Domain to target specified!')
-                        sys.exit(1)
+                    print_status("Performing TLD Brute force Enumeration against {0}".format(domain))
+                    tld_enum_records = brute_tlds(res, domain, verbose)
+                    if (output_file is not None) or (results_db is not None) or (csv_file is not None):
+                        returned_records.extend(tld_enum_records)
 
                 elif r == 'goo':
-                    if domain is not None:
-                        print_status("Performing Google Search Enumeration against {0}".format(domain))
-                        goo_enum_records = goo_result_process(res, scrape_google(domain))
-                        if (output_file is not None) or (results_db is not None) or (csv_file is not None):
-                            returned_records.extend(goo_enum_records)
-                    else:
-                        print('[-] No Domain to target specified!')
-                        sys.exit(1)
+                    print_status("Performing Google Search Enumeration against{0}".format(domain))
+                    goo_enum_records = goo_result_process(res, scrape_google(domain))
+                    if (output_file is not None) or (results_db is not None) or (csv_file is not None):
+                        returned_records.extend(goo_enum_records)
 
                 elif r == "snoop":
                     if (dict is not None) and (ns_server is not None):
@@ -1409,19 +1393,14 @@ def main():
                         sys.exit(1)
 
                 elif r == "zonewalk":
-                    if domain is not None:
-                        if (output_file is not None) or (results_db is not None) or (csv_file is not None):
-                            returned_records.extend(ds_zone_walk(res, domain))
-                        else:
-                            ds_zone_walk(res, domain)
+                    if (output_file is not None) or (results_db is not None) or (csv_file is not None):
+                        returned_records.extend(ds_zone_walk(res, domain))
                     else:
-                        print_error('No Domain or Name Server to target specified!')
-                        sys.exit(1)
+                        ds_zone_walk(res, domain)
 
                 else:
                     print_error("This type of scan is not in the list {0}".format(r))
                     usage()
-
 
             except dns.resolver.NXDOMAIN:
                 print_error("Could not resolve domain: {0}".format(domain))
