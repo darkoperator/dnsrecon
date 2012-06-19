@@ -144,6 +144,7 @@ def csv_parse(csv_file, ifilter, tfilter, nfilter, list):
     """
     iplist = []
     reader = csv.reader(open(csv_file, 'r'), delimiter=',')
+    reader.next()
     for row in reader:
         # Check if IP is in the filter list of addresses to ignore
         if row[2] not in ifilter and row[2] != "no_ip":
@@ -180,7 +181,7 @@ def extract_hostnames(file):
                     elif re.search(r'SOA', elem.attrib['type']):
                         host_names.append(re.search(hostname_pattern, elem.attrib['mname']).group(1))
 
-                    # Process MS Records
+                    # Process MX Records
                     elif re.search(r'MX', elem.attrib['type']):
                         host_names.append(re.search(hostname_pattern, elem.attrib['exchange']).group(1))
 
@@ -190,6 +191,7 @@ def extract_hostnames(file):
 
     elif file_type == "csv":
         reader = csv.reader(open(file, 'r'), delimiter=',')
+        reader.next()
         for row in reader:
             host_names.append(re.search(hostname_pattern, row[1]).group(1))
 

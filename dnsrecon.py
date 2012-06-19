@@ -18,7 +18,7 @@
 #    along with this program; if not, write to the Free Software
 #    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
-__version__ = '0.7.5'
+__version__ = '0.7.6'
 __author__ = 'Carlos Perez, Carlos_Perez@darkoperator.com'
 
 __doc__ = """
@@ -670,7 +670,7 @@ def create_db(db):
         pass
 
 def make_csv(data):
-    csv_data = ""
+    csv_data = "Type,Name,Address,Target,Port,String\n"
     for n in data:
 
         if re.search(r'PTR|^[A]$|AAAA',n['type']):
