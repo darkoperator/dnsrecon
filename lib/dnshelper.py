@@ -253,11 +253,11 @@ class DnsHelper:
                 if ips:
                     for ip in ips:
                         if re.search('(^A|AAAA)',ip[0]):
-                            record.append(['SRV', host, a.target.to_text(), ip[2],
+                            record.append(['SRV', host, a.target.to_text()[:-1], ip[2],
                                       str(a.port), str(a.weight)])
 
                 else:
-                    record.append(['SRV', host, a.target.to_text(), "no_ip",
+                    record.append(['SRV', host, a.target.to_text()[:-1], "no_ip",
                                   str(a.port), str(a.weight)])
         except:
             return record
@@ -353,9 +353,9 @@ class DnsHelper:
                         for rdata in rdataset:
                             for mn_ip in self.get_ip(rdata.mname.to_text()):
                                 if re.search(r'^A',mn_ip[0]):
-                                    print_status('\t SOA {0} {1}'.format(rdata.mname.to_text(), mn_ip[2]))
+                                    print_status('\t SOA {0} {1}'.format(rdata.mname.to_text()[:-1], mn_ip[2]))
                                     zone_records.append({'zone_server':ns_srv, 'type':'SOA', \
-                                                'mname':rdata.mname.to_text(),'address':mn_ip[2]
+                                                'mname':rdata.mname.to_text()[:-1],'address':mn_ip[2]
                                                 })
 
                     for (name, rdataset) in \
@@ -363,9 +363,9 @@ class DnsHelper:
                         for rdata in rdataset:
                             for n_ip in self.get_ip(rdata.target.to_text()):
                                 if re.search(r'^A',n_ip[0]):
-                                    print_status('\t NS {0} {1}'.format(rdata.target.to_text(),n_ip[2]))
+                                    print_status('\t NS {0} {1}'.format(rdata.target.to_text()[:-1],n_ip[2]))
                                     zone_records.append({'zone_server':ns_srv, 'type':'NS', \
-                                                'target':rdata.target.to_text(),'address':n_ip[2]
+                                                'target':rdata.target.to_text()[:-1],'address':n_ip[2]
                                                 })
 
                     for (name, rdataset) in \
@@ -399,10 +399,10 @@ class DnsHelper:
                             for e_ip in self.get_ip(rdata.exchange.to_text()):
                                 if re.search(r'^A',e_ip[0]):
                                     print_status('\t MX {0} {1} {2}'.format(str(name) + '.' + self._domain, \
-                                rdata.exchange.to_text(), e_ip[2]) )
+                                rdata.exchange.to_text()[:-1], e_ip[2]) )
                             zone_records.append({'zone_server':ns_srv, 'type':'MX', \
                                                 'name':str(name) + '.' + self._domain, \
-                                                'exchange':rdata.exchange.to_text(),\
+                                                'exchange':rdata.exchange.to_text()[:-1],\
                                                 'address':e_ip[2]
                                                 })
 
@@ -435,7 +435,7 @@ class DnsHelper:
                                     + self._domain, rdata.target.to_text(), t_ip[2]))
                                     zone_records.append({'zone_server':ns_srv, 'type':'CNAME', \
                                                 'name':str(name) + '.' + self._domain, \
-                                                'target':str(rdata.target.to_text()),
+                                                'target':str(rdata.target.to_text())[:-1],
                                                 'address':t_ip[2]
                                                 })
 
@@ -450,7 +450,7 @@ class DnsHelper:
                                         str(rdata.port), str(rdata.weight), t_ip[2]))
                                         zone_records.append({'zone_server':ns_srv, 'type':'SRV', \
                                                     'name':str(name) + '.' + self._domain, \
-                                                    'target':rdata.target.to_text(), \
+                                                    'target':rdata.target.to_text()[:-1], \
                                                     'address':t_ip[2], \
                                                     'port':str(rdata.port), \
                                                     'weight':str(rdata.weight)
@@ -460,7 +460,7 @@ class DnsHelper:
                                         str(rdata.port), str(rdata.weight), 'no_ip'))
                                 zone_records.append({'zone_server':ns_srv, 'type':'SRV', \
                                         'name':str(name) + '.' + self._domain, \
-                                        'target':rdata.target.to_text(), \
+                                        'target':rdata.target.to_text()[:-1], \
                                         'address':"no_ip", \
                                         'port':str(rdata.port), \
                                         'weight':str(rdata.weight)
