@@ -400,7 +400,7 @@ class DnsHelper:
                                 if re.search(r'^A',e_ip[0]):
                                     print_status('\t MX {0} {1} {2}'.format(str(name) + '.' + self._domain, \
                                 rdata.exchange.to_text()[:-1], e_ip[2]) )
-                            zone_records.append({'zone_server':ns_srv, 'type':'MX', \
+                                zone_records.append({'zone_server':ns_srv, 'type':'MX', \
                                                 'name':str(name) + '.' + self._domain, \
                                                 'exchange':rdata.exchange.to_text()[:-1],\
                                                 'address':e_ip[2]
@@ -645,6 +645,7 @@ class DnsHelper:
                                                 })
                 except Exception as e:
                     print_error('Zone Transfer Failed!')
+                    print_error(e)
                 zone_records.append({'type':'info','zone_transfer':'failed', 'ns_server':ns_srv})
             else:
                 print_error('Zone Transfer Failed for {0}!'.format(ns_srv))
