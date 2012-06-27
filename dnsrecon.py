@@ -464,14 +464,16 @@ def brute_domain(res, dict, dom, filter = None, verbose = False):
         for rcd_found in brtdata:
             for rcd in rcd_found:
                 if re.search(r'^A',rcd[0]):
-
                     # Filter Records if filtering was enabled
                     if filter:
                         if not filter == rcd[2]:
                             found_hosts.extend([{'type':rcd[0],'name':rcd[1],'address':rcd[2]}])
                     else:
                         found_hosts.extend([{'type':rcd[0],'name':rcd[1],'address':rcd[2]}])
-
+                        
+                elif re.search(r'^CNAME',rcd[0]):
+                    found_hosts.extend([{'type':rcd[0],'name':rcd[1],'target':rcd[2]}])
+                    
         # Clear Global variable
         brtdata = []
 
@@ -542,12 +544,14 @@ def goo_result_process(res, found_hosts):
     returned_records = []
     for sd in found_hosts:
         for sdip in res.get_ip(sd):
-            if re.search(r'^A',sdip[0]):
+            if re.search(r'^A|CNAME',sdip[0]):
                 print_status('\t {0} {1} {2}'.format(sdip[0], sdip[1], sdip[2]))
-
-                returned_records.extend([{'type':sdip[0], 'name':sdip[1], \
-                'address':sdip[2]
-                }])
+                if re.search(r'^A',sdip[0]):
+                    returned_records.extend([{'type':sdip[0], 'name':sdip[1], \
+                    'address':sdip[2] }])
+                else:
+                    returned_records.extend([{'type':sdip[0], 'name':sdip[1], \
+                    'target':sdip[2] }])
     print_good("{0} Records Found".format(len(returned_records)))
     return returned_records
 
@@ -693,6 +697,9 @@ def make_csv(data):
 
         elif re.search(r'SRV',n['type']):
             csv_data += n['type']+","+n['name']+","+n['address']+","+n['target']+","+n['port']+"\n"
+            
+        elif re.search(r'CNAME',n['type']):
+            csv_data += n['type']+","+n['name']+",,"+n['target']+",\n"
 
         else:
             # Handle not common records
@@ -742,6 +749,10 @@ def write_db(db,data):
         elif re.match(r'SRV',n['type']):
             query = 'insert into data( type, name, target, address, port ) '+\
             'values( "%(type)s", "%(name)s" , "%(target)s", "%(address)s" ,"%(port)s" )' % n
+            
+        elif re.match(r'CNAME',n['type']):
+            query = 'insert into data( type, name, target ) '+\
+            'values( "%(type)s", "%(name)s" , "%(target)s" )' % n
 
         else:
             # Handle not common records
@@ -1376,7 +1387,7 @@ def main():
                         returned_records.extend(tld_enum_records)
 
                 elif r == 'goo':
-                    print_status("Performing Google Search Enumeration against{0}".format(domain))
+                    print_status("Performing Google Search Enumeration against {0}".format(domain))
                     goo_enum_records = goo_result_process(res, scrape_google(domain))
                     if (output_file is not None) or (results_db is not None) or (csv_file is not None):
                         returned_records.extend(goo_enum_records)
