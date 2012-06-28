@@ -1298,6 +1298,8 @@ def main():
             ip_range = process_range(arg)
             if len(ip_range) > 0:
                 ip_list.extend(ip_range)
+                if type == None:
+                    type = "rvl"
             else:
                 sys.exit(1)
         elif opt in ('-f'):
