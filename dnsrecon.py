@@ -1300,6 +1300,8 @@ def main():
                 ip_list.extend(ip_range)
                 if type == None:
                     type = "rvl"
+                elif not re.search(r'rvl',type):
+                    type = "rvl," + type
             else:
                 sys.exit(1)
         elif opt in ('-f'):
