@@ -1151,7 +1151,6 @@ def usage():
     print("Options:")
     print("   -h, --help                  Show this help message and exit")
     print("   -d, --domain      <domain>  Domain to Target for enumeration.")
-    print("   -c, --cidr        <range>   CIDR for reverse look-up brute force (range/bitmask).")
     print("   -r, --range       <range>   IP Range for reverse look-up brute force in formats (first-last)")
     print("                               or in (range/bitmask).")
     print("   -n, --name_server <name>    Domain server to use, if none is given the SOA of the")
@@ -1191,7 +1190,7 @@ def usage():
     print("   --lifetime         <number> Time to wait for a server to response to a query.")
     print("   --db               <file>   SQLite 3 file to save found records.")
     print("   --xml              <file>   XML File to save found records.")
-    print("   --csv              <file>   Comma separated value file.")
+    print("   -c, --csv          <file>   Comma separated value file.")
     print("   -v                          Show attempts in the bruteforce modes.")
     sys.exit(0)
 
