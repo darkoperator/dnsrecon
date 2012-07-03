@@ -767,6 +767,16 @@ def write_db(db,data):
         cur.execute(query)
         con.commit()
 
+def get_nsec_type(domain, res):
+    target = "0." + domain
+    nsec_type = ""
+    answer = get_a_answer(target,res._res.nameservers[0],res._res.timeout)
+    for a in answer.authority:
+        if a.rdtype == 50:
+            return "NSEC3"
+        elif a.rdtype == 47:
+            return "NSEC"
+        
 def dns_sec_check(domain,res):
     """
     Check if a zone is configured for DNSSEC and if so if NSEC or NSEC3 is used.
@@ -776,18 +786,17 @@ def dns_sec_check(domain,res):
     try:
         answer = res._res.query(domain, 'DNSKEY')
         print_status("DNSSEC is configured for {0}".format(domain))
+        nsectype = get_nsec_type(domain, res)
         print_status("DNSKEYs:")
         for rdata in answer:
             if rdata.flags == 256:
                 key_type = "ZSK"
 
             if rdata.flags == 257:
-                key_type = "KSk"
-
-            if rdata.algorithm in nsec_algos:
-                print_status("\tNSEC {0} {1} {2}".format(key_type, algorithm_to_text(rdata.algorithm), dns.rdata._hexify(rdata.key)))
-            if rdata.algorithm in nsec3_algos:
-                print_status("\tNSEC3 {0} {1} {2}".format(key_type, algorithm_to_text(rdata.algorithm), dns.rdata._hexify(rdata.key)))
+                key_type = "KSk"  
+            
+            print_status("\t{0} {1} {2} {3}".format(nsectype, key_type, algorithm_to_text(rdata.algorithm), dns.rdata._hexify(rdata.key)))
+            
 
     except dns.resolver.NXDOMAIN:
         print_error("Could not resolve domain: {0}".format(domain))
