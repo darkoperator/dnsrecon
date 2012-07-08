@@ -486,7 +486,7 @@ class DnsHelper:
                     for (name, rdataset) in \
                         zone.iterate_rdatasets(dns.rdatatype.RP):
                         for rdata in rdataset:
-                            print_status('\t RP'.format(rdata.mbox, rdata.txt))
+                            print_status('\t RP {0} {1}'.format(rdata.mbox, rdata.txt))
                             zone_records.append({'zone_server':ns_srv, 'type':'RP', \
                                                 'mbox':rdata.mbox, 'txt':rdata.txt
                                                 })
