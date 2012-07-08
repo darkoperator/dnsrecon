@@ -1,3 +1,19 @@
+##Version 0.7.8
+
+###Date: 7/8/12
+###Changes:
+- CSV file now have a proper header for better parsing on tools that support them like Excel and PowerShell.
+- Windows System Console printing is now managed properly.
+- CNAME Records are now saved in SQLite3 and CSV output. They where only saved on XML output.
+- Fixed error when performing Zone Transfers do to improper indent.
+- Fixed misslabling of -c option in the help message.
+- If a Range or CIDR is given and no scan type is given it will perform a Reverse Look up against it. When other types are given rvl type will be appended to the list automaticaly.
+- Improved NSEC Type detection so as to eliminate possible false positive.
+- Added processing of LOC, NAPTR, CERT and RP records of zone transfers returned. Proper information saved on XML output with proper field names in the attributes for these.
+- Fixes on google enumeration parsing.
+- Fixed several typos.
+- Better handling and canceling of threaded tasks. 
+
 ##Version 0.7.3
 
 ###Date: 5/2/12
