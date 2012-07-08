@@ -498,6 +498,14 @@ class DnsHelper:
                             zone_records.append({'zone_server':ns_srv, 'type':'AFSDB', \
                                                 'subtype':rdata.subtype, 'hostname':rdata.hostname
                                                 })
+                            
+                    for (name, rdataset) in \
+                        zone.iterate_rdatasets(dns.rdatatype.LOC):
+                        for rdata in rdataset:
+                            print_status('\t LOC {0}'.format(rdata.to_text()))
+                            zone_records.append({'zone_server':ns_srv, 'type':'LOC', \
+                                                'coordinates':rdata.to_text()
+                                                })
 
                     for (name, rdataset) in \
                         zone.iterate_rdatasets(dns.rdatatype.X25):
@@ -531,7 +539,34 @@ class DnsHelper:
                                                 'address':rdata.address
                                                 })
 
-
+                    for (name, rdataset) in \
+                        zone.iterate_rdatasets(dns.rdatatype.NAPTR):
+                        for rdata in rdataset:
+                            print_status('\t NAPTR {0} {1} {2} {3} {4} {5}'.format(rdata.flags,\
+                                                               rdata.order,\
+                                                               rdata.preference,\
+                                                               rdata.regexp,\
+                                                               rdata.replacement,\
+                                                               rdata.service))
+                            zone_records.append({'zone_server':ns_srv, 'type':'NAPTR', \
+                                                'order':rdata.order,\
+                                                'preference':rdata.preference,\
+                                                'regex':rdata.regexp,\
+                                                'replacement':rdata.replacement,\
+                                                'service':rdata.service
+                                                })
+                            
+                    for (name, rdataset) in \
+                        zone.iterate_rdatasets(dns.rdatatype.CERT):
+                        for rdata in rdataset:
+                            print_status('\t CERT {0}'.format(rdata.to_text()))
+                            zone_records.append({'zone_server':ns_srv, 'type':'CERT', \
+                                                'algorithm':rdata.algorithm,\
+                                                'certificate':rdata.certificate,\
+                                                'certificate_type':rdata.certificate_type,\
+                                                'key_tag':rdata.key_tag
+                                                })
+                    
                     for (name, rdataset) in \
                         zone.iterate_rdatasets(dns.rdatatype.SIG):
                         for rdata in rdataset:
