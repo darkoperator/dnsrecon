@@ -21,10 +21,11 @@ import re
 import dns.query
 import dns.resolver
 import dns.reversename
-from dns.zone import *
 import socket
+from dns.zone import *
 from dns.dnssec import algorithm_to_text
 from .msf_print import *
+
 
 DNS_PORT_NUMBER = 53
 DNS_QUERY_TIMEOUT = 4.0

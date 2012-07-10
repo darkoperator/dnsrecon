@@ -37,6 +37,7 @@ import string
 import sys
 import time
 import sqlite3
+import netaddr
 
 # Manage the change in Python3 of the name of the Queue Library
 try:
@@ -1275,7 +1276,20 @@ def main():
             domain = arg
 
         elif opt in ('-n','--name_server'):
-            ns_server = arg
+            # Check if we got an IP or a FQDN
+            if netaddr.valid_glob(arg):
+                ns_server = arg
+            else:
+                # Resolve in the case if FQDN
+                answer = socket_resolv(arg)
+                # Check we actualy got a list
+                if len(answer) > 0:
+                    # We will use the first IP found as the NS
+                    ns_server = answer[0][2]
+                else:
+                    # Exit if we cannot resolve it
+                    print_error("Could not resolve NS server provided")
+                    sys.exit(1)
 
         elif opt in ('-x','--xml'):
             output_file = arg
@@ -1313,6 +1327,7 @@ def main():
                     type = "rvl," + type
             else:
                 sys.exit(1)
+                
         elif opt in ('-f'):
             wildcard_filter = True
 
