@@ -23,6 +23,7 @@ import socket
 WHOIS_PORT_NUMBER = 43
 WHOIS_RECEIVE_BUFFER_SIZE = 4096
 
+
 def get_whois(ip_addrs):
     """
     Function that returns what whois server is the one to be queried for
@@ -43,7 +44,7 @@ def get_whois(ip_addrs):
     return whois_server
 
 
-def whois(target,whois_srv):
+def whois(target, whois_srv):
     """
     Performs a whois query against a arin.net for a given IP, Domain or Host as a
     string and returns the answer of the query.
@@ -76,15 +77,14 @@ def get_whois_nets(data):
     """
 
     patern = '([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}) - ([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})'
-    results = re.findall(patern,data)
-   
+    results = re.findall(patern, data)
+
     return results
+
 
 def get_whois_orgname(data):
     org_pattern = "OrgName\:\s*(.*)\n"
-    result = re.findall(org_pattern,data)
+    result = re.findall(org_pattern, data)
     if not result:
         result.append("Not Found")
     return result
-
-
