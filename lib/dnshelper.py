@@ -485,15 +485,15 @@ class DnsHelper:
                         for rdata in rdataset:
                             print_status('\t RP {0} {1}'.format(rdata.mbox, rdata.txt))
                             zone_records.append({'zone_server': ns_srv, 'type': 'RP', \
-                                                'mbox': rdata.mbox, 'txt': rdata.txt
+                                                'mbox': rdata.mbox.to_text(), 'txt': rdata.txt.to_text()
                                                 })
 
                     for (name, rdataset) in \
                         zone.iterate_rdatasets(dns.rdatatype.AFSDB):
                         for rdata in rdataset:
-                            print_status('\t AFSDB {0} {1}'.format(rdata.subtype, rdata.hostname))
+                            print_status('\t AFSDB {0} {1}'.format(str(rdata.subtype), rdata.hostname))
                             zone_records.append({'zone_server': ns_srv, 'type': 'AFSDB', \
-                                                'subtype': rdata.subtype, 'hostname': rdata.hostname
+                                                'subtype': str(rdata.subtype), 'hostname': rdata.hostname.to_text()
                                                 })
 
                     for (name, rdataset) in \
@@ -546,10 +546,10 @@ class DnsHelper:
                                                                rdata.replacement,\
                                                                rdata.service))
                             zone_records.append({'zone_server': ns_srv, 'type': 'NAPTR', \
-                                                'order': rdata.order,\
-                                                'preference': rdata.preference,\
+                                                'order': str(rdata.order),\
+                                                'preference': str(rdata.preference),\
                                                 'regex': rdata.regexp,\
-                                                'replacement': rdata.replacement,\
+                                                'replacement': rdata.replacement.to_text(),\
                                                 'service': rdata.service
                                                 })
 

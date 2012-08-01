@@ -1,44 +1,44 @@
 module Msf
 
-    class Plugin::PostCommand < Msf::Plugin
+	class Plugin::PostCommand < Msf::Plugin
 
-        class MultiCommand
-            include Msf::Ui::Console::CommandDispatcher
+		class MultiCommand
+			include Msf::Ui::Console::CommandDispatcher
 
-            # Set name for command dispatcher
-            def name
-                "DNSR_Import"
-            end
+			# Set name for command dispatcher
+			def name
+				"DNSR_Import"
+			end
 
-            # Define Commands
-            def commands
-                {
-                    "import_dnsrecon_xml" => "Import DNSRecon XML output file.",
+			# Define Commands
+			def commands
+				{
+					"import_dnsrecon_xml" => "Import DNSRecon XML output file.",
 					"import_dnsrecon_csv" => "Import DNSRecon CSV output file."
-                }
-            end
+				}
+			end
 
 			# Method for adding a host
-            def report_host(ip)
-                print_good("Importing host #{ip}")
-                framework.db.report_host({:host => ip})
-            end
+			def report_host(ip)
+				print_good("Importing host #{ip}")
+				framework.db.report_host({:host => ip})
+			end
 
 			# Method for adding a service
-            def report_service(name, proto, port, target)
-                print_good("Importing service #{name} for host #{target}")
-                framework.db.report_service({
-                        :host  => target,
-                        :name  => name,
-                        :port  => port,
-                        :proto => proto
-                    })
-            end
+			def report_service(name, proto, port, target)
+				print_good("Importing service #{name} for host #{target}")
+				framework.db.report_service({
+						:host  => target,
+						:name  => name,
+						:port  => port,
+						:proto => proto
+					})
+			end
 
 			# Method for parsing and importing the XML file
-            def xml_import(xm_file)
-                require "nokogiri"
-                reader = Nokogiri::XML::Reader(IO.read(xm_file))
+			def xml_import(xm_file)
+				require "nokogiri"
+				reader = Nokogiri::XML::Reader(IO.read(xm_file))
 				reader.each do |node|
 					if node.name == 'record'
 						case node.attribute('type')
@@ -108,49 +108,49 @@ module Msf
 								})
 						end
 					end
-                end
-            end
+				end
+			end
 
-            # XML Import command
-            def cmd_import_dnsrecon_xml(*args)
-                # Define options
-                opts = Rex::Parser::Arguments.new(
-                    "-f"   => [ true,	"XML file to import."],
-                    "-h"   => [ false,  "Command Help"]
-                )
+			# XML Import command
+			def cmd_import_dnsrecon_xml(*args)
+				# Define options
+				opts = Rex::Parser::Arguments.new(
+					"-f"   => [ true,	"XML file to import."],
+					"-h"   => [ false,  "Command Help"]
+				)
 
-                # set variables for options
-                xml_file = ""
+				# set variables for options
+				xml_file = ""
 
-                # Parse options
-                opts.parse(args) do |opt, idx, val|
-                    case opt
+				# Parse options
+				opts.parse(args) do |opt, idx, val|
+					case opt
 					when "-f"
 						xml_file = val
 
 					when "-h"
 						print_line(opts.usage)
 						return
-                    end
-                end
+					end
+				end
 
-                if not ::File.exists?(xml_file)
+				if not ::File.exists?(xml_file)
 						print_error "XML File does not exists!"
 						return
 				else
-                        xml_import(xml_file)
-                end
+						xml_import(xml_file)
+				end
 
-            end
+			end
 
 			# Tab completion for the XML import command
 			def cmd_import_dnsrecon_xml_tabs(str, words)
 				tab_complete_filenames(str, words)
 			end
 
-						# Method for parsing and importing the XML file
-            def csv_import(csv_file)
-                require "csv"
+			# Method for parsing and importing the XML file
+			def csv_import(csv_file)
+				require "csv"
 				CSV.foreach(csv_file) do |row|
 
 					case row[0]
@@ -219,66 +219,66 @@ module Msf
 								:data  => "SRV #{row[3]}"
 							})
 					end
-                end
-            end
+				end
+			end
 
-            # CSV Import command
-            def cmd_import_dnsrecon_csv(*args)
-                # Define options
-                opts = Rex::Parser::Arguments.new(
-                    "-f"   => [ true,	"CSV file to import."],
-                    "-h"   => [ false,  "Command Help"]
-                )
+			# CSV Import command
+			def cmd_import_dnsrecon_csv(*args)
+				# Define options
+				opts = Rex::Parser::Arguments.new(
+					"-f"   => [ true,	"CSV file to import."],
+					"-h"   => [ false,  "Command Help"]
+				)
 
-                # set variables for options
-                csv_file = ""
+				# set variables for options
+				csv_file = ""
 
-                # Parse options
-                opts.parse(args) do |opt, idx, val|
-                    case opt
+				# Parse options
+				opts.parse(args) do |opt, idx, val|
+					case opt
 					when "-f"
 						csv_file = val
 
 					when "-h"
 						print_line(opts.usage)
 						return
-                    end
-                end
+					end
+				end
 
-                if not ::File.exists?(csv_file)
+				if not ::File.exists?(csv_file)
 						print_error "CSV File does not exists!"
 						return
 				else
-                        csv_import(csv_file)
-                end
+						csv_import(csv_file)
+				end
 
-            end
+			end
 
 			# Tab completion for the CSV import command
 			def cmd_import_dnsrecon_csv_tabs(str, words)
 				tab_complete_filenames(str, words)
 			end
-        end
+		end
 
-        def initialize(framework, opts)
-            super
-            add_console_dispatcher(MultiCommand)
-            print_status("dnsr_import plugin loaded.")
-        end
+		def initialize(framework, opts)
+			super
+			add_console_dispatcher(MultiCommand)
+			print_status("dnsr_import plugin loaded.")
+		end
 
-        def cleanup
-            remove_console_dispatcher("DNSR_Import")
-        end
+		def cleanup
+			remove_console_dispatcher("DNSR_Import")
+		end
 
-        def name
-            "dnsr_import"
-        end
+		def name
+			"dnsr_import"
+		end
 
-        def desc
-            "Allows to import DNSRecon output XML files."
-        end
+		def desc
+			"Allows to import DNSRecon output XML files."
+		end
 
-        protected
-    end
+		protected
+	end
 
 end
