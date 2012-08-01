@@ -18,7 +18,7 @@
 #    along with this program; if not, write to the Free Software
 #    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
-__version__ = '0.7.8'
+__version__ = '0.7.9'
 __author__ = 'Carlos Perez, Carlos_Perez@darkoperator.com'
 
 __doc__ = """
@@ -38,6 +38,7 @@ import sys
 import time
 import sqlite3
 import netaddr
+import datetime
 
 # Manage the change in Python3 of the name of the Queue Library
 try:
@@ -630,11 +631,12 @@ def prettify(elem):
     return reparsed.toprettyxml(indent="    ")
 
 
-def dns_record_from_dict(record_dict_list):
+def dns_record_from_dict(record_dict_list, scan_info, domain):
     """
     Saves DNS Records to XML Given a a list of dictionaries each representing
     a record to be saved, returns the XML Document formatted.
     """
+
     xml_doc = Element("records")
     for r in record_dict_list:
         elem = Element("record")
@@ -642,6 +644,13 @@ def dns_record_from_dict(record_dict_list):
             elem.attrib[k] = v
         xml_doc.append(elem)
 
+    scanelem = Element("scaninfo")
+    scanelem.attrib["arguments"] = scan_info[0]
+    scanelem.attrib["time"] = scan_info[1]
+    xml_doc.append(scanelem)
+    domelem = Element("domain")
+    domelem.attrib["domain_name"] = domain
+    xml_doc.append(domelem)
     return prettify(xml_doc)
 
 
@@ -1368,6 +1377,7 @@ def main():
     res = DnsHelper(domain, ns_server, request_timeout)
 
     domain_req = ['axfr', 'std', 'srv', 'tld', 'goo', 'zonewalk']
+    scan_info = [" ".join(sys.argv), str(datetime.datetime.now())]
 
     if type is not None:
         for r in type.split(','):
@@ -1464,8 +1474,8 @@ def main():
 
         # if an output xml file is specified it will write returned results.
         if (output_file is not None):
-            print_status("Saving records to XML file: {0}".format(output_file))
-            xml_enum_doc = dns_record_from_dict(returned_records)
+            print_status("Saving records to XML file: {0}".format(output_file, scan_info))
+            xml_enum_doc = dns_record_from_dict(returned_records, scan_info, domain)
             write_to_file(xml_enum_doc, output_file)
 
         # if an output db file is specified it will write returned results.
@@ -1491,7 +1501,7 @@ def main():
 
             # if an output xml file is specified it will write returned results.
             if (output_file is not None):
-                xml_enum_doc = dns_record_from_dict(returned_records)
+                xml_enum_doc = dns_record_from_dict(returned_records, scan_info, domain)
                 write_to_file(xml_enum_doc, output_file)
 
             # if an output db file is specified it will write returned results.
