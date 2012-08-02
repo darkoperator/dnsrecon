@@ -18,7 +18,7 @@
 #    along with this program; if not, write to the Free Software
 #    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
-__version__ = '0.0.4'
+__version__ = '0.0.5'
 __author__ = 'Carlos Perez, Carlos_Perez@darkoperator.com'
 
 import xml.etree.cElementTree as cElementTree
@@ -87,7 +87,7 @@ def xml_parse(xm_file, ifilter, tfilter, nfilter, list):
                 # Check if the IP is in the filter list of IPs to ignore
                 if elem.attrib['address'] not in ifilter and elem.attrib['address'] != "no_ip":
                     # Check if the RR Type against the types
-                    if re.search(tfilter, elem.attrib['type'], re.I):
+                    if re.match(tfilter, elem.attrib['type'], re.I):
                         # Process A, AAAA and PTR Records
                         if re.search(r'PTR|^[A]$|AAAA', elem.attrib['type']) \
                         and re.search(nfilter, elem.attrib['name'], re.I):
@@ -132,11 +132,12 @@ def xml_parse(xm_file, ifilter, tfilter, nfilter, list):
                                     iplist.append(elem.attrib['address'])
                             else:
                                 print_good("{0} {1} {2} {3}".format(elem.attrib['type'], elem.attrib['name'], elem.attrib['address'], elem.attrib['target'], elem.attrib['port']))
-
-            # Process TXT and SPF Records
-            elif re.search(r'TXT|SPF', elem.attrib['type']):
-                if not list:
-                    print_good("{0} {1}".format(elem.attrib['type'], elem.attrib['strings']))
+            else:
+                if re.match(tfilter, elem.attrib['type'], re.I):
+                    # Process TXT and SPF Records
+                    if re.search(r'TXT|SPF', elem.attrib['type']):
+                        if not list:
+                            print_good("{0} {1}".format(elem.attrib['type'], elem.attrib['strings']))
     # Process IPs in list
     if len(iplist) > 0:
         try:
@@ -234,6 +235,7 @@ def detect_type(file):
 
 def usage():
     print("Version: {0}".format(__version__))
+    print("DNSRecon output file parser")
     print("Usage: parser.py <options>\n")
     print("Options:")
     print("   -h, --help               Show this help message and exit")
@@ -241,9 +243,13 @@ def usage():
     print("   -l, --list               Output an unique IP List that can be used with other tools.")
     print("   -i, --ips     <ranges>   IP Ranges in a comma separated list each in formats (first-last)")
     print("                            or in (range/bitmask) for ranges to be excluded from output.")
+    print("                            For A, AAAA, NS, MX, SOA, SRV and PTR Records.")
     print("   -t, --type    <type>     Resource Record Types as a regular expression to filter output.")
+    print("                            For A, AAAA, NS, MX, SOA, TXT, SPF, SRV and PTR Records.")
     print("   -s, --str     <regex>    Regular expression between quotes for filtering host names on.")
+    print("                            For A, AAAA, NS, MX, SOA, SRV and PTR Records.")
     print("   -n, --name               Return list of unique host names.")
+    print("                            For A, AAAA, NS, MX, SOA, SRV and PTR Records.")
     sys.exit(0)
 
 # Main
