@@ -83,7 +83,7 @@ class DnsHelper:
             for ardata in ipv4_answers.response.answer:
                 for rdata in ardata:
                     if rdata.rdtype == 5:
-                        address.append(["CNAME", host_trg, rdata.target.to_text()])
+                        address.append(["CNAME", host_trg, rdata.target.to_text()[:-1]])
                         host_trg = rdata.target.to_text()[:-1]
                     else:
                         address.append(["A", host_trg, rdata.address])
@@ -102,7 +102,7 @@ class DnsHelper:
             for ardata in ipv6_answers.response.answer:
                 for rdata in ardata:
                     if rdata.rdtype == 5:
-                        address.append(["CNAME", host_trg, rdata.target.to_text()])
+                        address.append(["CNAME", host_trg, rdata.target.to_text()[:-1]])
                         host_trg = rdata.target.to_text()[:-1]
                     else:
                         address.append(["AAAA", host_trg, rdata.address])
@@ -678,7 +678,7 @@ class DnsHelper:
                 except Exception as e:
                     print_error('Zone Transfer Failed!')
                     print_error(e)
-                zone_records.append({'type': 'info', 'zone_transfer': 'failed', 'ns_server': ns_srv})
+                    zone_records.append({'type': 'info', 'zone_transfer': 'failed', 'ns_server': ns_srv})
             else:
                 print_error('Zone Transfer Failed for {0}!'.format(ns_srv))
                 print_error('Port 53 TCP is being filtered')
