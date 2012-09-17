@@ -950,7 +950,7 @@ def general_enum(res, domain, do_axfr, do_google, do_spf, do_whois, zw):
                 print_status('\t {0} {1} {2}'.format(t[0], t[1], t[2]))
                 text_data += t[2]
                 returned_records.extend([{'type':t[0], 'name':t[1],\
-                "text":t[2]
+                "strings":t[2]
                 }])
 
         # Process SPF records if selected
@@ -1068,7 +1068,7 @@ def lookup_next(target, res):
             for r in txt_answer:
                 print_status("\t {0}".format(" ".join(r)))
                 returned_records.append({'type': r[0],\
-                'name': r[1], 'text': r[2]
+                'name': r[1], 'strings': r[2]
                 })
         else:
             txt_answer = res_sys.get_tx(target)
@@ -1076,7 +1076,7 @@ def lookup_next(target, res):
                 for r in txt_answer:
                     print_status("\t {0}".format(" ".join(r)))
                     returned_records.append({'type': r[0],\
-                    'name': r[1], 'text': r[2]
+                    'name': r[1], 'strings': r[2]
                     })
             else:
                 print_status('\t A {0} no_ip'.format(target))
