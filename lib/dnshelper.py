@@ -198,7 +198,7 @@ class DnsHelper:
         try:
             answers = self._res.query(self._domain, 'SPF')
             for rdata in answers:
-                name = rdata.strings
+                name = ''.join(rdata.strings)
                 spf_record.append(['SPF', name])
         except:
             return None
