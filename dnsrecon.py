@@ -925,9 +925,9 @@ def general_enum(res, domain, do_axfr, do_google, do_spf, do_whois, zw):
         # Save dictionary of returned record
         if spf_text_data is not None:
             for s in spf_text_data:
-                print_status('\t {0} {1} {2}'.format(s[0], s[1], s[2]))
-                text_data += s[2]
-                returned_records.extend([{'type':s[0], 'name':s[1],\
+                print_status('\t {0} {1}'.format(s[0], s[1]))
+                text_data = s[1]
+                returned_records.extend([{'type':s[0],\
                 "strings":s[1]
                 }])
 
@@ -1110,6 +1110,16 @@ def get_a_answer(target, ns, timeout):
     return answer
 
 
+def get_next(target, ns, timeout):
+    next_host = None
+    response = get_a_answer(target, ns, timeout)
+    for a in response.authority:
+        if a.rdtype == 47:
+            for r in a:
+                next_host = r.next.to_text()[:-1]
+    return next_host
+
+
 def ds_zone_walk(res, domain):
     """
     Perform DNSSEC Zone Walk using NSEC records found the the error additional
@@ -1127,6 +1137,7 @@ def ds_zone_walk(res, domain):
     res = DnsHelper(domain, soa_rcd, 3)
     ns = soa_rcd
     response = get_a_answer(target, ns, timeout)
+    found_hosts = []
 
     while next_host != domain:
         next_host = ""
@@ -1141,24 +1152,34 @@ def ds_zone_walk(res, domain):
                         for r in a:
                             next_host = r.next.to_text()[:-1]
                             start_next = next_host
+                    else:
+                        found_hosts.append(start_next)
                 if start_next == domain:
                     if len(returned_records) > 0:
                         print_good("{0} Records Found".format(len(returned_records)))
                     else:
                         print_error("Zone could not be walked")
                     return returned_records
+
                 elif run == 0:
                     # Try getting an error by appending a host named 0
                     next_target = "0." + start_next
                     run = run + 1
                 elif run == 1:
                     # Try getting an error by appending - to the hostname
-                    hostname = re.search('(^[^.]*)(\S*)', start_next)
-                    next_target = "{0}-{1}".format(hostname.group(1), hostname.group(2))
-                    run = run + 1
+                    if start_next not in found_hosts:
+                        hostname = re.search('(^[^.]*)(\S*)', start_next)
+                        next_target = "{0}-{1}".format(hostname.group(1), hostname.group(2))
+                        run = run + 1
+                    else:
+                        if len(returned_records) > 0:
+                            print_good("{0} Records Found".format(len(returned_records)))
+                        else:
+                            print_error("Zone could not be walked")
+                        return returned_records
                 elif run == 2:
                     # Move one level down
-                    if hostname.group(2) != domain:
+                    if hostname.group(2) != domain or start_next not in found_hosts:
                         next_target = hostname.group(2)[1:]
                         start_next = hostname.group(2)[1:]
                     else:
@@ -1168,6 +1189,13 @@ def ds_zone_walk(res, domain):
                             print_error("Zone could not be walked")
                         return returned_records
                     run = 0
+                else:
+                    if len(returned_records) > 0:
+                        print_good("{0} Records Found".format(len(returned_records)))
+                    else:
+                        print_error("Zone could not be walked")
+                    return returned_records
+
                 response = get_a_answer(next_target, ns, timeout)
             returned_records.extend(lookup_next(next_host, res))
         except (KeyboardInterrupt):
