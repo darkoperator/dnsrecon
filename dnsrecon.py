@@ -1137,7 +1137,7 @@ def ds_zone_walk(res, domain):
     res = DnsHelper(domain, soa_rcd, 3)
     ns = soa_rcd
     response = get_a_answer(target, ns, timeout)
-    found_hosts = []
+    found_hosts = set()
 
     while next_host != domain:
         next_host = ""
@@ -1153,7 +1153,7 @@ def ds_zone_walk(res, domain):
                             next_host = r.next.to_text()[:-1]
                             start_next = next_host
                     else:
-                        found_hosts.append(start_next)
+                        found_hosts.add(start_next)
                 if start_next == domain:
                     if len(returned_records) > 0:
                         print_good("{0} Records Found".format(len(returned_records)))
