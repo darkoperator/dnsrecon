@@ -1153,47 +1153,42 @@ def ds_zone_walk(res, domain):
         lambda h, hc, dc: "{0}{1}.{2}".format(hc, hc[-1], dc)
     ]
 
-    hostname = domain
+    pending = set([domain])
+    finished = set()
     i = 0
 
     try:
-        while True:
-            # Extract the transformation
-            transformation = transformations[i]
-            if not transformation:
-                break
-            i += 1
+        while pending:
+            # Ensure nothing pending has already been queried
+            pending -= finished
 
-            # Apply the transformation
+            # Get the next pending hostname
+            hostname = pending.pop()
+            finished.add(hostname)
+
+            # Get all the records we can for the hostname
+            records.extend(lookup_next(hostname, res))
+
+            # Arrange the arguments for the transformations
             fields = re.search("(^[^.]*).(\S*)",  hostname)
-            target = transformation(hostname, fields.group(1), fields.group(2))
+            params = [hostname, fields.group(1), fields.group(2)]
 
-            # Perform a DNS query for the target and process the response
-            next_hostname = None
-            response = get_a_answer(target, nameserver, timeout)
-            for a in response.authority:
-                if a.rdtype != 47:
-                    continue
+            for transformation in transformations:
+                # Apply the transformation
+                target = transformation(*params)
 
-                # NSEC records give two results:
-                #   1) The previous existing hostname that is signed
-                #   2) The subsequent existing hostname that is signed
-                for r in a:
-                    next_hostname = r.next.to_text()[:-1]
+                # Perform a DNS query for the target and process the response
+                response = get_a_answer(target, nameserver, timeout)
+                for a in response.authority:
+                    if a.rdtype != 47:
+                        continue
 
-            # If the query got an NSEC, move on to the next hostname
-            if next_hostname and next_hostname != hostname:
-                # Get the records for the current hostname.
-                records.extend(lookup_next(hostname, res))
-
-                # If we've already seen this hostname, we've completed the walk
-                if next_hostname in hostnames:
-                    break
-
-                # Otherwise, continue the walk
-                hostnames.add(next_hostname)
-                hostname = next_hostname
-                i = 1
+                    # NSEC records give two results:
+                    #   1) The previous existing hostname that is signed
+                    #   2) The subsequent existing hostname that is signed
+                    # Add the latter to our list of pending hostnames
+                    for r in a:
+                        pending.add(r.next.to_text()[:-1])
 
     except (KeyboardInterrupt):
         print_error("You have pressed Ctrl + C. Saving found records.")
