@@ -1193,7 +1193,7 @@ def ds_zone_walk(res, domain):
                 # Otherwise, continue the walk
                 hostnames.add(next_hostname)
                 hostname = next_hostname
-                i = 0
+                i = 1
 
     except (KeyboardInterrupt):
         print_error("You have pressed Ctrl + C. Saving found records.")
