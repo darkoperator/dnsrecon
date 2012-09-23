@@ -1125,85 +1125,89 @@ def ds_zone_walk(res, domain):
     Perform DNSSEC Zone Walk using NSEC records found the the error additional
     records section of the message to find the next host to query int he zone.
     """
-    returned_records = []
-    target = "0." + domain
-    next_host = ""
-    start_next = domain
-    timeout = res._res.timeout
     print_status("Performing NSEC Zone Walk for {0}".format(domain))
+
     print_status("Getting SOA record for {0}".format(domain))
     soa_rcd = res.get_soa()[0][2]
+
     print_status("Name Server {0} will be used".format(soa_rcd))
     res = DnsHelper(domain, soa_rcd, 3)
-    ns = soa_rcd
-    response = get_a_answer(target, ns, timeout)
-    found_hosts = set()
+    nameserver = soa_rcd
 
-    while next_host != domain:
-        next_host = ""
-        nsec_found = False
-        run = 0
-        try:
-            while not nsec_found:
-                for a in response.authority:
-                    if a.rdtype == 47:
-                        nsec_found = True
-                        run = 0
-                        for r in a:
-                            next_host = r.next.to_text()[:-1]
-                            start_next = next_host
-                    else:
-                        found_hosts.add(start_next)
-                if start_next == domain:
-                    if len(returned_records) > 0:
-                        print_good("{0} Records Found".format(len(returned_records)))
-                    else:
-                        print_error("Zone could not be walked")
-                    return returned_records
+    timeout = res._res.timeout
 
-                elif run == 0:
-                    # Try getting an error by appending a host named 0
-                    next_target = "0." + start_next
-                    run = run + 1
-                elif run == 1:
-                    # Try getting an error by appending - to the hostname
-                    if start_next not in found_hosts:
-                        hostname = re.search('(^[^.]*)(\S*)', start_next)
-                        next_target = "{0}-{1}".format(hostname.group(1), hostname.group(2))
-                        run = run + 1
-                    else:
-                        if len(returned_records) > 0:
-                            print_good("{0} Records Found".format(len(returned_records)))
-                        else:
-                            print_error("Zone could not be walked")
-                        return returned_records
-                elif run == 2:
-                    # Move one level down
-                    if hostname.group(2) != domain or start_next not in found_hosts:
-                        next_target = hostname.group(2)[1:]
-                        start_next = hostname.group(2)[1:]
-                    else:
-                        if len(returned_records) > 0:
-                            print_good("{0} Records Found".format(len(returned_records)))
-                        else:
-                            print_error("Zone could not be walked")
-                        return returned_records
-                    run = 0
-                else:
-                    if len(returned_records) > 0:
-                        print_good("{0} Records Found".format(len(returned_records)))
-                    else:
-                        print_error("Zone could not be walked")
-                    return returned_records
+    hostnames = set([domain])
+    records = []
 
-                response = get_a_answer(next_target, ns, timeout)
-            returned_records.extend(lookup_next(next_host, res))
-        except (KeyboardInterrupt):
-            print_error("You have pressed Crtl-C. Saving found records.")
-            break
-    return returned_records
+    transformations = [
+        # Send the hostname as-is
+        lambda h, hc, dc: h,
 
+        # Prepend a zero as a subdomain
+        lambda h, hc, dc: "0.{0}".format(h),
 
+        # Append a hyphen to the host portion
+        lambda h, hc, dc: "{0}-.{1}".format(hc, dc),
+
+        # Double the last characten of the host portion
+        lambda h, hc, dc: "{0}{1}.{2}".format(hc, hc[-1], dc),
+
+        # Remove the host portion
+        lambda h, hc, dc: dc
+    ]
+
+    hostname = domain
+    i = 0
+
+    try:
+        while True:
+            # Extract the transformation
+            transformation = transformations[i]
+            if not transformation:
+                break
+            i += 1
+
+            # Apply the transformation
+            fields = re.search("(^[^.]*).(\S*)",  hostname)
+            target = transformation(hostname, fields.group(1), fields.group(2))
+
+            # Perform a DNS query for the target and process the response
+            next_hostname = None
+            response = get_a_answer(target, nameserver, timeout)
+            for a in response.authority:
+                if a.rdtype != 47:
+                    continue
+
+                # NSEC records give two results:
+                #   1) The previous existing hostname that is signed
+                #   2) The subsequent existing hostname that is signed
+                for r in a:
+                    next_hostname = r.next.to_text()[:-1]
+
+            # If the query got an NSEC, move on to the next hostname
+            if next_hostname and next_hostname != hostname:
+                # Get the records for the current hostname.
+                records.extend(lookup_next(hostname, res))
+
+                # If we've already seen this hostname, we've completed the walk
+                if next_hostname in hostnames:
+                    break
+
+                # Otherwise, continue the walk
+                hostnames.add(next_hostname)
+                hostname = next_hostname
+                i = 0
+
+    except (KeyboardInterrupt):
+        print_error("You have pressed Ctrl + C. Saving found records.")
+
+    # Give a summary of the walk
+    if len(records) > 0:
+        print_good("{0} records found".format(len(records)))
+    else:
+        print_error("Zone could not be walked")
+
+    return records
 def usage():
     print("Version: {0}".format(__version__))
     print("Usage: dnsrecon.py <options>\n")
