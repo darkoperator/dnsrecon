@@ -1150,10 +1150,7 @@ def ds_zone_walk(res, domain):
         lambda h, hc, dc: "{0}-.{1}".format(hc, dc),
 
         # Double the last character of the host portion
-        lambda h, hc, dc: "{0}{1}.{2}".format(hc, hc[-1], dc),
-
-        # Remove the host portion
-        lambda h, hc, dc: dc
+        lambda h, hc, dc: "{0}{1}.{2}".format(hc, hc[-1], dc)
     ]
 
     hostname = domain
