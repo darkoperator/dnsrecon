@@ -1149,7 +1149,7 @@ def ds_zone_walk(res, domain):
         # Append a hyphen to the host portion
         lambda h, hc, dc: "{0}-.{1}".format(hc, dc),
 
-        # Double the last characten of the host portion
+        # Double the last character of the host portion
         lambda h, hc, dc: "{0}{1}.{2}".format(hc, hc[-1], dc),
 
         # Remove the host portion
