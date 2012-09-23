@@ -1200,6 +1200,8 @@ def ds_zone_walk(res, domain):
         print_error("Zone could not be walked")
 
     return records
+
+
 def usage():
     print("Version: {0}".format(__version__))
     print("Usage: dnsrecon.py <options>\n")
