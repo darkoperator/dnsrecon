@@ -1125,83 +1125,81 @@ def ds_zone_walk(res, domain):
     Perform DNSSEC Zone Walk using NSEC records found the the error additional
     records section of the message to find the next host to query int he zone.
     """
-    returned_records = []
-    target = "0." + domain
-    next_host = ""
-    start_next = domain
-    timeout = res._res.timeout
     print_status("Performing NSEC Zone Walk for {0}".format(domain))
+
     print_status("Getting SOA record for {0}".format(domain))
     soa_rcd = res.get_soa()[0][2]
+
     print_status("Name Server {0} will be used".format(soa_rcd))
     res = DnsHelper(domain, soa_rcd, 3)
-    ns = soa_rcd
-    response = get_a_answer(target, ns, timeout)
-    found_hosts = []
+    nameserver = soa_rcd
 
-    while next_host != domain:
-        next_host = ""
-        nsec_found = False
-        run = 0
-        try:
-            while not nsec_found:
+    timeout = res._res.timeout
+
+    hostnames = set([domain])
+    records = []
+
+    transformations = [
+        # Send the hostname as-is
+        lambda h, hc, dc: h,
+
+        # Prepend a zero as a subdomain
+        lambda h, hc, dc: "0.{0}".format(h),
+
+        # Append a hyphen to the host portion
+        lambda h, hc, dc: "{0}-.{1}".format(hc, dc),
+
+        # Double the last character of the host portion
+        lambda h, hc, dc: "{0}{1}.{2}".format(hc, hc[-1], dc)
+    ]
+
+    pending = set([domain])
+    finished = set()
+    i = 0
+
+    try:
+        while pending:
+            # Ensure nothing pending has already been queried
+            pending -= finished
+
+            # Get the next pending hostname
+            hostname = pending.pop()
+            finished.add(hostname)
+
+            # Get all the records we can for the hostname
+            records.extend(lookup_next(hostname, res))
+
+            # Arrange the arguments for the transformations
+            fields = re.search("(^[^.]*).(\S*)",  hostname)
+            params = [hostname, fields.group(1), fields.group(2)]
+
+            for transformation in transformations:
+                # Apply the transformation
+                target = transformation(*params)
+
+                # Perform a DNS query for the target and process the response
+                response = get_a_answer(target, nameserver, timeout)
                 for a in response.authority:
-                    if a.rdtype == 47:
-                        nsec_found = True
-                        run = 0
-                        for r in a:
-                            next_host = r.next.to_text()[:-1]
-                            start_next = next_host
-                    else:
-                        found_hosts.append(start_next)
-                if start_next == domain:
-                    if len(returned_records) > 0:
-                        print_good("{0} Records Found".format(len(returned_records)))
-                    else:
-                        print_error("Zone could not be walked")
-                    return returned_records
+                    if a.rdtype != 47:
+                        continue
 
-                elif run == 0:
-                    # Try getting an error by appending a host named 0
-                    next_target = "0." + start_next
-                    run = run + 1
-                elif run == 1:
-                    # Try getting an error by appending - to the hostname
-                    if start_next not in found_hosts:
-                        hostname = re.search('(^[^.]*)(\S*)', start_next)
-                        next_target = "{0}-{1}".format(hostname.group(1), hostname.group(2))
-                        run = run + 1
-                    else:
-                        if len(returned_records) > 0:
-                            print_good("{0} Records Found".format(len(returned_records)))
-                        else:
-                            print_error("Zone could not be walked")
-                        return returned_records
-                elif run == 2:
-                    # Move one level down
-                    if hostname.group(2) != domain or start_next not in found_hosts:
-                        next_target = hostname.group(2)[1:]
-                        start_next = hostname.group(2)[1:]
-                    else:
-                        if len(returned_records) > 0:
-                            print_good("{0} Records Found".format(len(returned_records)))
-                        else:
-                            print_error("Zone could not be walked")
-                        return returned_records
-                    run = 0
-                else:
-                    if len(returned_records) > 0:
-                        print_good("{0} Records Found".format(len(returned_records)))
-                    else:
-                        print_error("Zone could not be walked")
-                    return returned_records
+                    # NSEC records give two results:
+                    #   1) The previous existing hostname that is signed
+                    #   2) The subsequent existing hostname that is signed
+                    # Add the latter to our list of pending hostnames
+                    for r in a:
+                        pending.add(r.next.to_text()[:-1])
 
-                response = get_a_answer(next_target, ns, timeout)
-            returned_records.extend(lookup_next(next_host, res))
-        except (KeyboardInterrupt):
-            print_error("You have pressed Crtl-C. Saving found records.")
-            break
-    return returned_records
+    except (KeyboardInterrupt):
+        print_error("You have pressed Ctrl + C. Saving found records.")
+
+    # Give a summary of the walk
+    if len(records) > 0:
+        print_good("{0} records found".format(len(records)))
+    else:
+        print_error("Zone could not be walked")
+
+    return records
 
 
 def usage():
