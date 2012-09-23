@@ -1159,9 +1159,6 @@ def ds_zone_walk(res, domain):
 
     try:
         while pending:
-            # Ensure nothing pending has already been queried
-            pending -= finished
-
             # Get the next pending hostname
             hostname = pending.pop()
             finished.add(hostname)
@@ -1189,6 +1186,9 @@ def ds_zone_walk(res, domain):
                     # Add the latter to our list of pending hostnames
                     for r in a:
                         pending.add(r.next.to_text()[:-1])
+
+            # Ensure nothing pending has already been queried
+            pending -= finished
 
     except (KeyboardInterrupt):
         print_error("You have pressed Ctrl + C. Saving found records.")
