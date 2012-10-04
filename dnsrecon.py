@@ -18,7 +18,7 @@
 #    along with this program; if not, write to the Free Software
 #    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
-__version__ = '0.7.9'
+__version__ = '0.8.0'
 __author__ = 'Carlos Perez, Carlos_Perez@darkoperator.com'
 
 __doc__ = """
@@ -351,7 +351,7 @@ def brute_srv(res, domain, verbose=False):
         '_test._tcp.', '_sips._tcp.', '_sip._udp.', '_sip._tcp.', '_aix._tcp.',
         '_aix._tcp.', '_finger._tcp.', '_ftp._tcp.', '_http._tcp.', '_nntp._tcp.',
         '_telnet._tcp.', '_whois._tcp.', '_h323cs._tcp.', '_h323cs._udp.',
-        '_h323be._tcp.', '_h323be._udp.', '_h323ls._tcp.',
+        '_h323be._tcp.', '_h323be._udp.', '_h323ls._tcp.', '_https._tcp.',
         '_h323ls._udp.', '_sipinternal._tcp.', '_sipinternaltls._tcp.',
         '_sip._tls.', '_sipfederationtls._tcp.', '_jabber._tcp.',
         '_xmpp-server._tcp.', '_xmpp-client._tcp.', '_imap.tcp.',
@@ -1192,6 +1192,12 @@ def ds_zone_walk(res, domain):
 
     except (KeyboardInterrupt):
         print_error("You have pressed Ctrl + C. Saving found records.")
+
+    except (dns.exception.Timeout):
+        print_error("A timeout error occurred while performing the zone walk please make ")
+        print_error("sure you can reach the target DNS Servers directly and requests")
+        print_error("are not being filtered. Increase the timeout to a higher number")
+        print_error("with --lifetime <time> option.")
 
     # Give a summary of the walk
     if len(records) > 0:

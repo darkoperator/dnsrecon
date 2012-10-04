@@ -18,7 +18,7 @@
 #    along with this program; if not, write to the Free Software
 #    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
-__version__ = '0.0.5'
+__version__ = '0.0.6'
 __author__ = 'Carlos Perez, Carlos_Perez@darkoperator.com'
 
 import xml.etree.cElementTree as cElementTree
@@ -85,7 +85,7 @@ def xml_parse(xm_file, ifilter, tfilter, nfilter, list):
             # Check that it is a RR Type that has an IP Address
             if "address" in elem.attrib:
                 # Check if the IP is in the filter list of IPs to ignore
-                if elem.attrib['address'] not in ifilter and elem.attrib['address'] != "no_ip":
+                if (len(ifilter) == 0 or elem.attrib['address'] in ifilter) and (elem.attrib['address'] != "no_ip"):
                     # Check if the RR Type against the types
                     if re.match(tfilter, elem.attrib['type'], re.I):
                         # Process A, AAAA and PTR Records
@@ -156,7 +156,7 @@ def csv_parse(csv_file, ifilter, tfilter, nfilter, list):
     reader.next()
     for row in reader:
         # Check if IP is in the filter list of addresses to ignore
-        if row[2] not in ifilter and row[2] != "no_ip":
+        if ((len(ifilter) == 0) or (row[2] in ifilter)) and (row[2] != "no_ip"):
             # Check Host Name regex and type list
             if re.search(tfilter, row[0], re.I) and re.search(nfilter, row[1], re.I):
                 if list:
@@ -242,7 +242,7 @@ def usage():
     print("   -f, --file    <file>     DNSRecon XML or CSV output file to parse.")
     print("   -l, --list               Output an unique IP List that can be used with other tools.")
     print("   -i, --ips     <ranges>   IP Ranges in a comma separated list each in formats (first-last)")
-    print("                            or in (range/bitmask) for ranges to be excluded from output.")
+    print("                            or in (range/bitmask) for ranges to be included from output.")
     print("                            For A, AAAA, NS, MX, SOA, SRV and PTR Records.")
     print("   -t, --type    <type>     Resource Record Types as a regular expression to filter output.")
     print("                            For A, AAAA, NS, MX, SOA, TXT, SPF, SRV and PTR Records.")
