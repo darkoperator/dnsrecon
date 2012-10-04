@@ -210,7 +210,9 @@ def process_spf_data(res, data):
             'include:(\S*)', "".join(data)))
     for inc_ranges in includes:
         for spr_rec in res.get_txt(inc_ranges):
-            ip_list.extend(process_spf_data(res, spr_rec[2]))
+            spf_data = process_spf_data(res, spr_rec[2])
+            if spf_data != None:
+                ip_list.extend(spf_data)
 
     # Return a list of IP Addresses
     return [str(ip) for ip in ip_list]
