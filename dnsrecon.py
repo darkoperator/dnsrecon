@@ -18,7 +18,7 @@
 #    along with this program; if not, write to the Free Software
 #    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
-__version__ = '0.8.0'
+__version__ = '0.8.1'
 __author__ = 'Carlos Perez, Carlos_Perez@darkoperator.com'
 
 __doc__ = """
@@ -642,9 +642,10 @@ def dns_record_from_dict(record_dict_list, scan_info, domain):
     xml_doc = Element("records")
     for r in record_dict_list:
         elem = Element("record")
-        for k, v in r.items():
-            elem.attrib[k] = v
-        xml_doc.append(elem)
+        if type(r) is not str:
+            for k, v in r.items():
+                elem.attrib[k] = v
+            xml_doc.append(elem)
 
     scanelem = Element("scaninfo")
     scanelem.attrib["arguments"] = scan_info[0]
@@ -981,7 +982,7 @@ def general_enum(res, domain, do_axfr, do_google, do_spf, do_whois, zw):
                 for r in goo_rcd:
                     if 'address' in goo_rcd:
                         ip_for_whois.append(r['address'])
-                    returned_records.extend(r)
+                returned_records.extend(goo_rcd)
 
         if do_whois:
             whois_rcd = whois_ips(res, ip_for_whois)
@@ -1358,21 +1359,6 @@ def main():
                 print_error("File {0} does not exist!".format(arg))
                 exit(1)
 
-        elif opt in ('-a', '--axfr'):
-            xfr = True
-
-        elif opt in ('-g', '--google'):
-            goo = True
-
-        elif opt in ('-w', '--do_whois'):
-            do_whois = True
-
-        elif opt in ('-z', '--zone_walk'):
-            zonewalk = True
-
-        elif opt in ('-s', '--do_spf'):
-            spf_enum = True
-
         elif opt in ('-r', '--range'):
             ip_range = process_range(arg)
             if len(ip_range) > 0:
@@ -1383,9 +1369,6 @@ def main():
                     type = "rvl," + type
             else:
                 sys.exit(1)
-
-        elif opt in ('-f'):
-            wildcard_filter = True
 
         elif opt in ('--theads'):
             thread_num = int(arg)
@@ -1404,6 +1387,25 @@ def main():
 
         elif opt in ('-h'):
             usage()
+
+    # Make sure standard enumeration modificators are set.
+    if ('-a' in sys.argv) or ('--axfr' in sys.argv):
+        xfr = True
+
+    if ('-g' in sys.argv) or ('--google' in sys.argv):
+        goo = True
+
+    if ('-w' in sys.argv) or ('--do_whois' in sys.argv):
+        do_whois = True
+
+    if ('-z' in sys.argv) or ('--zone_walk' in sys.argv):
+        zonewalk = True
+
+    if ('-s' in sys.argv) or ('--do_spf' in sys.argv):
+        spf_enum = True
+
+    if ('-f' in sys.argv):
+        wildcard_filter = True
 
     # Setting the number of threads to 10
     pool = ThreadPool(thread_num)
