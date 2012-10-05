@@ -979,7 +979,8 @@ def general_enum(res, domain, do_axfr, do_google, do_spf, do_whois, zw):
             goo_rcd = goo_result_process(res, scrape_google(domain))
             if goo_rcd:
                 for r in goo_rcd:
-                    ip_for_whois.append(r['address'])
+                    if 'address' in goo_rcd:
+                        ip_for_whois.append(r['address'])
                     returned_records.extend(r)
 
         if do_whois:
