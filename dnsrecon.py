@@ -1091,7 +1091,10 @@ def lookup_next(target, res):
         if len(a_answer) > 0:
             for r in a_answer:
                 print_status('\t {0} {1} {2}'.format(r[0], r[1], r[2]))
-                returned_records.append({'type': r[0], 'name': r[1], 'address': r[2]})
+                if r[0] == 'CNAME':
+                    returned_records.append({'type': r[0], 'name': r[1], 'target': r[2]})
+                else:
+                    returned_records.append({'type': r[0], 'name': r[1], 'address': r[2]})
         else:
             a_answer = socket_resolv(target)
             if len(a_answer) > 0:
