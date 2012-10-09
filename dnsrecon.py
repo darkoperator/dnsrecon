@@ -165,11 +165,15 @@ def process_range(arg):
         if re.match(r'\S*\/\S*', arg):
             ip_list = IPNetwork(arg)
 
-        range_vals.extend(arg.split("-"))
-        if len(range_vals) == 2:
-            ip_list = IPRange(range_vals[0], range_vals[1])
+        elif (re.match(r'\S*\-\S*', arg)):
+            range_vals.extend(arg.split("-"))
+            if len(range_vals) == 2:
+                ip_list = IPRange(range_vals[0], range_vals[1])
+        else:
+            print_error("Range provided is not valid")
+            return []
     except:
-        print_error("Range provided is not valid: {0}".format(arg()))
+        print_error("Range provided is not valid")
         return []
     return [str(ip) for ip in ip_list]
 
@@ -1371,6 +1375,7 @@ def main():
                 elif not re.search(r'rvl', type):
                     type = "rvl," + type
             else:
+                usage()
                 sys.exit(1)
 
         elif opt in ('--theads'):
