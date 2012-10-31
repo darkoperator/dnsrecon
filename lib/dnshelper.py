@@ -337,6 +337,7 @@ class DnsHelper:
         ns_records = list(set(ns_records))
         # Test each NS Server
         for ns_srv in ns_records:
+            print_status(" ")
             print_status('Trying NS server {0}'.format(ns_srv))
             if self.check_tcp_dns(ns_srv):
 
@@ -606,23 +607,23 @@ class DnsHelper:
                         zone.iterate_rdatasets(dns.rdatatype.DNSKEY):
                         for rdata in rdataset:
                             print_status('\t DNSKEY {0} {1} {2} {3}'.format(\
-                            algorithm_to_text(rdata.algorithm), rdata.flags, rdata.key, \
+                            algorithm_to_text(rdata.algorithm), rdata.flags, dns.rdata._hexify(rdata.key), \
                             rdata.protocol))
                             zone_records.append({'zone_server': ns_srv, 'type': 'DNSKEY', \
                                                 'algorithm': algorithm_to_text(rdata.algorithm), \
                                                 'flags': rdata.flags, \
-                                                'key': rdata.key, \
+                                                'key': dns.rdata._hexify(rdata.key), \
                                                 'protocol': rdata.protocol
                                                 })
 
                     for (name, rdataset) in \
                         zone.iterate_rdatasets(dns.rdatatype.DS):
                         for rdata in rdataset:
-                            print_status('\t DS {0} {1} {2} {3}'.format(algorithm_to_text(rdata.algorithm), rdata.digest, \
+                            print_status('\t DS {0} {1} {2} {3}'.format(algorithm_to_text(rdata.algorithm), dns.rdata._hexify(rdata.digest), \
                             rdata.digest_type, rdata.key_tag))
                             zone_records.append({'zone_server': ns_srv, 'type': 'DS', \
                                                 'algorithm': algorithm_to_text(rdata.algorithm), \
-                                                'digest': rdata.digest, \
+                                                'digest': dns.rdata._hexify(rdata.digest), \
                                                 'digest_type': rdata.digest_type, \
                                                 'key_tag': rdata.key_tag
                                                 })
@@ -630,13 +631,9 @@ class DnsHelper:
                     for (name, rdataset) in \
                         zone.iterate_rdatasets(dns.rdatatype.NSEC):
                         for rdata in rdataset:
-                            print_status('\t NSEC {0} {1} {2} {3}'.format(algorithm_to_text(rdata.algorithm), rdata.flags, \
-                            rdata.iterations, rdata.salt))
+                            print_status('\t NSEC {0}'.format(rdata.next))
                             zone_records.append({'zone_server': ns_srv, 'type': 'NSEC', \
-                                                'algorithm': algorithm_to_text(rdata.algorithm), \
-                                                'flags': rdata.flags, \
-                                                'iterations': rdata.iterations, \
-                                                'salt': rdata.salt
+                                                'next': rdata.next
                                                 })
 
                     for (name, rdataset) in \
@@ -648,7 +645,7 @@ class DnsHelper:
                                                 'algorithm': algorithm_to_text(rdata.algorithm), \
                                                 'flags': rdata.flags, \
                                                 'iterations': rdata.iterations, \
-                                                'salt': rdata.salt
+                                                'salt': dns.rdata._hexify(rdata.salt)
                                                 })
 
                     for (name, rdataset) in \
@@ -667,12 +664,12 @@ class DnsHelper:
                         zone.iterate_rdatasets(dns.rdatatype.IPSECKEY):
                         for rdata in rdataset:
                             print_status('\t PSECKEY {0} {1} {2} {3} {4}'.format(algorithm_to_text(rdata.algorithm), rdata.gateway, \
-                            rdata.gateway_type, rdata.key, rdata.precedence))
+                            rdata.gateway_type, dns.rdata._hexify(rdata.key), rdata.precedence))
                             zone_records.append({'zone_server': ns_srv, 'type': 'IPSECKEY', \
                                                 'algorithm': algorithm_to_text(rdata.algorithm), \
                                                 'gateway': rdata.gateway, \
                                                 'gateway_type': rdata.gateway_type, \
-                                                'key': rdata.key, \
+                                                'key': dns.rdata._hexify(rdata.key), \
                                                 'precedence': rdata.precedence
                                                 })
                 except Exception as e:

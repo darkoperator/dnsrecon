@@ -67,11 +67,11 @@ def process_range(arg):
 
         range_vals.extend(arg.split("-"))
         if len(range_vals) == 2:
-            ip_list = IPRange(range_vals[0], range_vals[1])
+            ip_list = IPNetwork(IPRange(range_vals[0], range_vals[1])).cidrs()[-1]
     except:
         print_error("Range provided is not valid: {0}".format(arg()))
         return []
-    return [str(ip) for ip in ip_list]
+    return ip_list
 
 
 def xml_parse(xm_file, ifilter, tfilter, nfilter, list):
@@ -85,7 +85,7 @@ def xml_parse(xm_file, ifilter, tfilter, nfilter, list):
             # Check that it is a RR Type that has an IP Address
             if "address" in elem.attrib:
                 # Check if the IP is in the filter list of IPs to ignore
-                if (len(ifilter) == 0 or elem.attrib['address'] in ifilter) and (elem.attrib['address'] != "no_ip"):
+                if (len(ifilter) == 0 or IPAddress(elem.attrib['address']) in ifilter) and (elem.attrib['address'] != "no_ip"):
                     # Check if the RR Type against the types
                     if re.match(tfilter, elem.attrib['type'], re.I):
                         # Process A, AAAA and PTR Records
@@ -93,7 +93,7 @@ def xml_parse(xm_file, ifilter, tfilter, nfilter, list):
                         and re.search(nfilter, elem.attrib['name'], re.I):
                             if list:
                                 if elem.attrib['address'] not in iplist:
-                                    iplist.append(elem.attrib['address'])
+                                    print elem.attrib['address']
                             else:
                                 print_good("{0} {1} {2}".format(elem.attrib['type'], elem.attrib['name'], elem.attrib['address']))
 
@@ -156,18 +156,18 @@ def csv_parse(csv_file, ifilter, tfilter, nfilter, list):
     reader.next()
     for row in reader:
         # Check if IP is in the filter list of addresses to ignore
-        if ((len(ifilter) == 0) or (row[2] in ifilter)) and (row[2] != "no_ip"):
+        if ((len(ifilter) == 0) or (IPAddress(row[2]) in ifilter)) and (row[2] != "no_ip"):
             # Check Host Name regex and type list
             if re.search(tfilter, row[0], re.I) and re.search(nfilter, row[1], re.I):
                 if list:
                     if row[2] not in iplist:
-                        iplist.append(row[2])
+                        print(row[2])
                 else:
                     print_good(" ".join(row))
     # Process IPs for target list if available
-    if len(iplist) > 0:
-        for ip in filter(None, iplist):
-            print_line(ip)
+    #if len(iplist) > 0:
+    #    for ip in filter(None, iplist):
+    #        print_line(ip)
 
 
 def extract_hostnames(file):
@@ -297,6 +297,7 @@ def main():
             ipranges = arg.split(",")
             for r in ipranges:
                 ip_filter.extend(process_range(r))
+            ip_set = IPSet(ip_filter)
 
         elif opt in ('-s', '--str'):
             name_filter = "({0})".format(arg)
@@ -338,9 +339,9 @@ def main():
         else:
             file_type = detect_type(file)
             if file_type == "xml":
-                xml_parse(file, ip_filter, type_filter, name_filter, target_list)
+                xml_parse(file, ip_set, type_filter, name_filter, target_list)
             elif file_type == "csv":
-                csv_parse(file, ip_filter, type_filter, name_filter, target_list)
+                csv_parse(file, ip_set, type_filter, name_filter, target_list)
     else:
         print_error("A DNSRecon XML or CSV output file must be provided to be parsed")
         usage()
