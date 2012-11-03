@@ -518,29 +518,62 @@ def in_cache(dict_file, ns):
                         print_status()
     return found_records
 
-
 def scrape_google(dom):
     """
-    Function for enumerating sub-domains and hosts by scrapping Google.
+    Function for enumerating sub-domains and hosts by scrapping Google and Bing.
     """
+    import random
+    import urllib2
     results = []
-    filtered = []
-    searches = ["100", "200", "300", "400", "500"]
     data = ""
-    urllib._urlopener = AppURLopener()
-    #opener.addheaders = [('User-Agent','Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)')]
-    for n in searches:
-        url = "http://google.com/search?hl=en&lr=&ie=UTF-8&q=%2B" + dom + "&start=" + n + "&sa=N&filter=0&num=100"
-        sock = urllib.urlopen(url)
-        data += sock.read()
+    
+    engines = {
+      'Bing': {
+        'url': 'http://www.bing.com/search?q=site:%s',
+        'filter': ' NOT ',
+        'cookie': 'SRCHHPGUSR=NEWWND=0&NRSLT=50&SRCHLANG=&AS=0&ADLT=DEMOTE'
+      },
+      'Google': {
+        'url': 'http://google.com/search?hl=en&lr=&ie=UTF-8&q=site:%s&start=0&sa=N&filter=0&num=100',
+        'filter': ' -inurl:',
+        'user-agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:16.0) Gecko/20100101 Firefox/16.0'
+      }
+    }
+    
+    for engine in engines:
+      print_status('Searching %s' % engine)
+      filter = ''
+      count = 0
+      sub_domain_filter = False
+      opener = urllib2.build_opener()
+      
+      if 'cookie' in engines[engine]:
+        opener.addheaders = [('Cookie', engines[engine]['cookie'])]
+      
+      if 'user-agent' in engines[engine]:
+        opener.addheaders = [('User-Agent', engines[engine]['user-agent'])]
+        
+      while True:
+        url = engines[engine]['url'] % ((dom + urllib.quote_plus(filter)))
+        #print_debug(url)
+        sock = opener.open(url)
+        data = sock.read()
         sock.close()
-    results.extend(unique(re.findall("htt\w{1,2}:\/\/([^:?]*[a-b0-9]*[^:?]*\." + dom + ")\/", data)))
-    # Make sure we are only getting the host
-    for f in results:
-        filtered.extend(re.findall("^([a-z.0-9^]*" + dom + ")", f))
-    time.sleep(2)
-    return unique(filtered)
-
+        time.sleep(random.randint(1, 5))
+        results.extend(unique(re.findall("//([a-zA-Z0-9-.]*\." + dom + "?)", data)))
+        
+        if count == len(unique(results)) and sub_domain_filter == False:
+          sub_domain_filter = True
+        elif count == len(unique(results)) and sub_domain_filter:
+          break
+        
+        count = len(unique(results))
+        filter = ''
+        for f in unique(results):
+          f =  f.replace(dom, '') if (sub_domain_filter) else f
+          filter += engines[engine]['filter'] + f
+    
+    return unique(results)
 
 def goo_result_process(res, found_hosts):
     """
@@ -981,7 +1014,7 @@ def general_enum(res, domain, do_axfr, do_google, do_spf, do_whois, zw):
 
         # Do Google Search enumeration if selected
         if do_google is not None:
-            print_status('Performing Google Search Enumeration')
+            print_status('Performing Google and Bing Search Enumeration')
             goo_rcd = goo_result_process(res, scrape_google(domain))
             if goo_rcd:
                 for r in goo_rcd:
