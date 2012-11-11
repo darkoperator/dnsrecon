@@ -522,9 +522,7 @@ def scrape_google(dom):
     """
     Function for enumerating sub-domains and hosts by scrapping Google and Bing.
     """
-    import random
-    import urllib2
-    results = []
+    results = set([])
     data = ""
     
     engines = {
@@ -556,24 +554,29 @@ def scrape_google(dom):
       while True:
         url = engines[engine]['url'] % ((dom + urllib.quote_plus(filter)))
         #print_debug(url)
-        sock = opener.open(url)
-        data = sock.read()
-        sock.close()
-        time.sleep(random.randint(1, 5))
-        results.extend(unique(re.findall("//([a-zA-Z0-9-.]*\." + dom + "?)", data)))
-        
-        if count == len(unique(results)) and sub_domain_filter == False:
-          sub_domain_filter = True
-        elif count == len(unique(results)) and sub_domain_filter:
+        try:
+          sock = opener.open(url)
+          data = sock.read()
+        except Exception as e:
+          print_error(e)
           break
         
-        count = len(unique(results))
+        sock.close()
+        time.sleep(random.randint(1, 5))
+        results.update(re.findall("//([a-zA-Z0-9-.]*\." + dom + "?)", data))
+        
+        if count == len(results) and sub_domain_filter == False:
+          sub_domain_filter = True
+        elif count == len(results) and sub_domain_filter:
+          break
+        
+        count = len(results)
         filter = ''
-        for f in unique(results):
+        for f in results:
           f =  f.replace(dom, '') if (sub_domain_filter) else f
           filter += engines[engine]['filter'] + f
     
-    return unique(results)
+    return results
 
 def goo_result_process(res, found_hosts):
     """
