@@ -782,7 +782,6 @@ def write_db(db, data):
             t = n['type']
             del n['type']
             record_data = "".join(['%s=%s,' % (key, value) for key, value in n.items()])
-            print record_data
             records = [t, record_data]
             query = "insert into data(type,text) values ('" +\
                 records[0] + "','" + records[1] + "')"
