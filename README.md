@@ -1,3 +1,9 @@
+##Version 0.8.1
+
+###Changes:
+- Improved DNSEC Zone Walk.
+- Several Bug fixes for exporting data and parsing records in zone transfers.
+- DigiNinja Edition for all his hard work in making DNSRecon better
 ##Version 0.7.8
 
 ###Date: 7/8/12
@@ -12,7 +18,7 @@
 - Added processing of LOC, NAPTR, CERT and RP records of zone transfers returned. Proper information saved on XML output with proper field names in the attributes for these.
 - Fixes on google enumeration parsing.
 - Fixed several typos.
-- Better handling and canceling of threaded tasks. 
+- Better handling and canceling of threaded tasks.
 
 ##Version 0.7.3
 
@@ -35,7 +41,7 @@
 - Added tool folder with python script for parsing results in XML and CSV format. Provide ability to filter and extract hostnames and subdomains.
 - Added Metasploit Plugin for importing in to metasploit the CSV and XML results in a very fast manner using Nokogiri for XML, it ill add hosts, notes for hostnames and service entries.
 -Improvements on the zone transfer code:
-	
+
 	- Handling of zones with no NS Records.
 	- Proper parsing of PTR Records in returned zones.
 	- De-duplication of NS record IP Addresses.
@@ -43,7 +49,7 @@
 	- Provide more infomation on actions being taken.
 
 - Bug fixes reported by users at RandomStorm and by Robin Wood.
-- Zone Walking has been greatly improved including the accuracy of the results and the formatting to extract the information in a manner more useful for a pentester. 
+- Zone Walking has been greatly improved including the accuracy of the results and the formatting to extract the information in a manner more useful for a pentester.
 
 ##Version 0.6.6
 
