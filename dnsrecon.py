@@ -655,9 +655,10 @@ def dns_record_from_dict(record_dict_list, scan_info, domain):
     scanelem.attrib["arguments"] = scan_info[0]
     scanelem.attrib["time"] = scan_info[1]
     xml_doc.append(scanelem)
-    domelem = Element("domain")
-    domelem.attrib["domain_name"] = domain
-    xml_doc.append(domelem)
+    if domain is not None:
+        domelem = Element("domain")
+        domelem.attrib["domain_name"] = domain
+        xml_doc.append(domelem)
     return prettify(xml_doc)
 
 
@@ -857,9 +858,11 @@ def general_enum(res, domain, do_axfr, do_google, do_spf, do_whois, zw):
 
     # Perform test for Zone Transfer against all NS servers of a Domain
     if do_axfr is not None:
-        returned_records.extend(res.zone_transfer())
-        if len(returned_records) == 0:
-            from_zt = True
+        zonerecs = res.zone_transfer()
+        if zonerecs is not None:
+            returned_records.extend(res.zone_transfer())
+            if len(returned_records) == 0:
+                from_zt = True
 
     # If a Zone Trasfer was possible there is no need to enumerate the rest
     if from_zt == None:
