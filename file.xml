@@ -1,0 +1,18 @@
+<?xml version="1.0" ?>
+<records>
+    <record address="192.168.1.1" name="fw1.localdomain" type="PTR"/>
+    <record address="192.168.1.11" name="lab-esx01.darkoperator.com" type="PTR"/>
+    <record address="192.168.1.12" name="lab-esx02.darkoperator.com" type="PTR"/>
+    <record address="192.168.1.13" name="lab-esx03.darkoperator.com" type="PTR"/>
+    <record address="192.168.1.100" name="loki.localdomain" type="PTR"/>
+    <record address="192.168.1.110" name="imac-4.localdomain" type="PTR"/>
+    <record address="192.168.1.112" name="RT3509.localdomain" type="PTR"/>
+    <record address="192.168.1.159" name="HP2E61AD.localdomain" type="PTR"/>
+    <record address="192.168.1.162" name="vcenter.darkoperator.com" type="PTR"/>
+    <record address="192.168.1.195" name="win8VM.localdomain" type="PTR"/>
+    <record address="192.168.1.223" name="Martas-Room.localdomain" type="PTR"/>
+    <record address="192.168.1.230" name="LAP17010.localdomain" type="PTR"/>
+    <record address="192.168.1.233" name="infidel01.localdomain" type="PTR"/>
+    <record address="192.168.1.241" name="loki.localdomain" type="PTR"/>
+    <scaninfo arguments="./dnsrecon.py -r 192.168.1.1/24 --xml file.xml" time="2013-01-29 10:54:57.646167"/>
+</records>

@@ -18,7 +18,7 @@
 #    along with this program; if not, write to the Free Software
 #    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
-__version__ = '0.8.1'
+__version__ = '0.8.2'
 __author__ = 'Carlos Perez, Carlos_Perez@darkoperator.com'
 
 __doc__ = """
@@ -127,12 +127,10 @@ class ThreadPool:
         for _ in range(num_threads):
             Worker(self.tasks)
 
-    def add_task(
-        self,
-        func,
-        *args,
-        **kargs
-        ):
+    def add_task(self,
+                 func,
+                 *args,
+                 **kargs):
         """Add a task to the queue"""
 
         self.tasks.put((func, args, kargs))
@@ -195,10 +193,8 @@ def process_spf_data(res, data):
         return
 
     # Parse the record for IPv4 Ranges, individual IPs and include TXT Records.
-    ipv4.extend(re.findall(\
-            'ip4:(\S*) ', "".join(data)))
-    ipv6.extend(re.findall(\
-            'ip6:(\S*)', "".join(data)))
+    ipv4.extend(re.findall('ip4:(\S*) ', "".join(data)))
+    ipv6.extend(re.findall('ip6:(\S*)', "".join(data)))
 
     # Create a list of IPNetwork objects.
     for ip in ipv4:
@@ -210,12 +206,11 @@ def process_spf_data(res, data):
             ip_list.append(i)
 
     # Extract and process include values.
-    includes.extend(re.findall(\
-            'include:(\S*)', "".join(data)))
+    includes.extend(re.findall('include:(\S*)', "".join(data)))
     for inc_ranges in includes:
         for spr_rec in res.get_txt(inc_ranges):
             spf_data = process_spf_data(res, spr_rec[2])
-            if spf_data != None:
+            if spf_data is not None:
                 ip_list.extend(spf_data)
 
     # Return a list of IP Addresses
@@ -292,30 +287,30 @@ def brute_tlds(res, domain, verbose=False):
     # tlds taken from http://data.iana.org/TLD/tlds-alpha-by-domain.txt
     gtld = ['co', 'com', 'net', 'biz', 'org']
     tlds = ['ac', 'ad', 'aeaero', 'af', 'ag', 'ai', 'al', 'am', 'an', 'ao', 'aq', 'ar',
-    'arpa', 'as', 'asia', 'at', 'au', 'aw', 'ax', 'az', 'ba', 'bb', 'bd', 'be', 'bf', 'bg',
-    'bh', 'bi', 'biz', 'bj', 'bm', 'bn', 'bo', 'br', 'bs', 'bt', 'bv', 'bw', 'by', 'bzca',
-    'cat', 'cc', 'cd', 'cf', 'cg', 'ch', 'ci', 'ck', 'cl', 'cm', 'cn', 'co', 'com', 'coop',
-    'cr', 'cu', 'cv', 'cx', 'cy', 'cz', 'de', 'dj', 'dk', 'dm', 'do', 'dz', 'ec', 'edu', 'ee',
-    'eg', 'er', 'es', 'et', 'eu', 'fi', 'fj', 'fk', 'fm', 'fo', 'fr', 'ga', 'gb', 'gd', 'ge',
-    'gf', 'gg', 'gh', 'gi', 'gl', 'gm', 'gn', 'gov', 'gp', 'gq', 'gr', 'gs', 'gt', 'gu', 'gw',
-    'gy', 'hk', 'hm', 'hn', 'hr', 'ht', 'hu', 'id', 'ie', 'il', 'im', 'in', 'info', 'int',
-    'io', 'iq', 'ir', 'is', 'it', 'je', 'jm', 'jo', 'jobs', 'jp', 'ke', 'kg', 'kh', 'ki', 'km',
-    'kn', 'kp', 'kr', 'kw', 'ky', 'kz', 'la', 'lb', 'lc', 'li', 'lk', 'lr', 'ls', 'lt', 'lu',
-    'lv', 'ly', 'ma', 'mc', 'md', 'me', 'mg', 'mh', 'mil', 'mk', 'ml', 'mm', 'mn', 'mo',
-    'mobi', 'mp', 'mq', 'mr', 'ms', 'mt', 'mu', 'museum', 'mv', 'mw', 'mx', 'my', 'mz', 'na',
-    'name', 'nc', 'ne', 'net', 'nf', 'ng', 'ni', 'nl', 'no', 'np', 'nr', 'nu', 'nz', 'om',
-    'org', 'pa', 'pe', 'pf', 'pg', 'ph', 'pk', 'pl', 'pm', 'pn', 'pr', 'pro', 'ps', 'pt', 'pw',
-    'py', 'qa', 're', 'ro', 'rs', 'ru', 'rw', 'sa', 'sb', 'sc', 'sd', 'se', 'sg', 'sh', 'si',
-    'sj', 'sk', 'sl', 'sm', 'sn', 'so', 'sr', 'st', 'su', 'sv', 'sy', 'sz', 'tc', 'td', 'tel',
-    'tf', 'tg', 'th', 'tj', 'tk', 'tl', 'tm', 'tn', 'to', 'tp', 'tr', 'travel', 'tt', 'tv',
-    'tw', 'tz', 'ua', 'ug', 'uk', 'us', 'uy', 'uz', 'va', 'vc', 've', 'vg', 'vi', 'vn', 'vu',
-    'wf', 'ws', 'ye', 'yt', 'za', 'zm', 'zw']
+            'arpa', 'as', 'asia', 'at', 'au', 'aw', 'ax', 'az', 'ba', 'bb', 'bd', 'be', 'bf', 'bg',
+            'bh', 'bi', 'biz', 'bj', 'bm', 'bn', 'bo', 'br', 'bs', 'bt', 'bv', 'bw', 'by', 'bzca',
+            'cat', 'cc', 'cd', 'cf', 'cg', 'ch', 'ci', 'ck', 'cl', 'cm', 'cn', 'co', 'com', 'coop',
+            'cr', 'cu', 'cv', 'cx', 'cy', 'cz', 'de', 'dj', 'dk', 'dm', 'do', 'dz', 'ec', 'edu', 'ee',
+            'eg', 'er', 'es', 'et', 'eu', 'fi', 'fj', 'fk', 'fm', 'fo', 'fr', 'ga', 'gb', 'gd', 'ge',
+            'gf', 'gg', 'gh', 'gi', 'gl', 'gm', 'gn', 'gov', 'gp', 'gq', 'gr', 'gs', 'gt', 'gu', 'gw',
+            'gy', 'hk', 'hm', 'hn', 'hr', 'ht', 'hu', 'id', 'ie', 'il', 'im', 'in', 'info', 'int',
+            'io', 'iq', 'ir', 'is', 'it', 'je', 'jm', 'jo', 'jobs', 'jp', 'ke', 'kg', 'kh', 'ki', 'km',
+            'kn', 'kp', 'kr', 'kw', 'ky', 'kz', 'la', 'lb', 'lc', 'li', 'lk', 'lr', 'ls', 'lt', 'lu',
+            'lv', 'ly', 'ma', 'mc', 'md', 'me', 'mg', 'mh', 'mil', 'mk', 'ml', 'mm', 'mn', 'mo',
+            'mobi', 'mp', 'mq', 'mr', 'ms', 'mt', 'mu', 'museum', 'mv', 'mw', 'mx', 'my', 'mz', 'na',
+            'name', 'nc', 'ne', 'net', 'nf', 'ng', 'ni', 'nl', 'no', 'np', 'nr', 'nu', 'nz', 'om',
+            'org', 'pa', 'pe', 'pf', 'pg', 'ph', 'pk', 'pl', 'pm', 'pn', 'pr', 'pro', 'ps', 'pt', 'pw',
+            'py', 'qa', 're', 'ro', 'rs', 'ru', 'rw', 'sa', 'sb', 'sc', 'sd', 'se', 'sg', 'sh', 'si',
+            'sj', 'sk', 'sl', 'sm', 'sn', 'so', 'sr', 'st', 'su', 'sv', 'sy', 'sz', 'tc', 'td', 'tel',
+            'tf', 'tg', 'th', 'tj', 'tk', 'tl', 'tm', 'tn', 'to', 'tp', 'tr', 'travel', 'tt', 'tv',
+            'tw', 'tz', 'ua', 'ug', 'uk', 'us', 'uy', 'uz', 'va', 'vc', 've', 'vg', 'vi', 'vn', 'vu',
+            'wf', 'ws', 'ye', 'yt', 'za', 'zm', 'zw']
     found_tlds = []
     domain_main = domain.split(".")[0]
 
     # Let the user know how long it could take
-    print_status("The operation could take up to: {0}".format(time.strftime('%H:%M:%S', \
-    time.gmtime(len(tlds) / 4))))
+    print_status("The operation could take up to: {0}".format(time.strftime('%H:%M:%S',
+                 time.gmtime(len(tlds) / 4))))
 
     try:
         for t in tlds:
@@ -337,7 +332,7 @@ def brute_tlds(res, domain, verbose=False):
     for rcd_found in brtdata:
         for rcd in rcd_found:
             if re.search(r'^A', rcd[0]):
-                found_tlds.extend([{'type':rcd[0], 'name':rcd[1], 'address':rcd[2]}])
+                found_tlds.extend([{'type': rcd[0], 'name': rcd[1], 'address': rcd[2]}])
 
     print_good("{0} Records Found".format(len(found_tlds)))
 
@@ -368,8 +363,7 @@ def brute_srv(res, domain, verbose=False):
         '_jabber-client._tcp.', '_jabber-client._udp.', '_kerberos.tcp.dc._msdcs.',
         '_ldap._tcp.ForestDNSZones.', '_ldap._tcp.dc._msdcs.', '_ldap._tcp.pdc._msdcs.',
         '_ldap._tcp.gc._msdcs.', '_kerberos._tcp.dc._msdcs.', '_kpasswd._tcp.', '_kpasswd._udp.',
-        '_imap._tcp.'
-        ]
+        '_imap._tcp.']
 
     try:
         for srvtype in srvrcd:
@@ -387,9 +381,11 @@ def brute_srv(res, domain, verbose=False):
     if len(brtdata) > 0:
         for rcd_found in brtdata:
             for rcd in rcd_found:
-                returned_records.extend([{'type':rcd[0],\
-                'name':rcd[1], 'target':rcd[2], 'address':rcd[3], 'port':rcd[4]
-                }])
+                returned_records.extend([{'type': rcd[0],
+                                        'name': rcd[1],
+                                        'target': rcd[2],
+                                        'address': rcd[3],
+                                        'port': rcd[4]}])
 
     else:
         print_error("No SRV Records Found for {0}".format(domain))
@@ -425,9 +421,9 @@ def brute_reverse(res, ip_list, verbose=False):
 
     for rcd_found in brtdata:
         for rcd in rcd_found:
-            returned_records.extend([{'type':rcd[0],\
-            "name":rcd[1], 'address':rcd[2]
-            }])
+            returned_records.extend([{'type': rcd[0],
+                                    "name": rcd[1],
+                                    'address': rcd[2]}])
 
     print_good("{0} Records Found".format(len(returned_records)))
 
@@ -476,11 +472,12 @@ def brute_domain(res, dict, dom, filter=None, verbose=False):
                     # Filter Records if filtering was enabled
                     if filter:
                         if not filter == rcd[2]:
-                            found_hosts.extend([{'type':rcd[0], 'name':rcd[1], 'address':rcd[2]}])
+                            found_hosts.extend([{'type': rcd[0], 'name': rcd[1], 'address': rcd[2]}])
                     else:
-                        found_hosts.extend([{'type':rcd[0], 'name':rcd[1], 'address':rcd[2]}])
+                        found_hosts.extend([{'type': rcd[0], 'name': rcd[1], 'address': rcd[2]}])
                 elif re.search(r'^CNAME', rcd[0]):
-                    found_hosts.extend([{'type':rcd[0], 'name':rcd[1], 'target':rcd[2]}])
+                    found_hosts.extend([{'type': rcd[0], 'name': rcd[1], 'target': rcd[2]}])
+
         # Clear Global variable
         brtdata = []
 
@@ -506,13 +503,13 @@ def in_cache(dict_file, ns):
                     if rcd.rdtype == 1:
                         print_status("\tName: {0} TTL: {1} Address: {2} Type: A".format(an.name, an.ttl, rcd.address))
 
-                        found_records.extend([{'type':"A", 'name':an.name,\
-                        'address':rcd.address, 'ttl':an.ttl}])
+                        found_records.extend([{'type': "A", 'name': an.name,
+                                             'address': rcd.address, 'ttl': an.ttl}])
 
                     elif rcd.rdtype == 5:
                         print_status("\tName: {0} TTL: {1} Target: {2} Type: CNAME".format(an.name, an.ttl, rcd.target))
-                        found_records.extend([{'type':"CNAME", 'name':an.name,\
-                        'target':rcd.target, 'ttl':an.ttl}])
+                        found_records.extend([{'type': "CNAME", 'name': an.name,
+                                             'target': rcd.target, 'ttl': an.ttl}])
 
                     else:
                         print_status()
@@ -528,13 +525,14 @@ def scrape_google(dom):
     searches = ["100", "200", "300", "400", "500"]
     data = ""
     urllib._urlopener = AppURLopener()
-    #opener.addheaders = [('User-Agent','Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)')]
+
     for n in searches:
         url = "http://google.com/search?hl=en&lr=&ie=UTF-8&q=%2B" + dom + "&start=" + n + "&sa=N&filter=0&num=100"
         sock = urllib.urlopen(url)
         data += sock.read()
         sock.close()
     results.extend(unique(re.findall("htt\w{1,2}:\/\/([^:?]*[a-b0-9]*[^:?]*\." + dom + ")\/", data)))
+
     # Make sure we are only getting the host
     for f in results:
         filtered.extend(re.findall("^([a-z.0-9^]*" + dom + ")", f))
@@ -554,11 +552,12 @@ def goo_result_process(res, found_hosts):
             if re.search(r'^A|CNAME', sdip[0]):
                 print_status('\t {0} {1} {2}'.format(sdip[0], sdip[1], sdip[2]))
                 if re.search(r'^A', sdip[0]):
-                    returned_records.extend([{'type':sdip[0], 'name':sdip[1], \
-                    'address':sdip[2]}])
+                    returned_records.extend([{'type': sdip[0], 'name': sdip[1],
+                                            'address':sdip[2]}])
                 else:
-                    returned_records.extend([{'type':sdip[0], 'name':sdip[1], \
-                    'target':sdip[2]}])
+                    returned_records.extend([{'type': sdip[0], 'name': sdip[1],
+                                            'target': sdip[2]}])
+
     print_good("{0} Records Found".format(len(returned_records)))
     return returned_records
 
@@ -609,8 +608,7 @@ def whois_ips(res, ip_list):
         if "a" in answer:
             for i in range(len(list)):
                 print_status("Performing Reverse Lookup of range {0}-{1}".format(list[i]['start'], list[i]['end']))
-                found_records.append(brute_reverse(res, \
-                    expand_range(list[i]['start'], list[i]['end'])))
+                found_records.append(brute_reverse(res, expand_range(list[i]['start'], list[i]['end'])))
 
         elif "n" in answer:
             print_status("No Reverse Lookups will be performed.")
@@ -620,8 +618,7 @@ def whois_ips(res, ip_list):
                 net_selected = list[int(a)]
                 print_status(net_selected['orgname'])
                 print_status("Performing Reverse Lookup of range {0}-{1}".format(net_selected['start'], net_selected['end']))
-                found_records.append(brute_reverse(res, \
-                    expand_range(net_selected['start'], net_selected['end'])))
+                found_records.append(brute_reverse(res, expand_range(net_selected['start'], net_selected['end'])))
     else:
         print_error("No IP Ranges where found in the Whois query results")
 
@@ -689,7 +686,7 @@ def create_db(db):
 
     # Connect and create table
     cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='data';")
-    if cur.fetchone() == None:
+    if cur.fetchone() is None:
         cur.execute(make_table)
         con.commit()
     else:
@@ -752,31 +749,31 @@ def write_db(db, data):
 
         if re.match(r'PTR|^[A]$|AAAA', n['type']):
             query = 'insert into data( type, name, address ) ' +\
-            'values( "%(type)s", "%(name)s","%(address)s" )' % n
+                'values( "%(type)s", "%(name)s","%(address)s" )' % n
 
         elif re.match(r'NS', n['type']):
             query = 'insert into data( type, name, address ) ' +\
-            'values( "%(type)s", "%(mname)s", "%(address)s" )' % n
+                'values( "%(type)s", "%(mname)s", "%(address)s" )' % n
 
         elif re.match(r'SOA', n['type']):
             query = 'insert into data( type, name, address ) ' +\
-            'values( "%(type)s", "%(mname)s", "%(address)s" )' % n
+                'values( "%(type)s", "%(mname)s", "%(address)s" )' % n
 
         elif re.match(r'MX', n['type']):
             query = 'insert into data( type, name, address ) ' +\
-            'values( "%(type)s", "%(exchange)s", "%(address)s" )' % n
+                'values( "%(type)s", "%(exchange)s", "%(address)s" )' % n
 
         elif re.match(r'TXT|SPF', n['type']):
             query = 'insert into data( type, name, text) ' +\
-            'values( "%(type)s", "%(text)s" ,"%(text)s" )' % n
+                'values( "%(type)s", "%(text)s" ,"%(text)s" )' % n
 
         elif re.match(r'SRV', n['type']):
             query = 'insert into data( type, name, target, address, port ) ' +\
-            'values( "%(type)s", "%(name)s" , "%(target)s", "%(address)s" ,"%(port)s" )' % n
+                'values( "%(type)s", "%(name)s" , "%(target)s", "%(address)s" ,"%(port)s" )' % n
 
         elif re.match(r'CNAME', n['type']):
             query = 'insert into data( type, name, target ) ' +\
-            'values( "%(type)s", "%(name)s" , "%(target)s" )' % n
+                'values( "%(type)s", "%(name)s" , "%(target)s" )' % n
 
         else:
             # Handle not common records
@@ -865,7 +862,7 @@ def general_enum(res, domain, do_axfr, do_google, do_spf, do_whois, zw):
                 from_zt = True
 
     # If a Zone Trasfer was possible there is no need to enumerate the rest
-    if from_zt == None:
+    if from_zt is None:
 
         # Check if DNSSEC is configured
         dns_sec_check(domain, res)
@@ -878,9 +875,8 @@ def general_enum(res, domain, do_axfr, do_google, do_spf, do_whois, zw):
                 print_status('\t {0} {1} {2}'.format(found_soa_record[0], found_soa_record[1], found_soa_record[2]))
 
                 # Save dictionary of returned record
-                returned_records.extend([{'type':found_soa_record[0],\
-                "mname": found_soa_record[1], 'address': found_soa_record[2]
-                }])
+                returned_records.extend([{'type': found_soa_record[0],
+                                        "mname": found_soa_record[1], 'address': found_soa_record[2]}])
 
                 ip_for_whois.append(found_soa_record[2])
 
@@ -893,9 +889,7 @@ def general_enum(res, domain, do_axfr, do_google, do_spf, do_whois, zw):
                 print_status('\t {0} {1} {2}'.format(ns_rcrd[0], ns_rcrd[1], ns_rcrd[2]))
 
                 # Save dictionary of returned record
-                returned_records.extend([{'type':ns_rcrd[0],\
-                "target": ns_rcrd[1], 'address': ns_rcrd[2]
-                }])
+                returned_records.extend([{'type': ns_rcrd[0], "target": ns_rcrd[1], 'address': ns_rcrd[2]}])
 
                 ip_for_whois.append(ns_rcrd[2])
 
@@ -908,9 +902,7 @@ def general_enum(res, domain, do_axfr, do_google, do_spf, do_whois, zw):
                 print_status('\t {0} {1} {2}'.format(mx_rcrd[0], mx_rcrd[1], mx_rcrd[2]))
 
                 # Save dictionary of returned record
-                returned_records.extend([{'type': mx_rcrd[0],\
-                "exchange": mx_rcrd[1], 'address': mx_rcrd[2]
-                }])
+                returned_records.extend([{'type': mx_rcrd[0], "exchange": mx_rcrd[1], 'address': mx_rcrd[2]}])
 
                 ip_for_whois.append(mx_rcrd[2])
 
@@ -922,9 +914,7 @@ def general_enum(res, domain, do_axfr, do_google, do_spf, do_whois, zw):
             print_status('\t {0} {1} {2}'.format(a_rcrd[0], a_rcrd[1], a_rcrd[2]))
 
             # Save dictionary of returned record
-            returned_records.extend([{'type':a_rcrd[0],\
-            "name":a_rcrd[1], 'address':a_rcrd[2]
-            }])
+            returned_records.extend([{'type': a_rcrd[0], "name": a_rcrd[1], 'address': a_rcrd[2]}])
 
             ip_for_whois.append(a_rcrd[2])
 
@@ -937,9 +927,7 @@ def general_enum(res, domain, do_axfr, do_google, do_spf, do_whois, zw):
             for s in spf_text_data:
                 print_status('\t {0} {1}'.format(s[0], s[1]))
                 text_data = s[1]
-                returned_records.extend([{'type':s[0],\
-                "strings":s[1]
-                }])
+                returned_records.extend([{'type': s[0], "strings": s[1]}])
 
         txt_text_data = res.get_txt()
 
@@ -948,9 +936,7 @@ def general_enum(res, domain, do_axfr, do_google, do_spf, do_whois, zw):
             for t in txt_text_data:
                 print_status('\t {0} {1} {2}'.format(t[0], t[1], t[2]))
                 text_data += t[2]
-                returned_records.extend([{'type':t[0], 'name':t[1],\
-                "strings":t[2]
-                }])
+                returned_records.extend([{'type': t[0], 'name': t[1], "strings":t[2]}])
 
         domainkey_text_data = res.get_txt("_domainkey." + domain)
 
@@ -959,9 +945,7 @@ def general_enum(res, domain, do_axfr, do_google, do_spf, do_whois, zw):
             for t in domainkey_text_data:
                 print_status('\t {0} {1} {2}'.format(t[0], t[1], t[2]))
                 text_data += t[2]
-                returned_records.extend([{'type':t[0], 'name':t[1],\
-                "strings":t[2]
-                }])
+                returned_records.extend([{'type': t[0], 'name': t[1], "strings": t[2]}])
 
         # Process SPF records if selected
         if do_spf is not None and len(text_data) > 0:
@@ -1069,26 +1053,26 @@ def lookup_next(target, res):
         if len(srv_answer) > 0:
             for r in srv_answer:
                 print_status("\t {0}".format(" ".join(r)))
-                returned_records.append({'type': r[0],\
-                'name': r[1], 'target': r[2], 'address': r[3], 'port': r[4]
-                })
+                returned_records.append({'type': r[0],
+                                        'name': r[1],
+                                        'target': r[2],
+                                        'address': r[3],
+                                        'port': r[4]})
 
     elif re.search("(_autodiscover\\.|_spf\\.|_domainkey\\.)", target, re.I):
         txt_answer = res.get_txt(target)
         if len(txt_answer) > 0:
             for r in txt_answer:
                 print_status("\t {0}".format(" ".join(r)))
-                returned_records.append({'type': r[0],\
-                'name': r[1], 'strings': r[2]
-                })
+                returned_records.append({'type': r[0],
+                                        'name': r[1], 'strings': r[2]})
         else:
             txt_answer = res_sys.get_tx(target)
             if len(txt_answer) > 0:
                 for r in txt_answer:
                     print_status("\t {0}".format(" ".join(r)))
-                    returned_records.append({'type': r[0],\
-                    'name': r[1], 'strings': r[2]
-                    })
+                    returned_records.append({'type': r[0],
+                                            'name': r[1], 'strings': r[2]})
             else:
                 print_status('\t A {0} no_ip'.format(target))
                 returned_records.append({'type': 'A', 'name': target, 'address': "no_ip"})
@@ -1311,24 +1295,24 @@ def main():
     #
     try:
         options, args = getopt.getopt(sys.argv[1:], 'hzd:n:x:D:t:aq:gwr:fsc:v',
-                                           ['help',
-                                           'zone_walk'
-                                           'domain=',
-                                           'name_server=',
-                                           'xml=',
-                                           'dictionary=',
-                                           'type=',
-                                           'axfr',
-                                           'google',
-                                           'do_whois',
-                                           'range=',
-                                           'do_spf',
-                                           'csv=',
-                                           'lifetime=',
-                                           'threads=',
-                                           'db=',
-                                           'verbose'
-                                           ])
+                                      ['help',
+                                      'zone_walk'
+                                      'domain=',
+                                      'name_server=',
+                                      'xml=',
+                                      'dictionary=',
+                                      'type=',
+                                      'axfr',
+                                      'google',
+                                      'do_whois',
+                                      'range=',
+                                      'do_spf',
+                                      'csv=',
+                                      'lifetime=',
+                                      'threads=',
+                                      'db=',
+                                      'verbose'])
+
     except getopt.GetoptError:
         print_error("Wrong Option Provided!")
         usage()
@@ -1373,7 +1357,7 @@ def main():
             ip_range = process_range(arg)
             if len(ip_range) > 0:
                 ip_list.extend(ip_range)
-                if type == None:
+                if type is None:
                     type = "rvl"
                 elif not re.search(r'rvl', type):
                     type = "rvl," + type
