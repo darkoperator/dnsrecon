@@ -33,7 +33,7 @@ def get_whois(ip_addrs):
     whois_server = None
     ip = IPAddress(ip_addrs)
     info_of_ip = ip.info
-    if ip.version == 4 and ip.is_private() == False:
+    if ip.version == 4 and ip.is_private() is False:
         for i in info_of_ip['IPv4']:
             whois_server = i['whois']
             if len(whois_server) == 0 and i['status'] != "Reserved":
@@ -50,7 +50,6 @@ def whois(target, whois_srv):
     string and returns the answer of the query.
     """
     response = ""
-    #socket.setdefaulttimeout(4.0)
     counter = 1
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)

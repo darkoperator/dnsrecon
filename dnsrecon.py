@@ -18,7 +18,7 @@
 #    along with this program; if not, write to the Free Software
 #    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
-__version__ = '0.8.2'
+__version__ = '0.8.3'
 __author__ = 'Carlos Perez, Carlos_Perez@darkoperator.com'
 
 __doc__ = """
@@ -1134,7 +1134,6 @@ def ds_zone_walk(res, domain):
 
     timeout = res._res.timeout
 
-    hostnames = set([domain])
     records = []
 
     transformations = [
@@ -1153,7 +1152,6 @@ def ds_zone_walk(res, domain):
 
     pending = set([domain])
     finished = set()
-    i = 0
 
     try:
         while pending:
@@ -1427,8 +1425,8 @@ def main():
 
                 elif r == 'std':
                     print_status("Performing General Enumeration of Domain:".format(domain))
-                    std_enum_records = general_enum(res, domain, xfr, goo,\
-                    spf_enum, do_whois, zonewalk)
+                    std_enum_records = general_enum(res, domain, xfr, goo,
+                                                    spf_enum, do_whois, zonewalk)
 
                     if (output_file is not None) or (results_db is not None) or (csv_file is not None):
                         returned_records.extend(std_enum_records)
@@ -1526,7 +1524,7 @@ def main():
     elif domain is not None:
         try:
             print_status("Performing General Enumeration of Domain: {0}".format(domain))
-            std_enum_records = std_enum_records = general_enum(res, domain, xfr, goo,\
+            std_enum_records = std_enum_records = general_enum(res, domain, xfr, goo,
                                                                spf_enum, do_whois, zonewalk)
 
             returned_records.extend(std_enum_records)
