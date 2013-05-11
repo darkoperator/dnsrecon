@@ -407,7 +407,7 @@ class DnsHelper:
                                          rdata.address))
                             zone_records.append({'zone_server': ns_srv, 'type': 'A',
                                                 'name': str(name) + '.' + self._domain,
-                                                'address': rdata.addres})
+                                                'address': rdata.address})
 
                     for (name, rdataset) in zone.iterate_rdatasets(dns.rdatatype.CNAME):
                         for rdata in rdataset:
