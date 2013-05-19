@@ -1531,16 +1531,19 @@ def main():
 
             # if an output xml file is specified it will write returned results.
             if (output_file is not None):
+                print_status("Saving records to XML file: {0}".format(output_file, scan_info))
                 xml_enum_doc = dns_record_from_dict(returned_records, scan_info, domain)
                 write_to_file(xml_enum_doc, output_file)
 
             # if an output db file is specified it will write returned results.
             if (results_db is not None):
+                print_status("Saving records to SQLite3 file: {0}".format(results_db))
                 create_db(results_db)
                 write_db(results_db, returned_records)
 
             # if an output csv file is specified it will write returned results.
             if (csv_file is not None):
+                print_status("Saving records to CSV file: {0}".format(csv_file))
                 write_to_file(make_csv(returned_records), csv_file)
 
             sys.exit(0)
