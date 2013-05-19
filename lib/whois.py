@@ -54,7 +54,10 @@ def whois(target, whois_srv):
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.connect((whois_srv, WHOIS_PORT_NUMBER))
-        s.send(("n " + target + "\r\n").encode("utf-8"))
+        if whois_srv == "whois.arin.net":
+            s.send(("n " + target + "\r\n").encode("utf-8"))
+        else:
+            s.send((target + "\r\n").encode("utf-8"))
         response = ''
         while True:
             d = s.recv(WHOIS_RECEIVE_BUFFER_SIZE)
@@ -84,6 +87,10 @@ def get_whois_nets(data):
 def get_whois_orgname(data):
     org_pattern = "OrgName\:\s*(.*)\n"
     result = re.findall(org_pattern, data)
+    # Lets try RIPENET Format
+    if not result :
+        org_pattern = "netname\:\s*(.*)\n"
+        result = re.findall(org_pattern, data)
     if not result:
         result.append("Not Found")
     return result
