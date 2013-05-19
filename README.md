@@ -1,3 +1,13 @@
+##Version 0.8.4
+
+###Date: 5/19/13
+###Changes:
+- Improved Whois Parsing for ranges and organization.
+- Better Whois Record and Request handling for RIPE and APNIC.
+- Several bug fixes.
+- Added print messages for when saving output to files
+
+
 ##Version 0.8.1
 
 ###Changes:
