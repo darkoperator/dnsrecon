@@ -1,3 +1,9 @@
+##Version 0.8.5
+
+###Date: 5/25/13
+###Changes:
+- Changed the way IP Ranges are handled and greatly improved speed and memory use in Reverse Lookup of large networks.
+
 ##Version 0.8.4
 
 ###Date: 5/19/13
