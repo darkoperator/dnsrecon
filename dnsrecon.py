@@ -173,7 +173,7 @@ def process_range(arg):
     except:
         print_error("Range provided is not valid")
         return []
-    return [str(ip) for ip in ip_list]
+    return ip_list
 
 
 def process_spf_data(res, data):
@@ -224,9 +224,7 @@ def expand_cidr(cidr_to_expand):
     """
     ip_list = []
     c1 = IPNetwork(cidr_to_expand)
-    for x in ([str(c) for c in c1.iter_hosts()]):
-        ip_list.append(str(x))
-    return ip_list
+    return c1
 
 
 def expand_range(startip, endip):
@@ -234,11 +232,7 @@ def expand_range(startip, endip):
     Function to expand a given range and return an Array of IP Addresses that
     form the range.
     """
-    ip_list = []
-    ipr = iter_iprange(startip, endip)
-    for i in ipr:
-        ip_list.append(str(i))
-    return ip_list
+    return IPRange(startip, endip)
 
 
 def range2cidr(ip1, ip2):
@@ -408,10 +402,16 @@ def brute_reverse(res, ip_list, verbose=False):
 
     # Resolve each IP in a separate thread.
     try:
-        for x in ip_list:
+        ip_range = xrange(len(ip_list) -1 )
+    except NameError:
+        ip_range = range(len(ip_list) -1 )
+
+    try:
+        for x in ip_range:
+            ipaddress = str(ip_list[x])
             if verbose:
-                print_status("Trying {0}".format(x))
-            pool.add_task(res.get_ptr, x)
+                print_status("Trying {0}".format(ipaddress))
+            pool.add_task(res.get_ptr, ipaddress)
 
         # Wait for threads to finish.
         pool.wait_completion()
@@ -1286,7 +1286,7 @@ def main():
     do_whois = None
     thread_num = 10
     request_timeout = 3.0
-    ip_list = []
+    #ip_list = []
     ip_range = None
     results_db = None
     zonewalk = None
@@ -1364,9 +1364,8 @@ def main():
                 exit(1)
 
         elif opt in ('-r', '--range'):
-            ip_range = process_range(arg)
-            if len(ip_range) > 0:
-                ip_list.extend(ip_range)
+            ip_list = process_range(arg)
+            if len(ip_list) > 0:
                 if type is None:
                     type = "rvl"
                 elif not re.search(r'rvl', type):
