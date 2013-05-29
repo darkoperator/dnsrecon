@@ -18,7 +18,7 @@
 #    along with this program; if not, write to the Free Software
 #    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
-__version__ = '0.8.5'
+__version__ = '0.8.6'
 __author__ = 'Carlos Perez, Carlos_Perez@darkoperator.com'
 
 __doc__ = """
@@ -61,6 +61,7 @@ import dns.zone
 import dns.message
 import dns.rdata
 import dns.rdatatype
+import dns.flags
 from dns.dnssec import algorithm_to_text
 
 from netaddr import *
@@ -843,6 +844,41 @@ def dns_sec_check(domain, res):
         print_error("DNSSEC is not configured for {0}".format(domain))
 
 
+def check_bindversion(ns_server, timeout):
+    """
+    Check if the version of Bind can be queried for.
+    """
+    version = ""
+    request = dns.message.make_query('version.bind', 'txt', 'ch')
+    try:
+        response = dns.query.udp(request, ns_server, timeout=timeout, one_rr_per_rrset=True)
+        if (len(response.answer) > 0):
+            print_status("\t Bind Version for {0} {1}".format(ns_server, response.answer[0].items[0].strings[0]))
+            version = response.answer[0].items[0].strings[0]
+    except (dns.resolver.NXDOMAIN, dns.exception.Timeout, dns.resolver.NoAnswer, socket.error):
+        return version
+    return version
+
+
+def check_recursive(ns_server):
+    """
+    Check if a NS Server is recursive.
+    """
+    is_recursive = False
+    query = dns.message.make_query('www.google.com.', dns.rdatatype.NS)
+    try:
+        response = dns.query.udp(query, ns_server)
+        recursion_flag_pattern = "\.*RA\.*"
+        flags = dns.flags.to_text(response.flags)
+        result = re.findall(recursion_flag_pattern, flags)
+        if (result):
+            print_error("\t Recursion enabled on NS Server {0}".format(ns_server))
+            is_recursive = True
+    except (socket.error):
+        return is_recursive
+    return is_recursive
+
+
 def general_enum(res, domain, do_axfr, do_google, do_spf, do_whois, zw):
     """
     Function for performing general enumeration of a domain. It gets SOA, NS, MX
@@ -901,8 +937,9 @@ def general_enum(res, domain, do_axfr, do_google, do_spf, do_whois, zw):
                 print_status('\t {0} {1} {2}'.format(ns_rcrd[0], ns_rcrd[1], ns_rcrd[2]))
 
                 # Save dictionary of returned record
-                returned_records.extend([{'type': ns_rcrd[0], "target": ns_rcrd[1], 'address': ns_rcrd[2]}])
-
+                recursive = check_recursive(ns_rcrd[2])
+                bind_ver = check_bindversion(ns_rcrd[2], res._res.timeout)
+                returned_records.extend([{'type': ns_rcrd[0], "target": ns_rcrd[1], 'address': ns_rcrd[2], 'Recursive': str(recursive), "Version": bind_ver}])
                 ip_for_whois.append(ns_rcrd[2])
 
         except dns.resolver.NoAnswer:
