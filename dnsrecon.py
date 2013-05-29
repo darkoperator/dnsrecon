@@ -873,7 +873,7 @@ def check_recursive(ns_server):
         result = re.findall(recursion_flag_pattern, flags)
         if (result):
             print_error("\t Recursion enabled on NS Server {0}".format(ns_server))
-            is_recursive = True
+        is_recursive = True
     except (socket.error):
         return is_recursive
     return is_recursive
