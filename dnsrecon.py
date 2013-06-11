@@ -855,7 +855,7 @@ def check_bindversion(ns_server, timeout):
         if (len(response.answer) > 0):
             print_status("\t Bind Version for {0} {1}".format(ns_server, response.answer[0].items[0].strings[0]))
             version = response.answer[0].items[0].strings[0]
-    except (dns.resolver.NXDOMAIN, dns.exception.Timeout, dns.resolver.NoAnswer, socket.error):
+    except (dns.resolver.NXDOMAIN, dns.exception.Timeout, dns.resolver.NoAnswer, socket.error, dns.query.BadResponse):
         return version
     return version
 
