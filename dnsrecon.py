@@ -18,7 +18,7 @@
 #    along with this program; if not, write to the Free Software
 #    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
-__version__ = '0.8.6'
+__version__ = '0.8.7'
 __author__ = 'Carlos Perez, Carlos_Perez@darkoperator.com'
 
 __doc__ = """
@@ -431,7 +431,7 @@ def brute_reverse(res, ip_list, verbose=False):
     return returned_records
 
 
-def brute_domain(res, dict, dom, filter=None, verbose=False):
+def brute_domain(res, dict, dom, filter=None, verbose=False, ignore_wildcard=False):
     """
     Main Function for domain brute forcing
     """
@@ -443,7 +443,7 @@ def brute_domain(res, dict, dom, filter=None, verbose=False):
 
     # Check if wildcard resolution is enabled
     wildcard_ip = check_wildcard(res, dom)
-    if wildcard_ip:
+    if wildcard_ip and not ignore_wildcard:
         print_status('Do you wish to continue? y/n ')
         continue_brt = str(sys.stdin.readline()[:-1])
     if re.search(r'y', continue_brt, re.I):
@@ -1298,6 +1298,7 @@ def usage():
     print("   --lifetime         <number> Time to wait for a server to response to a query.")
     print("   --db               <file>   SQLite 3 file to save found records.")
     print("   --xml              <file>   XML File to save found records.")
+    print("   --iw                        Contibue bruteforcing a domain even if a wildcard record resolution is dicovered.")
     print("   -c, --csv          <file>   Comma separated value file.")
     print("   -v                          Show attempts in the bruteforce modes.")
     sys.exit(0)
@@ -1330,6 +1331,7 @@ def main():
     csv_file = None
     wildcard_filter = None
     verbose = False
+    ignore_wildcardrr = False
 
     #
     # Global Vars
@@ -1358,6 +1360,7 @@ def main():
                                       'lifetime=',
                                       'threads=',
                                       'db=',
+                                      'iw'
                                       'verbose'])
 
     except getopt.GetoptError:
@@ -1423,8 +1426,11 @@ def main():
         elif opt in ('-c', '--csv'):
             csv_file = arg
 
-        elif opt in ('-v'):
+        elif opt in ('-v', '--verbose'):
             verbose = True
+
+        elif opt in ('--iw'):
+            ignore_wildcardrr = True
 
         elif opt in ('-h'):
             usage()
@@ -1492,12 +1498,22 @@ def main():
                 elif r == 'brt':
                     if (dict is not None) and (domain is not None):
                         print_status('Performing host and subdomain brute force against {0}'.format(domain))
-                        brt_enum_records = brute_domain(res, dict, domain, wildcard_filter, verbose)
+                        brt_enum_records = brute_domain(res, dict, domain, wildcard_filter, verbose,ignore_wildcardrr)
 
                         if (output_file is not None) or (results_db is not None) or (csv_file is not None):
                             returned_records.extend(brt_enum_records)
+                    elif (domain is not None):
+                        script_dir = os.path.dirname(os.path.realpath(__file__)) + os.sep
+                        print_status("No file was speciied with domains to check.")
+                        name_list_dic = script_dir + "namelist.txt"
+                        if os.path.isfile(name_list_dic):
+                            print_status("Using file provided with tool: " + name_list_dic)
+                            brt_enum_records = brute_domain(res, name_list_dic, domain, wildcard_filter, verbose, ignore_wildcardrr)
+                        else:
+                            print_error("File {0} does not exist!".format(name_list_dic))
+                            exit(1)
                     else:
-                        print_error('No Dictionary file specified!')
+                        print_error('Could not execute a brute force enumeration. A domain was not given.')
                         sys.exit(1)
 
                 elif r == 'srv':
