@@ -75,6 +75,12 @@ from lib.msf_print import *
 brtdata = []
 
 
+import socks
+import socket
+
+socks.setdefaultproxy(socks.PROXY_TYPE_SOCKS4, "127.0.0.1", 9150, True)
+socket.socket = socks.socksocket
+
 # Function Definitions
 # -------------------------------------------------------------------------------
 
@@ -657,9 +663,12 @@ def dns_record_from_dict(record_dict_list, scan_info, domain):
     for r in record_dict_list:
         elem = Element("record")
         if type(r) is not str:
-            for k, v in r.items():
-                elem.attrib[k] = v
-            xml_doc.append(elem)
+            try:
+                for k, v in r.items():
+                    elem.attrib[k] = v
+                xml_doc.append(elem)
+            except AttributeError:
+                continue
 
     scanelem = Element("scaninfo")
     scanelem.attrib["arguments"] = scan_info[0]
