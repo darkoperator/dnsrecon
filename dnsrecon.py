@@ -75,12 +75,6 @@ from lib.msf_print import *
 brtdata = []
 
 
-import socks
-import socket
-
-socks.setdefaultproxy(socks.PROXY_TYPE_SOCKS4, "127.0.0.1", 9150, True)
-socket.socket = socks.socksocket
-
 # Function Definitions
 # -------------------------------------------------------------------------------
 
