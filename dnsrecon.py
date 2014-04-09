@@ -725,7 +725,13 @@ def make_csv(data):
         elif re.search(r'MX', n['type']):
             csv_data += n['type'] + "," + n['exchange'] + "," + n['address'] + "\n"
 
-        elif re.search(r'TXT|SPF', n['type']):
+        elif re.search(r'SPF', n['type']):
+            if "zone_server" in n:
+                csv_data += n['type'] + ",,,,,\'" + n['strings'] + "\'\n"
+            else:
+                csv_data += n['type'] + ",,,,,\'" + n['strings'] + "\'\n"
+
+        elif re.search(r'TXT', n['type']):
             if "zone_server" in n:
                 csv_data += n['type'] + ",,,,,\'" + n['strings'] + "\'\n"
             else:
@@ -1301,7 +1307,7 @@ def usage():
     print("   --lifetime         <number> Time to wait for a server to response to a query.")
     print("   --db               <file>   SQLite 3 file to save found records.")
     print("   --xml              <file>   XML File to save found records.")
-    print("   --iw                        Contibue bruteforcing a domain even if a wildcard record resolution is dicovered.")
+    print("   --iw                        Continua bruteforcing a domain even if a wildcard record resolution is discovered.")
     print("   -c, --csv          <file>   Comma separated value file.")
     print("   -v                          Show attempts in the bruteforce modes.")
     sys.exit(0)
@@ -1478,7 +1484,7 @@ def main():
                     if zonercds:
                         returned_records.extend(zonercds)
                     else:
-                        print_error("No records where returned in the zone trasfer attempt.")
+                        print_error("No records were returned in the zone transfer attempt.")
 
                 elif r == 'std':
                     print_status("Performing General Enumeration of Domain:".format(domain))
@@ -1507,7 +1513,7 @@ def main():
                             returned_records.extend(brt_enum_records)
                     elif (domain is not None):
                         script_dir = os.path.dirname(os.path.realpath(__file__)) + os.sep
-                        print_status("No file was speciied with domains to check.")
+                        print_status("No file was specified with domains to check.")
                         name_list_dic = script_dir + "namelist.txt"
                         if os.path.isfile(name_list_dic):
                             print_status("Using file provided with tool: " + name_list_dic)
