@@ -472,7 +472,7 @@ def brute_domain(res, dict, dom, filter=None, verbose=False, ignore_wildcard=Fal
                 if re.search(r'^A', rcd[0]):
                     # Filter Records if filtering was enabled
                     if filter:
-                        if not filter == rcd[2]:
+                        if not wildcard_ip == rcd[2]:
                             found_hosts.extend([{'type': rcd[0], 'name': rcd[1], 'address': rcd[2]}])
                     else:
                         found_hosts.extend([{'type': rcd[0], 'name': rcd[1], 'address': rcd[2]}])
@@ -1338,7 +1338,7 @@ def main():
     results_db = None
     zonewalk = None
     csv_file = None
-    wildcard_filter = None
+    wildcard_filter = False
     verbose = False
     ignore_wildcardrr = False
 
@@ -1369,7 +1369,7 @@ def main():
                                       'lifetime=',
                                       'threads=',
                                       'db=',
-                                      'iw'
+                                      'iw',
                                       'verbose'])
 
     except getopt.GetoptError:
@@ -1392,7 +1392,7 @@ def main():
             else:
                 # Resolve in the case if FQDN
                 answer = socket_resolv(arg)
-                # Check we actualy got a list
+                # Check we actually got a list
                 if len(answer) > 0:
                     # We will use the first IP found as the NS
                     ns_server = answer[0][2]
