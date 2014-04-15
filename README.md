@@ -1,3 +1,13 @@
+##Version 0.8.8
+
+###Date: 4/14/14
+###Changes:
+- Support for saving results in to a JSON file.
+- Bug fixes for:
+    - Parsing SPF and TXT records whe saving to XML, CSV and SQlite3.
+    - Filtering of wildcards records when brute forcing forward lookup zone.
+    - Several typos and miss spelled words.
+
 ##Version 0.8.5
 
 ###Date: 5/25/13
