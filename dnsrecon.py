@@ -32,13 +32,12 @@ requires netaddr https://github.com/drkjam/netaddr/
 """
 import getopt
 import os
-import re
 import string
-import sys
-import time
 import sqlite3
-import netaddr
 import datetime
+
+import netaddr
+
 
 # Manage the change in Python3 of the name of the Queue Library
 try:
@@ -64,8 +63,6 @@ import dns.rdatatype
 import dns.flags
 import json
 from dns.dnssec import algorithm_to_text
-
-from netaddr import *
 
 from lib.gooenum import *
 from lib.whois import *
@@ -783,7 +780,7 @@ def write_db(db, data):
 
         elif re.match(r'NS', n['type']):
             query = 'insert into data( type, name, address ) ' + \
-                    'values( "%(type)s", "%(mname)s", "%(address)s" )' % n
+                    'values( "%(type)s", "%(target)s", "%(address)s" )' % n
 
         elif re.match(r'SOA', n['type']):
             query = 'insert into data( type, name, address ) ' + \
@@ -793,9 +790,13 @@ def write_db(db, data):
             query = 'insert into data( type, name, address ) ' + \
                     'values( "%(type)s", "%(exchange)s", "%(address)s" )' % n
 
-        elif re.match(r'TXT|SPF', n['type']):
+        elif re.match(r'TXT', n['type']):
             query = 'insert into data( type, name, text) ' + \
-                    'values( "%(type)s", "%(name)s" ,"%(text)s" )' % n
+                    'values( "%(type)s", "%(name)s" ,"%(strings)s" )' % n
+
+        elif re.match(r'SPF', n['type']):
+            query = 'insert into data( type, text) ' + \
+                    'values( "%(type)s","%(text)s" )' % n
 
         elif re.match(r'SPF', n['type']):
             query = 'insert into data( type, text) ' + \
