@@ -884,21 +884,21 @@ def check_bindversion(ns_server, timeout):
     return version
 
 
-def check_recursive(ns_server):
+def check_recursive(ns_server, timeout):
     """
     Check if a NS Server is recursive.
     """
     is_recursive = False
     query = dns.message.make_query('www.google.com.', dns.rdatatype.NS)
     try:
-        response = dns.query.udp(query, ns_server)
+        response = dns.query.udp(query, ns_server, timeout)
         recursion_flag_pattern = "\.*RA\.*"
         flags = dns.flags.to_text(response.flags)
         result = re.findall(recursion_flag_pattern, flags)
         if (result):
             print_error("\t Recursion enabled on NS Server {0}".format(ns_server))
         is_recursive = True
-    except (socket.error):
+    except (socket.error, dns.exception.Timeout):
         return is_recursive
     return is_recursive
 
@@ -961,7 +961,7 @@ def general_enum(res, domain, do_axfr, do_google, do_spf, do_whois, zw):
                 print_status('\t {0} {1} {2}'.format(ns_rcrd[0], ns_rcrd[1], ns_rcrd[2]))
 
                 # Save dictionary of returned record
-                recursive = check_recursive(ns_rcrd[2])
+                recursive = check_recursive(ns_rcrd[2], res._res.timeout)
                 bind_ver = check_bindversion(ns_rcrd[2], res._res.timeout)
                 returned_records.extend([
                     {'type': ns_rcrd[0], "target": ns_rcrd[1], 'address': ns_rcrd[2], 'recursive': str(recursive),
