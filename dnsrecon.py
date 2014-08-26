@@ -570,7 +570,7 @@ def get_whois_nets_iplist(ip_list):
     found_nets = []
     for ip in ip_list:
         if ip != "no_ip":
-            # Find appropiate Whois Server for the IP
+            # Find appropriate Whois Server for the IP
             whois_server = get_whois(ip)
             # If we get a Whois server Process get the whois and process.
             if whois_server:
@@ -933,7 +933,7 @@ def general_enum(res, domain, do_axfr, do_google, do_spf, do_whois, zw):
             if len(returned_records) == 0:
                 from_zt = True
 
-    # If a Zone Trasfer was possible there is no need to enumerate the rest
+    # If a Zone Transfer was possible there is no need to enumerate the rest
     if from_zt is None:
 
         # Check if DNSSEC is configured
@@ -1066,7 +1066,7 @@ def general_enum(res, domain, do_axfr, do_google, do_spf, do_whois, zw):
 
 def query_ds(target, ns, timeout=5.0):
     """
-    Function for performing DS Record queries. Retuns answer object. Since a
+    Function for performing DS Record queries. Returns answer object. Since a
     timeout will break the DS NSEC chain of a zone walk it will exit if a timeout
     happens.
     """
