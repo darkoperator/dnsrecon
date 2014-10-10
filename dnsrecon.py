@@ -1501,6 +1501,7 @@ def main():
                 print_error('No Domain to target specified!')
                 sys.exit(1)
             try:
+                output_needed = (output_file is not None) or (results_db is not None) or (csv_file is not None) or (json_file is not None)
                 if r == 'axfr':
                     print_status('Testing NS Servers for Zone Transfer')
                     zonercds = res.zone_transfer()
@@ -1514,7 +1515,7 @@ def main():
                     std_enum_records = general_enum(res, domain, xfr, goo,
                                                     spf_enum, do_whois, zonewalk)
 
-                    if (output_file is not None) or (results_db is not None) or (csv_file is not None):
+                    if output_needed:
                         returned_records.extend(std_enum_records)
 
                 elif r == 'rvl':
@@ -1532,7 +1533,7 @@ def main():
                         print_status('Performing host and subdomain brute force against {0}'.format(domain))
                         brt_enum_records = brute_domain(res, dict, domain, wildcard_filter, verbose, ignore_wildcardrr)
 
-                        if (output_file is not None) or (results_db is not None) or (csv_file is not None):
+                        if output_needed:
                             returned_records.extend(brt_enum_records)
                     elif (domain is not None):
                         script_dir = os.path.dirname(os.path.realpath(__file__)) + os.sep
@@ -1553,26 +1554,26 @@ def main():
                     print_status('Enumerating Common SRV Records against {0}'.format(domain))
                     srv_enum_records = brute_srv(res, domain, verbose)
 
-                    if (output_file is not None) or (results_db is not None) or (csv_file is not None):
+                    if output_needed:
                         returned_records.extend(srv_enum_records)
 
                 elif r == 'tld':
                     print_status("Performing TLD Brute force Enumeration against {0}".format(domain))
                     tld_enum_records = brute_tlds(res, domain, verbose)
-                    if (output_file is not None) or (results_db is not None) or (csv_file is not None):
+                    if output_needed:
                         returned_records.extend(tld_enum_records)
 
                 elif r == 'goo':
                     print_status("Performing Google Search Enumeration against {0}".format(domain))
                     goo_enum_records = goo_result_process(res, scrape_google(domain))
-                    if (output_file is not None) or (results_db is not None) or (csv_file is not None):
+                    if output_needed:
                         returned_records.extend(goo_enum_records)
 
                 elif r == "snoop":
                     if (dict is not None) and (ns_server is not None):
                         print_status("Performing Cache Snooping against NS Server: {0}".format(ns_server))
                         cache_enum_records = in_cache(dict, ns_server)
-                        if (output_file is not None) or (results_db is not None) or (csv_file is not None):
+                        if output_needed:
                             returned_records.extend(cache_enum_records)
 
                     else:
@@ -1580,7 +1581,7 @@ def main():
                         sys.exit(1)
 
                 elif r == "zonewalk":
-                    if (output_file is not None) or (results_db is not None) or (csv_file is not None):
+                    if output_needed:
                         returned_records.extend(ds_zone_walk(res, domain))
                     else:
                         ds_zone_walk(res, domain)
