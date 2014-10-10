@@ -253,18 +253,23 @@ def check_wildcard(res, domain_trg):
     """
     Function for checking if Wildcard resolution is configured for a Domain
     """
-    wildcard = None
+    wildcard_ips = []
     test_name = ''.join(Random().sample(string.hexdigits + string.digits,
                                         12)) + '.' + domain_trg
-    ips = res.get_a(test_name)
+    ipsv4 = res.get_a(test_name)
+    ipsv6 = res.get_aaaa(test_name)
+    if len(ipsv4) > 0:
+        print_debug('IPv4 Wildcard resolution is enabled on this domain. ' + ' => It is resolving to {0}'.format(''.join(ipsv4[0][2])))
+        for entry in ipsv4:
+            wildcard_ips.append(''.join(entry[2]))
+    if len(ipsv6) > 0:
+        print_debug('IPv6 Wildcard resolution is enabled on this domain. ' + ' => It is resolving to {0}'.format(''.join(ipsv6[0][2])))
+        for entry in ipsv6:
+            wildcard_ips.append(''.join(entry[2]))
+    if len(ipsv4) > 0 or len(ipsv6) > 0:
+        print_debug('All queries will resolve to the previous address(es)!')    
 
-    if len(ips) > 0:
-        print_debug('Wildcard resolution is enabled on this domain')
-        print_debug('It is resolving to {0}'.format(''.join(ips[0][2])))
-        print_debug("All queries will resolve to this address!!")
-        wildcard = ''.join(ips[0][2])
-
-    return wildcard
+    return wildcard_ips
 
 
 def brute_tlds(res, domain, verbose=False):
@@ -427,7 +432,7 @@ def brute_reverse(res, ip_list, verbose=False):
     return returned_records
 
 
-def brute_domain(res, dict, dom, filter=None, verbose=False, ignore_wildcard=False):
+def brute_domain(res, dict, dom, filter_wildcard=False, verbose=False, ignore_wildcard=False):
     """
     Main Function for domain brute forcing
     """
@@ -438,8 +443,8 @@ def brute_domain(res, dict, dom, filter=None, verbose=False, ignore_wildcard=Fal
     continue_brt = 'y'
 
     # Check if wildcard resolution is enabled
-    wildcard_ip = check_wildcard(res, dom)
-    if wildcard_ip and not ignore_wildcard:
+    wildcard_ips = check_wildcard(res, dom)
+    if len(wildcard_ips) > 0 and not ignore_wildcard:
         print_status('Do you wish to continue? y/n ')
         continue_brt = str(sys.stdin.readline()[:-1])
     if re.search(r'y', continue_brt, re.I):
@@ -467,8 +472,8 @@ def brute_domain(res, dict, dom, filter=None, verbose=False, ignore_wildcard=Fal
             for rcd in rcd_found:
                 if re.search(r'^A', rcd[0]):
                     # Filter Records if filtering was enabled
-                    if filter:
-                        if not wildcard_ip == rcd[2]:
+                    if filter_wildcard:
+                        if rcd[2] not in wildcard_ips:
                             found_hosts.extend([{'type': rcd[0], 'name': rcd[1], 'address': rcd[2]}])
                     else:
                         found_hosts.extend([{'type': rcd[0], 'name': rcd[1], 'address': rcd[2]}])
