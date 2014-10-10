@@ -253,18 +253,23 @@ def check_wildcard(res, domain_trg):
     """
     Function for checking if Wildcard resolution is configured for a Domain
     """
-    wildcard = None
+    wildcard_ips = []
     test_name = ''.join(Random().sample(string.hexdigits + string.digits,
                                         12)) + '.' + domain_trg
-    ips = res.get_a(test_name)
+    ipsv4 = res.get_a(test_name)
+    ipsv6 = res.get_aaaa(test_name)
+    if len(ipsv4) > 0:
+        print_debug('IPv4 Wildcard resolution is enabled on this domain. ' + ' => It is resolving to {0}'.format(''.join(ipsv4[0][2])))
+        for entry in ipsv4:
+            wildcard_ips.append(''.join(entry[2]))
+    if len(ipsv6) > 0:
+        print_debug('IPv6 Wildcard resolution is enabled on this domain. ' + ' => It is resolving to {0}'.format(''.join(ipsv6[0][2])))
+        for entry in ipsv6:
+            wildcard_ips.append(''.join(entry[2]))
+    if len(ipsv4) > 0 or len(ipsv6) > 0:
+        print_debug('All queries will resolve to the previous address(es)!')    
 
-    if len(ips) > 0:
-        print_debug('Wildcard resolution is enabled on this domain')
-        print_debug('It is resolving to {0}'.format(''.join(ips[0][2])))
-        print_debug("All queries will resolve to this address!!")
-        wildcard = ''.join(ips[0][2])
-
-    return wildcard
+    return wildcard_ips
 
 
 def brute_tlds(res, domain, verbose=False):
@@ -427,7 +432,7 @@ def brute_reverse(res, ip_list, verbose=False):
     return returned_records
 
 
-def brute_domain(res, dict, dom, filter=None, verbose=False, ignore_wildcard=False):
+def brute_domain(res, dict, dom, filter_wildcard=False, verbose=False, ignore_wildcard=False):
     """
     Main Function for domain brute forcing
     """
@@ -438,8 +443,8 @@ def brute_domain(res, dict, dom, filter=None, verbose=False, ignore_wildcard=Fal
     continue_brt = 'y'
 
     # Check if wildcard resolution is enabled
-    wildcard_ip = check_wildcard(res, dom)
-    if wildcard_ip and not ignore_wildcard:
+    wildcard_ips = check_wildcard(res, dom)
+    if len(wildcard_ips) > 0 and not ignore_wildcard:
         print_status('Do you wish to continue? y/n ')
         continue_brt = str(sys.stdin.readline()[:-1])
     if re.search(r'y', continue_brt, re.I):
@@ -467,8 +472,8 @@ def brute_domain(res, dict, dom, filter=None, verbose=False, ignore_wildcard=Fal
             for rcd in rcd_found:
                 if re.search(r'^A', rcd[0]):
                     # Filter Records if filtering was enabled
-                    if filter:
-                        if not wildcard_ip == rcd[2]:
+                    if filter_wildcard:
+                        if rcd[2] not in wildcard_ips:
                             found_hosts.extend([{'type': rcd[0], 'name': rcd[1], 'address': rcd[2]}])
                     else:
                         found_hosts.extend([{'type': rcd[0], 'name': rcd[1], 'address': rcd[2]}])
@@ -1501,6 +1506,7 @@ def main():
                 print_error('No Domain to target specified!')
                 sys.exit(1)
             try:
+                output_needed = (output_file is not None) or (results_db is not None) or (csv_file is not None) or (json_file is not None)
                 if r == 'axfr':
                     print_status('Testing NS Servers for Zone Transfer')
                     zonercds = res.zone_transfer()
@@ -1514,7 +1520,7 @@ def main():
                     std_enum_records = general_enum(res, domain, xfr, goo,
                                                     spf_enum, do_whois, zonewalk)
 
-                    if (output_file is not None) or (results_db is not None) or (csv_file is not None):
+                    if output_needed:
                         returned_records.extend(std_enum_records)
 
                 elif r == 'rvl':
@@ -1532,7 +1538,7 @@ def main():
                         print_status('Performing host and subdomain brute force against {0}'.format(domain))
                         brt_enum_records = brute_domain(res, dict, domain, wildcard_filter, verbose, ignore_wildcardrr)
 
-                        if (output_file is not None) or (results_db is not None) or (csv_file is not None):
+                        if output_needed:
                             returned_records.extend(brt_enum_records)
                     elif (domain is not None):
                         script_dir = os.path.dirname(os.path.realpath(__file__)) + os.sep
@@ -1553,26 +1559,26 @@ def main():
                     print_status('Enumerating Common SRV Records against {0}'.format(domain))
                     srv_enum_records = brute_srv(res, domain, verbose)
 
-                    if (output_file is not None) or (results_db is not None) or (csv_file is not None):
+                    if output_needed:
                         returned_records.extend(srv_enum_records)
 
                 elif r == 'tld':
                     print_status("Performing TLD Brute force Enumeration against {0}".format(domain))
                     tld_enum_records = brute_tlds(res, domain, verbose)
-                    if (output_file is not None) or (results_db is not None) or (csv_file is not None):
+                    if output_needed:
                         returned_records.extend(tld_enum_records)
 
                 elif r == 'goo':
                     print_status("Performing Google Search Enumeration against {0}".format(domain))
                     goo_enum_records = goo_result_process(res, scrape_google(domain))
-                    if (output_file is not None) or (results_db is not None) or (csv_file is not None):
+                    if output_needed:
                         returned_records.extend(goo_enum_records)
 
                 elif r == "snoop":
                     if (dict is not None) and (ns_server is not None):
                         print_status("Performing Cache Snooping against NS Server: {0}".format(ns_server))
                         cache_enum_records = in_cache(dict, ns_server)
-                        if (output_file is not None) or (results_db is not None) or (csv_file is not None):
+                        if output_needed:
                             returned_records.extend(cache_enum_records)
 
                     else:
@@ -1580,7 +1586,7 @@ def main():
                         sys.exit(1)
 
                 elif r == "zonewalk":
-                    if (output_file is not None) or (results_db is not None) or (csv_file is not None):
+                    if output_needed:
                         returned_records.extend(ds_zone_walk(res, domain))
                     else:
                         ds_zone_walk(res, domain)
