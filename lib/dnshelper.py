@@ -356,10 +356,27 @@ class DnsHelper:
 
                     for (name, rdataset) in zone.iterate_rdatasets(dns.rdatatype.NS):
                         for rdata in rdataset:
-                            for n_ip in self.get_ip(rdata.target.to_text()):
+
+                            # Check if target is only the host name or a full FQDN.
+                            # If only a hostname we will appaned the domain name of the
+                            # Zone being transfered.
+                            target = rdata.target.to_text()
+                            target_split = target.split('.')
+                            appended = False
+                            if len(target_split) == 1:
+                                target = target + '.' + self._domain
+                                appended = True
+
+                            for n_ip in self.get_ip(target):
                                 if re.search(r'^A', n_ip[0]):
-                                    print_status('\t NS {0} {1}'.format(rdata.target.to_text()[:-1], n_ip[2]))
-                                    zone_records.append({'zone_server': ns_srv, 'type': 'NS',
+
+                                    if appended:
+                                        print_status('\t NS {0} {1}'.format(target, n_ip[2]))
+                                        zone_records.append({'zone_server': ns_srv, 'type': 'NS',
+                                                        'target': target, 'address': n_ip[2]})
+                                    else:
+                                        print_status('\t NS {0} {1}'.format(rdata.target.to_text()[:-1], n_ip[2]))
+                                        zone_records.append({'zone_server': ns_srv, 'type': 'NS',
                                                         'target': rdata.target.to_text()[:-1], 'address': n_ip[2]})
 
                     for (name, rdataset) in zone.iterate_rdatasets(dns.rdatatype.TXT):
