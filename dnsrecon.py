@@ -1333,7 +1333,7 @@ def usage():
     print("   -c, --csv          <file>   Comma separated value file.")
     print("   -j, --json         <file>   JSON file.")
     print("   -v                          Show attempts in the bruteforce modes.")
-    sys.exit(0)
+
 
 
 # Main
@@ -1398,6 +1398,7 @@ def main():
     except getopt.GetoptError:
         print_error("Wrong Option Provided!")
         usage()
+        sys.exit(0)
     #
     # Parse options
     #
@@ -1469,6 +1470,7 @@ def main():
 
         elif opt in ('-h'):
             usage()
+            sys.exit(0)
 
     # Make sure standard enumeration modificators are set.
     if ('-a' in sys.argv) or ('--axfr' in sys.argv):
@@ -1669,6 +1671,7 @@ def main():
             sys.exit(1)
     else:
         usage()
+        sys.exit(0)
 
 
 if __name__ == "__main__":
