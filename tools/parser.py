@@ -18,7 +18,7 @@
 #    along with this program; if not, write to the Free Software
 #    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
-__version__ = '0.0.6'
+__version__ = '0.0.7'
 __author__ = 'Carlos Perez, Carlos_Perez@darkoperator.com'
 
 import xml.etree.cElementTree as cElementTree
@@ -266,6 +266,7 @@ def main():
     target_list = False
     file = None
     names = False
+    #ip_set = []
 
     #
     # Define options
@@ -297,7 +298,7 @@ def main():
             ipranges = arg.split(",")
             for r in ipranges:
                 ip_filter.extend(process_range(r))
-            ip_set = IPSet(ip_filter)
+            #ip_set = IPSet(ip_filter)
 
         elif opt in ('-s', '--str'):
             name_filter = "({0})".format(arg)
@@ -339,9 +340,9 @@ def main():
         else:
             file_type = detect_type(file)
             if file_type == "xml":
-                xml_parse(file, ip_set, type_filter, name_filter, target_list)
+                xml_parse(file, ip_filter, type_filter, name_filter, target_list)
             elif file_type == "csv":
-                csv_parse(file, ip_set, type_filter, name_filter, target_list)
+                csv_parse(file, ip_filter, type_filter, name_filter, target_list)
     else:
         print_error("A DNSRecon XML or CSV output file must be provided to be parsed")
         usage()

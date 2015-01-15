@@ -1,4 +1,10 @@
+##Version 0.8.9
+
+###Date: 1/14/14
+###Changes:
+
 ##Version 0.8.8
+- Minos bug fixes in parsing tool and dnsrecon.
 
 ###Date: 4/14/14
 ###Changes:

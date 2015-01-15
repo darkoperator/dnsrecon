@@ -18,7 +18,7 @@
 #    along with this program; if not, write to the Free Software
 #    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
-__version__ = '0.8.8'
+__version__ = '0.8.9'
 __author__ = 'Carlos Perez, Carlos_Perez@darkoperator.com'
 
 __doc__ = """
@@ -710,44 +710,45 @@ def create_db(db):
 def make_csv(data):
     csv_data = "Type,Name,Address,Target,Port,String\n"
     for n in data:
+        # make sure that we are working with a dictionary.
+        if isinstance(n, dict):
+            if re.search(r'PTR|^[A]$|AAAA', n['type']):
+                csv_data += n['type'] + "," + n['name'] + "," + n['address'] + "\n"
 
-        if re.search(r'PTR|^[A]$|AAAA', n['type']):
-            csv_data += n['type'] + "," + n['name'] + "," + n['address'] + "\n"
+            elif re.search(r'NS', n['type']):
+                csv_data += n['type'] + "," + n['target'] + "," + n['address'] + "\n"
 
-        elif re.search(r'NS', n['type']):
-            csv_data += n['type'] + "," + n['target'] + "," + n['address'] + "\n"
+            elif re.search(r'SOA', n['type']):
+                csv_data += n['type'] + "," + n['mname'] + "," + n['address'] + "\n"
 
-        elif re.search(r'SOA', n['type']):
-            csv_data += n['type'] + "," + n['mname'] + "," + n['address'] + "\n"
+            elif re.search(r'MX', n['type']):
+                csv_data += n['type'] + "," + n['exchange'] + "," + n['address'] + "\n"
 
-        elif re.search(r'MX', n['type']):
-            csv_data += n['type'] + "," + n['exchange'] + "," + n['address'] + "\n"
+            elif re.search(r'SPF', n['type']):
+                if "zone_server" in n:
+                    csv_data += n['type'] + ",,,,,\'" + n['strings'] + "\'\n"
+                else:
+                    csv_data += n['type'] + ",,,,,\'" + n['strings'] + "\'\n"
 
-        elif re.search(r'SPF', n['type']):
-            if "zone_server" in n:
-                csv_data += n['type'] + ",,,,,\'" + n['strings'] + "\'\n"
+            elif re.search(r'TXT', n['type']):
+                if "zone_server" in n:
+                    csv_data += n['type'] + ",,,,,\'" + n['strings'] + "\'\n"
+                else:
+                    csv_data += n['type'] + "," + n['name'] + ",,,,\'" + n['strings'] + "\'\n"
+
+            elif re.search(r'SRV', n['type']):
+                csv_data += n['type'] + "," + n['name'] + "," + n['address'] + "," + n['target'] + "," + n['port'] + "\n"
+
+            elif re.search(r'CNAME', n['type']):
+                csv_data += n['type'] + "," + n['name'] + ",," + n['target'] + ",\n"
+
             else:
-                csv_data += n['type'] + ",,,,,\'" + n['strings'] + "\'\n"
-
-        elif re.search(r'TXT', n['type']):
-            if "zone_server" in n:
-                csv_data += n['type'] + ",,,,,\'" + n['strings'] + "\'\n"
-            else:
-                csv_data += n['type'] + "," + n['name'] + ",,,,\'" + n['strings'] + "\'\n"
-
-        elif re.search(r'SRV', n['type']):
-            csv_data += n['type'] + "," + n['name'] + "," + n['address'] + "," + n['target'] + "," + n['port'] + "\n"
-
-        elif re.search(r'CNAME', n['type']):
-            csv_data += n['type'] + "," + n['name'] + ",," + n['target'] + ",\n"
-
-        else:
-            # Handle not common records
-            t = n['type']
-            del n['type']
-            record_data = "".join(['%s =%s,' % (key, value) for key, value in n.items()])
-            records = [t, record_data]
-            csv_data + records[0] + ",,,,," + records[1] + "\n"
+                # Handle not common records
+                t = n['type']
+                del n['type']
+                record_data = "".join(['%s =%s,' % (key, value) for key, value in n.items()])
+                records = [t, record_data]
+                csv_data + records[0] + ",,,,," + records[1] + "\n"
 
     return csv_data
 
@@ -1025,7 +1026,9 @@ def general_enum(res, domain, do_axfr, do_google, do_spf, do_whois, zw):
         # Process SPF records if selected
         if do_spf is not None and len(text_data) > 0:
             print_status("Expanding IP ranges found in DNS and TXT records for Reverse Look-up")
-            found_spf_ranges.extend(process_spf_data(res, text_data))
+            processed_spf_data = process_spf_data(res, text_data)
+            if processed_spf_data is not None:
+                found_spf_ranges.extend(processed_spf_data)
             if len(found_spf_ranges) > 0:
                 print_status("Performing Reverse Look-up of SPF Ranges")
                 returned_records.extend(brute_reverse(res, unique(found_spf_ranges)))
