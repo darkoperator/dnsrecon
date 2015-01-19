@@ -1445,8 +1445,7 @@ def main():
                 elif not re.search(r'rvl', type):
                     type = "rvl," + type
             else:
-                usage()
-                sys.exit(1)
+                print_error('Failed CIDR or Range is Required for type rvl')
 
         elif opt in ('--theads'):
             thread_num = int(arg)
