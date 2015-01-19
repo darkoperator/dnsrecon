@@ -1356,6 +1356,7 @@ def main():
     thread_num = 10
     request_timeout = 3.0
     ip_range = None
+    ip_list = []
     results_db = None
     zonewalk = None
     csv_file = None
@@ -1592,7 +1593,6 @@ def main():
 
                 else:
                     print_error("This type of scan is not in the list {0}".format(r))
-                    usage()
 
             except dns.resolver.NXDOMAIN:
                 print_error("Could not resolve domain: {0}".format(domain))
