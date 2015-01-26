@@ -140,4 +140,4 @@
 
 Known Issues:
 - For some reason, the Python getopt is not parsing the options correctly in some cases. Considering changing to optparse even if it is  more complicated to manage.
-- When running Python 3.x the Whois wuery does not show the organization.
+- When running Python 3.x the whois query does not show the organization.
