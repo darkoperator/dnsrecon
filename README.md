@@ -11,7 +11,7 @@
 - Support for saving results in to a JSON file.
 - Bug fixes for:
     - Parsing SPF and TXT records when saving to XML, CSV and SQLite3.
-    - Filtering of wildcards records when brute forcing forward lookup zone.
+    - Filtering of wildcard records when brute forcing a forward zone lookup.
     - Several typos and misspelled words.
 
 ##Version 0.8.5
