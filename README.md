@@ -10,7 +10,7 @@
 ###Changes:
 - Support for saving results in to a JSON file.
 - Bug fixes for:
-    - Parsing SPF and TXT records when saving to XML, CSV and SQlite3.
+    - Parsing SPF and TXT records when saving to XML, CSV and SQLite3.
     - Filtering of wildcards records when brute forcing forward lookup zone.
     - Several typos and misspelled words.
 
