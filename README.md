@@ -8,17 +8,18 @@
 
 ###Date: 4/14/14
 ###Changes:
-- Support for saving results in to a JSON file.
+- Support for saving results to a JSON file.
 - Bug fixes for:
     - Parsing SPF and TXT records when saving to XML, CSV and SQLite3.
-    - Filtering of wildcard records when brute forcing a forward zone lookup.
+    - Filtering of wildcard records when brute forcing a forward lookup zone.
     - Several typos and misspelled words.
 
 ##Version 0.8.5
 
 ###Date: 5/25/13
 ###Changes:
-- Changed the way IP ranges are handled and greatly improved speed and memory use in a reverse lookup of large networks.
+- Changed the way IP ranges are handled.
+- Greatly improved speed and memory use in a reverse lookup of large networks.
 
 ##Version 0.8.4
 
@@ -42,13 +43,13 @@
 ###Changes:
 - CSV files now have a proper header for better parsing on tools that support them like Excel and PowerShell.
 - Windows System Console printing is now managed properly.
-- CNAME records are now saved in SQLite3 and CSV output. They where only saved on XML output.
+- CNAME records are now saved in SQLite3 and CSV output.
 - Fixed an error when performing zone transfers due to improper indent.
-- Fixed misslabling of -c option in the help message.
-- If a range or CIDR is given and no scan type is given, it will perform a reverse lookup against it. When other types are given rvl type will be appended to the list automaticaly.
+- Fixed mislabling of -c option in the help message.
+- If a range or CIDR is provided and no scan type is given, dnsrecon will perform a reverse lookup against it. When other types are given, the rvl type will be appended to the list automaticaly.
 - Improved NSEC type detection to eliminate possible false positives.
 - Added processing of LOC, NAPTR, CERT and RP records of zone transfers returned. Proper information saved on XML output with proper field names in the attributes for these.
-- Fixes on Hoogle enumeration parsing.
+- Fixes on Google enumeration parsing.
 - Fixed several typos.
 - Better handling and canceling of threaded tasks.
 
@@ -57,28 +58,28 @@
 ###Date: 5/2/12
 ###Changes:
 - Fixes for Python 3 compatibility.
-- Fixed key values for when saving results to XML and CSV.
+- Fixed key values when saving results to XML and CSV.
 
 ##Version 0.7.0
 
 ###Date: 3/2/12
 ###Changes:
-- Fixes to zone walk option.
+- Fixes to zonewalk option.
 - Query for _domainkey record in standard enumeration.
 
 ##Version 0.6.8
 
 ###Date: 2/15/12
 ###Changes:
-- Added tool folder with python script for parsing results in XML and CSV format. Provide ability to filter and extract hostnames and subdomains.
+- Added tool folder with Python script for parsing results in XML and CSV format. 
+- Added the ability to filter and extract hostnames and subdomains.
 - Added Metasploit plugin for importing into Metasploit the CSV and XML results in a very fast manner using Nokogiri for XML. It will add hosts, notes for hostnames and service entries.
 -Improvements on the zone transfer code:
-
 	- Handling of zones with no NS records.
 	- Proper parsing of PTR records in returned zones.
-	- De-duplication of NS record IP addresses.
+	- De-duplication of NS records IP addresses.
 	- Provide additional info on failure.
-	- Provide more infomation on actions being taken.
+	- Provide more info on actions being taken.
 
 - Bug fixes reported by users at RandomStorm and by Robin Wood.
 - Zone walking has been greatly improved including the accuracy of the results and the formatting to extract the information in a manner more useful for a pentester.
@@ -90,7 +91,7 @@
 - Does not for a Origin Check for zones transferred since some admin may have configured their zones without NS servers as experienced by a user.
 - Handles exception if NS records cannot be resolved when performing a zone transfer test.
 - Will always ??? for a test for the SOA and test it for zone transfer.
-- Fixed a problem when generating an XML from a zone transfer with the new parsing method. Info type was added to the XML output.
+- Fixed a problem when generating an XML file from a zone transfer with the new parsing method. Info type was added to the XML output.
 
 ##Version 0.6.5
 ###Date: 1/16/12
@@ -104,14 +105,14 @@
 ##Version 0.6.1
 ###Date: 1/14/12
 ###Changes:
-- IPv6 support for ranges in reverse look-up.
+- IPv6 support for ranges in reverse lookup.
 - Enhanced parsing of SPF records ranges to cover includes and IPv6.
 - Specific host query for TXT RR.
 - Better handling and logging of TXT and SPF RR.
 - Started changes for Python 3.x compatibility.
-- Filtering of wildcard records when saving brute-force  results.
-- Show found records after brute-force of domain is finished.
-- Manage Ctrl-C when doing a brute-force and save results for those records found.
+- Filtering of wildcard records when saving brute force results.
+- Show found records after brute force of domain is finished.
+- Manage Ctrl-c when doing a brute force and save results for those records found.
 - Corrected several spelling errors.
 
 ##Version 0.6
@@ -126,7 +127,7 @@
 ###Date: 1/8/12
 ###Changes:
 - Additional fixes for XML formatting.
-- Ability to end a zone walk with Ctrl-c and not lose data.
+- Ability to end a zonewalk with Ctrl-c and not lose data.
 - Initial Metasploit plug-in to be able to import data from XML file generated by dnsrecon.
 
 ##Version 0.5
@@ -134,10 +135,10 @@
 ###Changes:
 - Will check in standard enumeration if DNSSEC is configured for the zone by checking for DNSKEY records and checking if the zone is configured as NSEC or NSEC3.
 - With the get_ip() method it will also check for CNAME records and add those to the list found hosts.
-- Will perform a DNSSEC zone walk if NSEC records are available. It identifies currently A, AAAA, CNAME, NS and SRV records any other it will just print the RDATA info.
+- Will perform a DNSSEC zonewalk if NSEC records are available. It currently identifies A, AAAA, CNAME, NS and SRV records. For any other, it will just print the RDATA info.
 - General record resolver method added.
 - Changes to the options.
 
 Known Issues:
-- For some reason, the Python getopt is not parsing the options correctly in some cases. Considering changing to optparse even if it is  more complicated to manage.
-- When running Python 3.x the whois query does not show the organization.
+- For some reason, the Python getopt is not parsing the options correctly in some cases. Considering changing to optparse even if it is more complicated to manage.
+- When running Python 3.x the Whois query does not show the organization.
