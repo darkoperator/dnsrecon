@@ -427,7 +427,7 @@ def brute_reverse(res, ip_list, verbose=False):
     return returned_records
 
 
-def brute_domain(res, dict, dom, filter=None, verbose=False, ignore_wildcard=False):
+def brute_domain(res, dict, dom, filter=None, verbose=False, ignore_wildcard=False, abort_wildcard=False):
     """
     Main Function for domain brute forcing
     """
@@ -439,9 +439,12 @@ def brute_domain(res, dict, dom, filter=None, verbose=False, ignore_wildcard=Fal
 
     # Check if wildcard resolution is enabled
     wildcard_ip = check_wildcard(res, dom)
-    if wildcard_ip and not ignore_wildcard:
-        print_status('Do you wish to continue? y/n ')
-        continue_brt = str(sys.stdin.readline()[:-1])
+    if wildcard_ip:
+        if not ignore_wildcard and not abort_wildcard:
+            print_status('Do you wish to continue? y/n ')
+            continue_brt = str(sys.stdin.readline()[:-1])
+        elif abort_wildcard and not ignore_wildcard:
+            continue_brt = 'n'
     if re.search(r'y', continue_brt, re.I):
         # Check if Dictionary file exists
 
@@ -1330,6 +1333,7 @@ def usage():
     print("   --xml              <file>   XML File to save found records.")
     print("   --iw                        Continua bruteforcing a domain even if a wildcard record resolution is ")
     print("                               discovered.")
+    print("  --aw                         Abort if a wildcard record resolution is discovered")
     print("   -c, --csv          <file>   Comma separated value file.")
     print("   -j, --json         <file>   JSON file.")
     print("   -v                          Show attempts in the bruteforce modes.")
@@ -1364,6 +1368,7 @@ def main():
     wildcard_filter = False
     verbose = False
     ignore_wildcardrr = False
+    abort_wildcardrr = False
 
     #
     # Global Vars
@@ -1393,6 +1398,7 @@ def main():
                                        'threads=',
                                        'db=',
                                        'iw',
+                                       'aw',
                                        'verbose',
                                        'json='])
 
@@ -1468,6 +1474,9 @@ def main():
         elif opt in ('--iw'):
             ignore_wildcardrr = True
 
+        elif opt in ('--aw'):
+            abort_wildcardrr = True
+
         elif opt in ('-h'):
             usage()
             sys.exit(0)
@@ -1535,7 +1544,7 @@ def main():
                 elif r == 'brt':
                     if (dict is not None) and (domain is not None):
                         print_status('Performing host and subdomain brute force against {0}'.format(domain))
-                        brt_enum_records = brute_domain(res, dict, domain, wildcard_filter, verbose, ignore_wildcardrr)
+                        brt_enum_records = brute_domain(res, dict, domain, wildcard_filter, verbose, ignore_wildcardrr, abort_wildcardrr)
 
                         if (output_file is not None) or (results_db is not None) or (csv_file is not None):
                             returned_records.extend(brt_enum_records)
@@ -1546,7 +1555,7 @@ def main():
                         if os.path.isfile(name_list_dic):
                             print_status("Using file provided with tool: " + name_list_dic)
                             brt_enum_records = brute_domain(res, name_list_dic, domain, wildcard_filter, verbose,
-                                                            ignore_wildcardrr)
+                                                            ignore_wildcardrr, abort_wildcardrr)
                         else:
                             print_error("File {0} does not exist!".format(name_list_dic))
                             exit(1)
