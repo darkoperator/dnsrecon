@@ -779,7 +779,7 @@ def write_db(db, data):
             query = 'insert into data( type, name, address ) ' + \
                     'values( "%(type)s", "%(name)s","%(address)s" )' % n
 
-        elif re.match(r'NS', n['type']):
+        elif re.match(r'NS$', n['type']):
             query = 'insert into data( type, name, address ) ' + \
                     'values( "%(type)s", "%(target)s", "%(address)s" )' % n
 
