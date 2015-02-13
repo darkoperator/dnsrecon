@@ -792,8 +792,8 @@ def write_db(db, data):
                     'values( "%(type)s", "%(exchange)s", "%(address)s" )' % n
 
         elif re.match(r'TXT', n['type']):
-            query = 'insert into data( type, name, text) ' + \
-                    'values( "%(type)s", "%(name)s" ,"%(strings)s" )' % n
+            query = 'insert into data( type, text) ' + \
+                    'values( "%(type)s","%(strings)s" )' % n
 
         elif re.match(r'SPF', n['type']):
             query = 'insert into data( type, text) ' + \
