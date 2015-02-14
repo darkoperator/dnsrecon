@@ -170,23 +170,47 @@ class DnsHelper:
         address of the host both in IPv4 and IPv6. Returns an Array.
         """
         soa_records = []
-        answers = self._res.query(self._domain, 'SOA')
-        for rdata in answers:
-            name = rdata.mname.to_text()
-            ipv4_answers = self._res.query(name, 'A')
-            for ardata in ipv4_answers:
-                soa_records.append(['SOA', name[:-1], ardata.address])
 
         try:
+            #Try the default method:
+            answers = self._res.query(self._domain, 'SOA')
             for rdata in answers:
                 name = rdata.mname.to_text()
-                ipv4_answers = self._res.query(name, 'AAAA')
+                ipv4_answers = self._res.query(name, 'A')
                 for ardata in ipv4_answers:
                     soa_records.append(['SOA', name[:-1], ardata.address])
-
-            return soa_records
+                try:
+                    for rdata in answers:
+                        name = rdata.mname.to_text()
+                        ipv4_answers = self._res.query(name, 'AAAA')
+                        for ardata in ipv4_answers:
+                            soa_records.append(['SOA', name[:-1], ardata.address])
+                except:
+                    pass
         except:
-            return soa_records
+            #Try the alternative method (for subdomains)
+            try:
+                nameservers = dns.resolver.get_default_resolver().nameservers
+                query = dns.message.make_query(self._domain, dns.rdatatype.SOA)
+                for nameserver in nameservers:
+                    response = response = dns.query.tcp(query, nameserver)
+                    if len(response.authority) > 0:
+                        set = response.authority
+                    elif len(response.answer) > 0:
+                        set = response.answer
+                    else:
+                        #TODO: Could this occur?
+                        raise RuntimeError("No results in answer???")
+                    for rrset in set:
+                        if rrset.rdtype == dns.rdatatype.SOA:
+                            for rdata in rrset:
+                                name = rdata.mname.to_text()
+                                ipv4_answers = self._res.query(name, 'A')
+                                for ardata in ipv4_answers:
+                                    soa_records.append(['SOA', name[:-1], ardata.address])
+            except:
+                return soa_records
+        return soa_records
 
     def get_spf(self):
         """
