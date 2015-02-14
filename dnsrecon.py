@@ -715,7 +715,7 @@ def make_csv(data):
             if re.search(r'PTR|^[A]$|AAAA', n['type']):
                 csv_data += n['type'] + "," + n['name'] + "," + n['address'] + "\n"
 
-            elif re.search(r'NS', n['type']):
+            elif re.search(r'NS$', n['type']):
                 csv_data += n['type'] + "," + n['target'] + "," + n['address'] + "\n"
 
             elif re.search(r'SOA', n['type']):
