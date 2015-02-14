@@ -619,7 +619,7 @@ class DnsHelper:
                                                  'algorithm': algorithm_to_text(rdata.algorithm),
                                                  'flags': rdata.flags,
                                                  'iterations': rdata.iterations,
-                                                 'salt': rdata.salt})
+                                                 'salt': dns.rdata._hexify(rdata.salt)})
 
                     for (name, rdataset) in zone.iterate_rdatasets(dns.rdatatype.IPSECKEY):
                         for rdata in rdataset:

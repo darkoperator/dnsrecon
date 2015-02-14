@@ -657,7 +657,17 @@ def dns_record_from_dict(record_dict_list, scan_info, domain):
         if type(r) is not str:
             try:
                 for k, v in r.items():
-                    elem.attrib[k] = v
+                    try:
+                        k = unicode(str(k))
+                        v = unicode(str(v))
+                        elem.attrib[k] = v
+                    except:
+                        print ("Could not convert key or value to unicode: '%s = %s'" % (repr(k), repr(v)))
+                        print ("In element: %s" % repr(elem.attrib))
+                        continue
+                xml_doc.append(elem)
+            except AttributeError:
+                continue
                 xml_doc.append(elem)
             except AttributeError:
                 continue
