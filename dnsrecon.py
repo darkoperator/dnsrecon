@@ -3,7 +3,7 @@
 
 #    DNSRecon
 #
-#    Copyright (C) 2014  Carlos Perez
+#    Copyright (C) 2015  Carlos Perez
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -18,7 +18,7 @@
 #    along with this program; if not, write to the Free Software
 #    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
-__version__ = '0.8.9'
+__version__ = '0.8.10'
 __author__ = 'Carlos Perez, Carlos_Perez@darkoperator.com'
 
 __doc__ = """
@@ -1055,7 +1055,9 @@ def general_enum(res, domain, do_axfr, do_google, do_spf, do_whois, zw):
 
         if do_whois:
             whois_rcd = whois_ips(res, ip_for_whois)
-            returned_records.extend(whois_rcd)
+            if whois_rcd:
+                for r in whois_rcd:
+                    returned_records.extend(r)
 
         if zw:
             zone_info = ds_zone_walk(res, domain)
