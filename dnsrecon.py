@@ -662,8 +662,8 @@ def dns_record_from_dict(record_dict_list, scan_info, domain):
                         v = unicode(str(v))
                         elem.attrib[k] = v
                     except:
-                        print ("Could not convert key or value to unicode: '%s = %s'" % (repr(k), repr(v)))
-                        print ("In element: %s" % repr(elem.attrib))
+                        print_error("Could not convert key or value to unicode: '{0} = {1}'".format((repr(k), repr(v))))
+                        print_error("In element: {0}".format(repr(elem.attrib)))
                         continue
                 xml_doc.append(elem)
             except AttributeError:
