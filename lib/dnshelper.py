@@ -21,6 +21,7 @@ import re
 import dns.query
 import dns.resolver
 import dns.reversename
+import dns.message
 import socket
 from dns.zone import *
 from dns.dnssec import algorithm_to_text
@@ -170,12 +171,22 @@ class DnsHelper:
         address of the host both in IPv4 and IPv6. Returns an Array.
         """
         soa_records = []
-        answers = self._res.query(self._domain, 'SOA')
-        for rdata in answers:
-            name = rdata.mname.to_text()
-            ipv4_answers = self._res.query(name, 'A')
-            for ardata in ipv4_answers:
-                soa_records.append(['SOA', name[:-1], ardata.address])
+        query = dns.message.make_query(self._domain, dns.rdatatype.SOA)
+        try:
+            response = dns.query.udp(query, self._res.nameservers[0], self._res.timeout)
+            if len(response.answer) > 0:
+                answers = response.answer
+            elif len(response.authority) > 0:
+                answers = response.authority
+            for rdata in answers:
+                # A zone only has one SOA record so we select the first.
+                name = rdata[0].mname.to_text()
+                ipv4_answers = self._res.query(name, 'A')
+                for ardata in ipv4_answers:
+                    soa_records.append(['SOA', name[:-1], ardata.address])
+        except (dns.resolver.NXDOMAIN, dns.exception.Timeout, dns.resolver.NoAnswer, socket.error, dns.query.BadResponse):
+            print_error('Error while resolving SOA record.')
+            return soa_records
 
         try:
             for rdata in answers:
