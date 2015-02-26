@@ -764,11 +764,9 @@ def make_csv(data):
 
 
 def write_json(jsonfile, data, scan_info):
-    print(str(data))
     scaninfo = {'type': 'ScanInfo', 'arguments': scan_info[0], 'date': scan_info[1]}
     data.insert(0, scaninfo)
     json_data = json.dumps(data, sort_keys=True, indent=4, separators=(',', ': '))
-    print(json_data)
     write_to_file(json_data, jsonfile)
 
 
