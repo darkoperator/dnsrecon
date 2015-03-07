@@ -84,8 +84,12 @@ class DnsHelper:
             for ardata in ipv4_answers.response.answer:
                 for rdata in ardata:
                     if rdata.rdtype == 5:
-                        address.append(["CNAME", host_trg, rdata.target.to_text()[:-1]])
-                        host_trg = rdata.target.to_text()[:-1]
+                        if rdata.target.to_text().endswith('.'):
+                            address.append(["CNAME", host_trg, rdata.target.to_text()[:-1]])
+                            host_trg = rdata.target.to_text()[:-1]
+                        else:
+                            address.append(["CNAME", host_trg, rdata.target.to_text()])
+                            host_trg = rdata.target.to_text()
                     else:
                         address.append(["A", host_trg, rdata.address])
         except:
@@ -103,8 +107,12 @@ class DnsHelper:
             for ardata in ipv6_answers.response.answer:
                 for rdata in ardata:
                     if rdata.rdtype == 5:
-                        address.append(["CNAME", host_trg, rdata.target.to_text()[:-1]])
-                        host_trg = rdata.target.to_text()[:-1]
+                        if rdata.target.to_text().endswith('.'):
+                            address.append(["CNAME", host_trg, rdata.target.to_text()[:-1]])
+                            host_trg = rdata.target.to_text()[:-1]
+                        else:
+                            address.append(["CNAME", host_trg, rdata.target.to_text()])
+                            host_trg = rdata.target.to_text()
                     else:
                         address.append(["AAAA", host_trg, rdata.address])
         except:
@@ -134,8 +142,12 @@ class DnsHelper:
                 name = rdata.exchange.to_text()
                 ipv4_answers = self._res.query(name, 'A')
                 for ardata in ipv4_answers:
-                    mx_records.append(['MX', name[:-1], ardata.address,
-                                      rdata.preference])
+                    if name.endswith('.'):
+                        mx_records.append(['MX', name[:-1], ardata.address,
+                                          rdata.preference])
+                    else:
+                        mx_records.append(['MX', name, ardata.address,
+                                          rdata.preference])
             except:
                 pass
         try:
@@ -143,8 +155,12 @@ class DnsHelper:
                 name = rdata.exchange.to_text()
                 ipv6_answers = self._res.query(name, 'AAAA')
                 for ardata in ipv6_answers:
-                    mx_records.append(['MX', name[:-1], ardata.address,
-                                      rdata.preference])
+                    if name.endswith('.'):
+                        mx_records.append(['MX', name[:-1], ardata.address,
+                                          rdata.preference])
+                    else:
+                        mx_records.append(['MX', name, ardata.address,
+                                          rdata.preference])
             return mx_records
         except:
             return mx_records
@@ -183,7 +199,10 @@ class DnsHelper:
                 name = rdata[0].mname.to_text()
                 ipv4_answers = self._res.query(name, 'A')
                 for ardata in ipv4_answers:
-                    soa_records.append(['SOA', name[:-1], ardata.address])
+                    if name.endswith('.'):
+                        soa_records.append(['SOA', name[:-1], ardata.address])
+                    else:
+                        soa_records.append(['SOA', name, ardata.address])
         except (dns.resolver.NXDOMAIN, dns.exception.Timeout, dns.resolver.NoAnswer, socket.error, dns.query.BadResponse):
             print_error('Error while resolving SOA record.')
             return soa_records
@@ -193,7 +212,10 @@ class DnsHelper:
                 name = rdata.mname.to_text()
                 ipv4_answers = self._res.query(name, 'AAAA')
                 for ardata in ipv4_answers:
-                    soa_records.append(['SOA', name[:-1], ardata.address])
+                    if name.endswith('.'):
+                        soa_records.append(['SOA', name[:-1], ardata.address])
+                    else:
+                        soa_records.append(['SOA', name, ardata.address])
 
             return soa_records
         except:
@@ -242,7 +264,10 @@ class DnsHelper:
         try:
             answers = self._res.query(n, 'PTR')
             for a in answers:
-                found_ptr.append(['PTR', a.target.to_text()[:-1], ipaddress])
+                if a.target.to_text().endswith('.'):
+                    found_ptr.append(['PTR', a.target.to_text()[:-1], ipaddress])
+                else:
+                    found_ptr.append(['PTR', a.target.to_text(), ipaddress])
             return found_ptr
         except:
             return None
@@ -255,17 +280,21 @@ class DnsHelper:
         try:
             answers = self._res.query(host, 'SRV')
             for a in answers:
-                target = a.target.to_text()
-                #print a.target.to_text()
-                ips = self.get_ip(target[:-1])
+                if a.target.to_text().endswith('.'):
+                    target = a.target.to_text()[:-1]
+                else:
+                    target = a.target.to_text()
+
+                ips = self.get_ip(target)
+
                 if ips:
                     for ip in ips:
                         if re.search('(^A|AAAA)', ip[0]):
-                            record.append(['SRV', host, a.target.to_text()[:-1], ip[2],
+                            record.append(['SRV', host, target, ip[2],
                                           str(a.port), str(a.weight)])
 
                 else:
-                    record.append(['SRV', host, a.target.to_text()[:-1], "no_ip",
+                    record.append(['SRV', host, target, "no_ip",
                                   str(a.port), str(a.weight)])
         except:
             return record
@@ -386,9 +415,14 @@ class DnsHelper:
                                         zone_records.append({'zone_server': ns_srv, 'type': 'NS',
                                                         'target': target, 'address': n_ip[2]})
                                     else:
-                                        print_status('\t NS {0} {1}'.format(rdata.target.to_text()[:-1], n_ip[2]))
+                                        if rdata.target.to_text().endswith('.'):
+                                            target = rdata.target.to_text()[:-1]
+                                        else:
+                                            target = rdata.target.to_text()
+
+                                        print_status('\t NS {0} {1}'.format(target, n_ip[2]))
                                         zone_records.append({'zone_server': ns_srv, 'type': 'NS',
-                                                        'target': rdata.target.to_text()[:-1], 'address': n_ip[2]})
+                                                        'target': target, 'address': n_ip[2]})
 
                     for (name, rdataset) in zone.iterate_rdatasets(dns.rdatatype.TXT):
                         for rdata in rdataset:
@@ -414,11 +448,15 @@ class DnsHelper:
                         for rdata in rdataset:
                             for e_ip in self.get_ip(rdata.exchange.to_text()):
                                 if re.search(r'^A', e_ip[0]):
+                                    if rdata.exchange.to_text().endswith('.'):
+                                        exchange = rdata.exchange.to_text()[:-1]
+                                    else:
+                                        exchange = rdata.exchange.to_text()
                                     print_status('\t MX {0} {1} {2}'.format(str(name) + '.' + self._domain,
-                                                 rdata.exchange.to_text()[:-1], e_ip[2]))
+                                                 exchange, e_ip[2]))
                                 zone_records.append({'zone_server': ns_srv, 'type': 'MX',
                                                      'name': str(name) + '.' + self._domain,
-                                                     'exchange': rdata.exchange.to_text()[:-1],
+                                                     'exchange': exchange,
                                                      'address': e_ip[2]})
 
                     for (name, rdataset) in zone.iterate_rdatasets(dns.rdatatype.AAAA):
@@ -441,11 +479,15 @@ class DnsHelper:
                         for rdata in rdataset:
                             for t_ip in self.get_ip(rdata.target.to_text()):
                                 if re.search(r'^A', t_ip[0]):
+                                    if rdata.target.to_text().endswith('.'):
+                                        ctarget = rdata.target.to_text()[:-1]
+                                    else:
+                                        ctarget = rdata.target.to_text()
                                     print_status('\t CNAME {0} {1} {2}'.format(str(name) + '.'
                                                  + self._domain, rdata.target.to_text(), t_ip[2]))
                                     zone_records.append({'zone_server': ns_srv, 'type': 'CNAME',
                                                          'name': str(name) + '.' + self._domain,
-                                                         'target': str(rdata.target.to_text())[:-1],
+                                                         'target': str(ctarget),
                                                          'address': t_ip[2]})
 
                     for (name, rdataset) in zone.iterate_rdatasets(dns.rdatatype.SRV):
