@@ -29,9 +29,9 @@ def print_status(message=""):
 
 def print_good(message=""):
     if sys.stdout.isatty() and platform.system() != "Windows":
-        print("\033[1;32m[*]\033[1;m {0}".format(message))
+        print("\033[1;32m[+]\033[1;m {0}".format(message))
     else:
-        print("[*] {0}".format(message))
+        print("[+] {0}".format(message))
 
 
 def print_error(message=""):
