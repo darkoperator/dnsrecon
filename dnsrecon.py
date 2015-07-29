@@ -1630,8 +1630,8 @@ def main():
     elif domain is not None:
         try:
             print_status("Performing General Enumeration of Domain: {0}".format(domain))
-            std_enum_records = std_enum_records = general_enum(res, domain, xfr, goo,
-                                                               spf_enum, do_whois, zonewalk)
+            std_enum_records = general_enum(res, domain, xfr, goo,
+                                            spf_enum, do_whois, zonewalk)
 
             returned_records.extend(std_enum_records)
 
