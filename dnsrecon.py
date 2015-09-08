@@ -1446,7 +1446,7 @@ def main():
             else:
                 print_error('Failed CIDR or Range is Required for type rvl')
 
-        elif opt in ('--theads'):
+        elif opt in ('--threads'):
             thread_num = int(arg)
 
         elif opt in ('--lifetime'):
