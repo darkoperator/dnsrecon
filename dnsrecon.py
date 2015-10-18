@@ -515,11 +515,11 @@ def in_cache(dict_file, ns):
 
 def scrape_google(dom):
     """
-    Function for enumerating sub-domains and hosts by scrapping Google.
+    Function for enumerating sub-domains and hosts by scraping Google.
     """
     results = []
     filtered = []
-    searches = ["100", "200", "300", "400", "500"]
+    searches = ["0","100", "200", "300", "400", "500"]
     data = ""
     urllib._urlopener = AppURLopener()
 
