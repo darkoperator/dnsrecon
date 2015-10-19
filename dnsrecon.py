@@ -527,6 +527,9 @@ def scrape_google(dom):
         url = "http://google.com/search?hl=en&lr=&ie=UTF-8&q=%2B" + dom + "&start=" + n + "&sa=N&filter=0&num=100"
         sock = urllib.urlopen(url)
         data += sock.read()
+        if re.search('Our systems have detected unusual traffic from your computer network',data) != None:
+          print_error("Google has detected the search as \'bot activity, stopping search...")
+          return 
         sock.close()
     results.extend(unique(re.findall("htt\w{1,2}:\/\/([^:?]*[a-b0-9]*[^:?]*\." + dom + ")\/", data)))
 
@@ -544,6 +547,8 @@ def goo_result_process(res, found_hosts):
     with all the results found.
     """
     returned_records = []
+    if found_hosts == None:
+        return None
     for sd in found_hosts:
         for sdip in res.get_ip(sd):
             if re.search(r'^A|CNAME', sdip[0]):
