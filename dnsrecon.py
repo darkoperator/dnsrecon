@@ -446,21 +446,21 @@ def brute_domain(res, dict, dom, filter=None, verbose=False, ignore_wildcard=Fal
         # Check if Dictionary file exists
 
         if os.path.isfile(dict):
-            f = open(dict, 'r+')
+            with open(dict) as f:
 
-            # Thread brute-force.
-            try:
-                for line in f:
-                    if verbose:
-                        print_status("Trying {0}".format(line.strip() + '.' + dom.strip()))
-                    target = line.strip() + '.' + dom.strip()
-                    pool.add_task(res.get_ip, target)
+                # Thread brute-force.
+                try:
+                    for line in f:
+                        if verbose:
+                            print_status("Trying {0}".format(line.strip() + '.' + dom.strip()))
+                        target = line.strip() + '.' + dom.strip()
+                        pool.add_task(res.get_ip, target)
 
-                # Wait for threads to finish
-                pool.wait_completion()
+                    # Wait for threads to finish
+                    pool.wait_completion()
 
-            except (KeyboardInterrupt):
-                exit_brute(pool)
+                except (KeyboardInterrupt):
+                    exit_brute(pool)
 
         # Process the output of the threads.
         for rcd_found in brtdata:
@@ -488,28 +488,29 @@ def in_cache(dict_file, ns):
     type of records for a given domain are in it's cache.
     """
     found_records = []
-    f = open(dict_file, 'r+')
-    for zone in f:
-        dom_to_query = str.strip(zone)
-        query = dns.message.make_query(dom_to_query, dns.rdatatype.A, dns.rdataclass.IN)
-        query.flags ^= dns.flags.RD
-        answer = dns.query.udp(query, ns)
-        if len(answer.answer) > 0:
-            for an in answer.answer:
-                for rcd in an:
-                    if rcd.rdtype == 1:
-                        print_status("\tName: {0} TTL: {1} Address: {2} Type: A".format(an.name, an.ttl, rcd.address))
+    with open(dict_file) as f:
 
-                        found_records.extend([{'type': "A", 'name': an.name,
-                                               'address': rcd.address, 'ttl': an.ttl}])
+        for zone in f:
+            dom_to_query = str.strip(zone)
+            query = dns.message.make_query(dom_to_query, dns.rdatatype.A, dns.rdataclass.IN)
+            query.flags ^= dns.flags.RD
+            answer = dns.query.udp(query, ns)
+            if len(answer.answer) > 0:
+                for an in answer.answer:
+                    for rcd in an:
+                        if rcd.rdtype == 1:
+                            print_status("\tName: {0} TTL: {1} Address: {2} Type: A".format(an.name, an.ttl, rcd.address))
 
-                    elif rcd.rdtype == 5:
-                        print_status("\tName: {0} TTL: {1} Target: {2} Type: CNAME".format(an.name, an.ttl, rcd.target))
-                        found_records.extend([{'type': "CNAME", 'name': an.name,
-                                               'target': rcd.target, 'ttl': an.ttl}])
+                            found_records.extend([{'type': "A", 'name': an.name,
+                                                   'address': rcd.address, 'ttl': an.ttl}])
 
-                    else:
-                        print_status()
+                        elif rcd.rdtype == 5:
+                            print_status("\tName: {0} TTL: {1} Target: {2} Type: CNAME".format(an.name, an.ttl, rcd.target))
+                            found_records.extend([{'type': "CNAME", 'name': an.name,
+                                                   'target': rcd.target, 'ttl': an.ttl}])
+
+                        else:
+                            print_status()
     return found_records
 
 
