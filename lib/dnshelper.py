@@ -652,7 +652,7 @@ class DnsHelper:
                         for rdata in rdataset:
                             print_status('\t NSEC {0}'.format(rdata.next))
                             zone_records.append({'zone_server': ns_srv, 'type': 'NSEC',
-                                                 'next': rdata.next})
+                                                 'next': rdata.next.to_text()})
 
                     for (name, rdataset) in zone.iterate_rdatasets(dns.rdatatype.NSEC3):
                         for rdata in rdataset:
