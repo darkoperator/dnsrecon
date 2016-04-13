@@ -1430,10 +1430,11 @@ def main():
     output_file = arguments.xml
 
     if arguments.dictionary:
-        if os.path.isfile(arguments.dictionary):
-            dict = arguments.dictionary
+        print(arguments.dictionary)
+        if os.path.isfile(arguments.dictionary.strip()):
+            dict = arguments.dictionary.strip()
         else:
-            print_error("File {0} does not exist!".format(arguments.dictionary))
+            print_error("File {0} does not exist!".format(arguments.dictionary.strip()))
             exit(1)
 
 
