@@ -30,7 +30,7 @@ requires dnspython http://www.dnspython.org/
 requires netaddr https://github.com/drkjam/netaddr/
 
 """
-import getopt
+import argparse
 import os
 import string
 import sqlite3
@@ -530,7 +530,7 @@ def scrape_google(dom):
         data += sock.read()
         if re.search('Our systems have detected unusual traffic from your computer network',data) != None:
           print_error("Google has detected the search as \'bot activity, stopping search...")
-          return 
+          return
         sock.close()
     results.extend(unique(re.findall("htt\w{1,2}:\/\/([^:?]*[a-b0-9]*[^:?]*\." + dom + ")\/", data)))
 
@@ -1379,122 +1379,92 @@ def main():
     #
     # Define options
     #
+    parser = argparse.ArgumentParser()
     try:
-        options, args = getopt.getopt(sys.argv[1:], 'hzd:n:x:D:t:aq:gwr:fsc:vj:',
-                                      ['help',
-                                       'zone_walk'
-                                       'domain=',
-                                       'name_server=',
-                                       'xml=',
-                                       'dictionary=',
-                                       'type=',
-                                       'axfr',
-                                       'google',
-                                       'do_whois',
-                                       'range=',
-                                       'do_spf',
-                                       'csv=',
-                                       'lifetime=',
-                                       'threads=',
-                                       'db=',
-                                       'iw',
-                                       'verbose',
-                                       'json='])
+        parser.add_argument('-d', '--domain', type=str, dest="domain", help="Target domain.")
+        parser.add_argument('-n', '--name_server',type=str, dest="ns_server", help="Domain server to use. If none is given,    the SOA of the target will be used.")
+        parser.add_argument('-r', '--range',type=str, dest="range", help="IP range for reverse lookup brute force in formats   (first-last) or in (range/bitmask).")
+        parser.add_argument('-D', '--dictionary',type=str, dest="dictionary", help="Dictionary file of subdomain and          hostnames to use for brute force. Filter out of brute force domain lookup, records that resolve to the wildcard        defined IP address when saving records.")
+        parser.add_argument('-f', help="Filter out of brute force domain lookup, records that resolve to the wildcard defined  IP address when saving records.", action="store_true")
+        parser.add_argument('-t', '--type', type=str, dest="type", help="Type of enumeration to perform.")
+        parser.add_argument('-a', help="Perform AXFR with standard enumeration.", action="store_true")
+        parser.add_argument('-s', help="Perform a reverse lookup of IPv4 ranges in the SPF record with standard enumeration.   ", action="store_true")
+        parser.add_argument('-g', help="Perform Google enumeration with standard enumeration.", action="store_true")
+        parser.add_argument('-w', help="Perform deep whois record analysis and reverse lookup of IP ranges found through       Whois when doing a standard enumeration.", action="store_true")
+        parser.add_argument('-z', help='Performs a DNSSEC zone walk with standard enumeration.', action="store_true")
+        parser.add_argument('--threads', type=int, dest="threads", help="Number of threads to use in reverse lookups, forward  lookups, brute force and SRV record enumeration.")
+        parser.add_argument('--lifetime', type=int, dest="lifetime", help="Time to wait for a server to response to a query.")
+        parser.add_argument('--db', type=str, dest="db", help="SQLite 3 file to save found records.")
+        parser.add_argument('-x', '--xml', type=str, dest="xml", help="XML file to save found records.")
+        parser.add_argument('-c', '--csv', type=str, dest="csv", help="Comma separated value file.")
+        parser.add_argument('-j', '--json', type=str, dest="json", help="JSON file.")
+        parser.add_argument('--iw', help="Continue brute forcing a domain even if a wildcard records are discovered.",         action="store_true")
+        parser.add_argument('-v', help="Enable verbose", action="store_true")
+        arguments = parser.parse_args()
 
-    except getopt.GetoptError:
+    except:
         print_error("Wrong Option Provided!")
-        usage()
+        parser.print_help()
         sys.exit(0)
     #
     # Parse options
     #
-    for opt, arg in options:
-        if opt in ('-t', '--type'):
-            type = arg
+    type = arguments.type
+    domain = arguments.domain
 
-        elif opt in ('-d', '--domain'):
-            domain = arg
-
-        elif opt in ('-n', '--name_server'):
-            # Check if we got an IP or a FQDN
-            if netaddr.valid_glob(arg):
-                ns_server = arg
+    if arguments.ns_server:
+        if netaddr.valid_glob(arguments.ns_server):
+            ns_server = arguments.ns_server
+        else:
+            #Resolve in the case if FQDN
+            answer = socket_resolv(arguments.ns_server)
+            # Check we actually got a list
+            if len(answer) > 0:
+                # We will use the first IP found as the NS
+                ns_server = answer[0][2]
             else:
-                # Resolve in the case if FQDN
-                answer = socket_resolv(arg)
-                # Check we actually got a list
-                if len(answer) > 0:
-                    # We will use the first IP found as the NS
-                    ns_server = answer[0][2]
-                else:
-                    # Exit if we cannot resolve it
-                    print_error("Could not resolve NS server provided")
-                    sys.exit(1)
+                # Exit if we cannot resolve it
+                print_error("Could not resolve NS server provided")
+                sys.exit(1)
 
-        elif opt in ('-x', '--xml'):
-            output_file = arg
+    output_file = arguments.xml
 
-        elif opt in ('-D', '--dictionary'):
-            #Check if the dictionary file exists
-            if os.path.isfile(arg):
-                dict = arg
-            else:
-                print_error("File {0} does not exist!".format(arg))
-                exit(1)
+    if arguments.dictionary:
+        if os.path.isfile(arguments.dictionary):
+            dict = arguments.dictionary
+        else:
+            print_error("File {0} does not exist!".format(arguments.dictionary))
+            exit(1)
 
-        elif opt in ('-r', '--range'):
-            ip_list = process_range(arg)
-            if len(ip_list) > 0:
-                if type is None:
-                    type = "rvl"
-                elif not re.search(r'rvl', type):
-                    type = "rvl," + type
-            else:
-                print_error('Failed CIDR or Range is Required for type rvl')
 
-        elif opt in ('--threads'):
-            thread_num = int(arg)
+    if arguments.range:
+        ip_list = process_range(arguments.range)
+        if len(ip_list) > 0:
+            if type is None:
+                type = "rvl"
+            elif not re.search(r'rvl', type):
+                type = "rvl," + type
+        else:
+            print_error('Failed CIDR or Range is Required for type rvl')
 
-        elif opt in ('--lifetime'):
-            request_timeout = float(arg)
+    if arguments.threads:
+        thread_num = int(arguments.threads)
 
-        elif opt in ('--db'):
-            results_db = arg
+    if arguments.lifetime:
+        request_timeout = float(arguments.lifetime)
 
-        elif opt in ('-c', '--csv'):
-            csv_file = arg
+    results_db = arguments.db
+    csv_file = arguments.csv
+    json_file = arguments.json
+    verbose = arguments.v
+    ignore_wildcardrr = arguments.iw
 
-        elif opt in ('-j', '--json'):
-            json_file = arg
-
-        elif opt in ('-v', '--verbose'):
-            verbose = True
-
-        elif opt in ('--iw'):
-            ignore_wildcardrr = True
-
-        elif opt in ('-h'):
-            usage()
-            sys.exit(0)
-
-    # Make sure standard enumeration modificators are set.
-    if ('-a' in sys.argv) or ('--axfr' in sys.argv):
-        xfr = True
-
-    if ('-g' in sys.argv) or ('--google' in sys.argv):
-        goo = True
-
-    if ('-w' in sys.argv) or ('--do_whois' in sys.argv):
-        do_whois = True
-
-    if ('-z' in sys.argv) or ('--zone_walk' in sys.argv):
-        zonewalk = True
-
-    if ('-s' in sys.argv) or ('--do_spf' in sys.argv):
-        spf_enum = True
-
-    if ('-f' in sys.argv):
-        wildcard_filter = True
+    xfr = arguments.a
+    goo = arguments.g
+    do_whois = arguments.w
+    zonewalk = arguments.z
+    spf_enum = arguments.s
+    wildcard_filter = arguments.f
 
     # Setting the number of threads to 10
     pool = ThreadPool(thread_num)
