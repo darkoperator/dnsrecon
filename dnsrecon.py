@@ -35,6 +35,7 @@ import os
 import string
 import sqlite3
 import datetime
+import itertools
 
 import netaddr
 
@@ -329,6 +330,69 @@ def brute_tlds(res, domain, verbose=False):
 
     return found_tlds
 
+
+def force_enum(res, domain, type=0, length=3, verbose=False):
+    """
+    Brute-forcing all value of alphanum(with _ and -) or a length received or 3 by default
+    """
+
+    global brtdata
+    brtdata = []
+    returned_records = []
+    full_list = 'abcdefghijklmnopqrstuvwxyz0123456789_-'
+    alpha_list = 'abcdefghijklmnopqrstuvwxyz_-'
+    num_list = '0123456789_-'
+    complete_list = []
+    found_hosts = []
+
+    #casting the length
+    length = int(length)
+    type = int(type)
+
+    #Decide which list to use
+    if type == 0:
+      charset = full_list
+    elif type == 1:
+      charset = alpha_list
+    elif type == 2:
+      charset = num_list
+    else:
+      charset = full_list
+
+    # Thread brute-force.
+    try:
+        # Loop through the brute force function to enumerate all value of the list
+        for a in itertools.product(charset,repeat=length):
+           sub="".join(a) 
+           if verbose:
+              print_status("Trying {0}".format(sub.strip() + '.' + domain.strip()))
+           target = sub.strip() + '.' + domain.strip()
+           pool.add_task(res.get_ip, target)
+
+
+           # Wait for threads to finish
+           pool.wait_completion()
+
+    except (KeyboardInterrupt):
+       exit_brute(pool)
+
+    # Process the output of the threads.
+    for rcd_found in brtdata:
+       for rcd in rcd_found:
+           if re.search(r'^A', rcd[0]):
+                # Filter Records if filtering was enabled
+                if filter:
+                    found_hosts.extend([{'type': rcd[0], 'name': rcd[1], 'address': rcd[2]}])
+                else:
+                    found_hosts.extend([{'type': rcd[0], 'name': rcd[1], 'address': rcd[2]}])
+           elif re.search(r'^CNAME', rcd[0]):
+                found_hosts.extend([{'type': rcd[0], 'name': rcd[1], 'target': rcd[2]}])
+
+    # Clear Global variable
+    brtdata = []
+
+    print_good("{0} Records Found".format(len(found_hosts)))
+    return found_hosts
 
 def brute_srv(res, domain, verbose=False):
     """
@@ -1323,7 +1387,10 @@ def usage():
     print("                                          all with file containing the domains, file given with -D option.")
     print("                                tld       Remove the TLD of given domain and test against all TLDs registered in IANA.")
     print("                                zonewalk  Perform a DNSSEC zone walk using NSEC records.")
+    print("                                force     Brute force all values of alpha/num/alphanum of length N for a given domain")
     print("   -a                           Perform AXFR with standard enumeration.")
+    print("   -l, --length      <number>   Length of the brt force option. Default=3")
+    print("   -k, --charset     <type>     Type of charset to bruteforce with:  0:alphanumeric, 1:alpha, 2:numeric")
     print("   -s                           Perform a reverse lookup of IPv4 ranges in the SPF record with standard enumeration.")
     print("   -g                           Perform Google enumeration with standard enumeration.")
     print("   -w                           Perform deep whois record analysis and reverse lookup of IP ranges found through")
@@ -1369,6 +1436,8 @@ def main():
     wildcard_filter = False
     verbose = False
     ignore_wildcardrr = False
+    lengthforce = 3
+    charset = 0
 
     #
     # Global Vars
@@ -1380,7 +1449,7 @@ def main():
     # Define options
     #
     try:
-        options, args = getopt.getopt(sys.argv[1:], 'hzd:n:x:D:t:aq:gwr:fsc:vj:',
+        options, args = getopt.getopt(sys.argv[1:], 'hzd:n:x:l:k:D:t:aq:gwr:fsc:vj:',
                                       ['help',
                                        'zone_walk'
                                        'domain=',
@@ -1433,6 +1502,12 @@ def main():
 
         elif opt in ('-x', '--xml'):
             output_file = arg
+
+        elif opt in ('-l','--length'):
+            lengthforce = arg
+
+        elif opt in ('-k','--charset'):
+            charset = arg
 
         elif opt in ('-D', '--dictionary'):
             #Check if the dictionary file exists
@@ -1558,6 +1633,13 @@ def main():
                     else:
                         print_error('Could not execute a brute force enumeration. A domain was not given.')
                         sys.exit(1)
+
+                elif r == 'force':
+                    print_status("Performing Domain Brute Force with a defined charset:".format(domain))
+                    force_enum_records = force_enum(res, domain, charset, lengthforce, verbose)
+
+                    if (output_file is not None) or (results_db is not None) or (csv_file is not None) or (json_file is not None):
+                        returned_records.extend(force_enum_records)
 
                 elif r == 'srv':
                     print_status('Enumerating Common SRV Records against {0}'.format(domain))
