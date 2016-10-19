@@ -370,8 +370,8 @@ def force_enum(res, domain, type=0, length=3, verbose=False):
            pool.add_task(res.get_ip, target)
 
 
-           # Wait for threads to finish
-           pool.wait_completion()
+        # Wait for threads to finish
+        pool.wait_completion()
 
     except (KeyboardInterrupt):
        exit_brute(pool)
