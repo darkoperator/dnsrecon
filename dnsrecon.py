@@ -1507,14 +1507,15 @@ def main():
     domain_req = ['axfr', 'std', 'srv', 'tld', 'goo', 'zonewalk']
     scan_info = [" ".join(sys.argv), str(datetime.datetime.now())]
 
-    # Check for any illegal enumeration types from the user
-    valid_types = ['axfr','std','rvl','brt','srv','tld','goo','snoop','zonewalk']
-    incorrect_types = [t for t in type.split(',') if t not in valid_types]
-    if incorrect_types:
-        print_error("This type of scan is not in the list: {0}".format(','.join(incorrect_types)))
-        sys.exit(1)
-
     if type is not None:
+
+        # Check for any illegal enumeration types from the user
+        valid_types = ['axfr','std','rvl','brt','srv','tld','goo','snoop','zonewalk']
+        incorrect_types = [t for t in type.split(',') if t not in valid_types]
+        if incorrect_types:
+            print_error("This type of scan is not in the list: {0}".format(','.join(incorrect_types)))
+            sys.exit(1)
+
         for r in type.split(','):
             if r in domain_req and domain is None:
                 print_error('No Domain to target specified!')
