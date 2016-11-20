@@ -418,7 +418,9 @@ def brute_srv(res, domain, verbose=False):
         '_jabber-client._tcp.', '_jabber-client._udp.', '_kerberos.tcp.dc._msdcs.',
         '_ldap._tcp.ForestDNSZones.', '_ldap._tcp.dc._msdcs.', '_ldap._tcp.pdc._msdcs.',
         '_ldap._tcp.gc._msdcs.', '_kerberos._tcp.dc._msdcs.', '_kpasswd._tcp.', '_kpasswd._udp.',
-        '_imap._tcp.']
+        '_imap._tcp.', '_imaps._tcp.', '_submission._tcp.', '_pop3._tcp.', '_pop3s._tcp.',
+        '_caldav._tcp.', '_caldavs._tcp.', '_carddav._tcp.', '_carddavs._tcp.',
+        '_x-puppet._tcp.', '_x-puppet-ca._tcp.']
 
     try:
         for srvtype in srvrcd:
@@ -594,7 +596,7 @@ def scrape_google(dom):
         data += sock.read()
         if re.search('Our systems have detected unusual traffic from your computer network',data) != None:
           print_error("Google has detected the search as \'bot activity, stopping search...")
-          return 
+          return
         sock.close()
     results.extend(unique(re.findall("htt\w{1,2}:\/\/([^:?]*[a-b0-9]*[^:?]*\." + dom + ")\/", data)))
 
@@ -1581,10 +1583,19 @@ def main():
     scan_info = [" ".join(sys.argv), str(datetime.datetime.now())]
 
     if type is not None:
+
+        # Check for any illegal enumeration types from the user
+        valid_types = ['axfr','std','rvl','brt','srv','tld','goo','snoop','zonewalk','force']
+        incorrect_types = [t for t in type.split(',') if t not in valid_types]
+        if incorrect_types:
+            print_error("This type of scan is not in the list: {0}".format(','.join(incorrect_types)))
+            sys.exit(1)
+
         for r in type.split(','):
             if r in domain_req and domain is None:
                 print_error('No Domain to target specified!')
                 sys.exit(1)
+
             try:
                 if r == 'axfr':
                     print_status('Testing NS Servers for Zone Transfer')
@@ -1678,7 +1689,7 @@ def main():
                         ds_zone_walk(res, domain)
 
                 else:
-                    print_error("This type of scan is not in the list {0}".format(r))
+                    print_error("This type of scan is not in the list: {0}".format(r))
 
             except dns.resolver.NXDOMAIN:
                 print_error("Could not resolve domain: {0}".format(domain))
