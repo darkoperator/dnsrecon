@@ -925,10 +925,10 @@ def check_recursive(ns_server, timeout):
 def general_enum(res, domain, do_axfr, do_google, do_spf, do_whois, zw):
     """
     Function for performing general enumeration of a domain. It gets SOA, NS, MX
-    A, AAA and SRV records for a given domain. It will first try a Zone Transfer
+    A, AAAA and SRV records for a given domain. It will first try a Zone Transfer
     if not successful it will try individual record type enumeration. If chosen
     it will also perform a Google Search and scrape the results for host names and
-    perform an A and AAA query against them.
+    perform an A and AAAA query against them.
     """
     returned_records = []
 

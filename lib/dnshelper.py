@@ -121,7 +121,7 @@ class DnsHelper:
 
     def get_ip(self, hostname):
         """
-        Function resolves a host name to its given A and/or AAA record. Returns Array
+        Function resolves a host name to its given A and/or AAAA record. Returns Array
         of found hosts and IPv4 or IPv6 Address.
         """
         found_ip_add = []
