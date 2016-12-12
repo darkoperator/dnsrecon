@@ -45,7 +45,7 @@
 - Windows System Console printing is now managed properly.
 - CNAME records are now saved in SQLite3 and CSV output.
 - Fixed an error when performing zone transfers due to improper indent.
-- Fixed mislabling of -c option in the help message.
+- Fixed mislabeling of -c option in the help message.
 - If a range or CIDR is provided and no scan type is given, dnsrecon will perform a reverse lookup against it. When other types are given, the rvl type will be appended to the list automaticaly.
 - Improved NSEC type detection to eliminate possible false positives.
 - Added processing of LOC, NAPTR, CERT and RP records of zone transfers returned. Proper information saved on XML output with proper field names in the attributes for these.
