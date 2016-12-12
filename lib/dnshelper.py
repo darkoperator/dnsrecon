@@ -302,7 +302,7 @@ class DnsHelper:
 
     def get_nsec(self, host):
         """
-        Function for querying for a NSEC record and retriving the rdata object.
+        Function for querying for a NSEC record and retrieving the rdata object.
         This function is used mostly for performing a Zone Walk against a zone.
         """
         answer = self._res.query(host, 'NSEC')
