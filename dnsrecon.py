@@ -246,7 +246,7 @@ def write_to_file(data, target_file):
     """
     f = open(target_file, "w")
     f.write(data)
-    f.close
+    f.close()
 
 
 def check_wildcard(res, domain_trg):
