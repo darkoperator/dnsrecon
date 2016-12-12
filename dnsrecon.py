@@ -1089,7 +1089,7 @@ def general_enum(res, domain, do_axfr, do_google, do_spf, do_whois, zw):
 
 def query_ds(target, ns, timeout=5.0):
     """
-    Function for performing DS Record queries. Retuns answer object. Since a
+    Function for performing DS Record queries. Returns answer object. Since a
     timeout will break the DS NSEC chain of a zone walk it will exit if a timeout
     happens.
     """
