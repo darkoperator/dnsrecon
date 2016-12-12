@@ -398,7 +398,7 @@ class DnsHelper:
                         for rdata in rdataset:
 
                             # Check if target is only the host name or a full FQDN.
-                            # If only a hostname we will appaned the domain name of the
+                            # If only a hostname we will append the domain name of the
                             # Zone being transfered.
                             target = rdata.target.to_text()
                             target_split = target.split('.')
