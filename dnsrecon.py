@@ -94,15 +94,15 @@ class Worker(Thread):
 
     def run(self):
 
-        found_recrd = []
+        found_record = []
         while True:
             (func, args, kargs) = self.tasks.get()
             try:
-                found_recrd = func(*args, **kargs)
-                if found_recrd:
+                found_record = func(*args, **kargs)
+                if found_record:
                     Worker.lck.acquire()
-                    brtdata.append(found_recrd)
-                    for r in found_recrd:
+                    brtdata.append(found_record)
+                    for r in found_record:
                         if type(r).__name__ == "dict":
                             for k, v in r.iteritems():
                                 print_status("\t{0}:{1}".format(k, v))
