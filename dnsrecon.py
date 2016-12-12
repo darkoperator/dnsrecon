@@ -578,7 +578,7 @@ def get_whois_nets_iplist(ip_list):
     found_nets = []
     for ip in ip_list:
         if ip != "no_ip":
-            # Find appropiate Whois Server for the IP
+            # Find appropriate Whois Server for the IP
             whois_server = get_whois(ip)
             # If we get a Whois server Process get the whois and process.
             if whois_server:
