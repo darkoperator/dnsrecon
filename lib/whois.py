@@ -78,8 +78,8 @@ def get_whois_nets(data):
     where each list has the starting and ending IP of the found range.
     """
 
-    patern = '([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}) - ([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})'
-    results = re.findall(patern, data)
+    pattern = '([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}) - ([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})'
+    results = re.findall(pattern, data)
 
     return results
 

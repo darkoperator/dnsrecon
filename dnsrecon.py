@@ -94,15 +94,15 @@ class Worker(Thread):
 
     def run(self):
 
-        found_recrd = []
+        found_record = []
         while True:
             (func, args, kargs) = self.tasks.get()
             try:
-                found_recrd = func(*args, **kargs)
-                if found_recrd:
+                found_record = func(*args, **kargs)
+                if found_record:
                     Worker.lck.acquire()
-                    brtdata.append(found_recrd)
-                    for r in found_recrd:
+                    brtdata.append(found_record)
+                    for r in found_record:
                         if type(r).__name__ == "dict":
                             for k, v in r.iteritems():
                                 print_status("\t{0}:{1}".format(k, v))
@@ -246,7 +246,7 @@ def write_to_file(data, target_file):
     """
     f = open(target_file, "w")
     f.write(data)
-    f.close
+    f.close()
 
 
 def check_wildcard(res, domain_trg):
@@ -578,7 +578,7 @@ def get_whois_nets_iplist(ip_list):
     found_nets = []
     for ip in ip_list:
         if ip != "no_ip":
-            # Find appropiate Whois Server for the IP
+            # Find appropriate Whois Server for the IP
             whois_server = get_whois(ip)
             # If we get a Whois server Process get the whois and process.
             if whois_server:
@@ -925,10 +925,10 @@ def check_recursive(ns_server, timeout):
 def general_enum(res, domain, do_axfr, do_google, do_spf, do_whois, zw):
     """
     Function for performing general enumeration of a domain. It gets SOA, NS, MX
-    A, AAA and SRV records for a given domain.It Will first try a Zone Transfer
+    A, AAAA and SRV records for a given domain. It will first try a Zone Transfer
     if not successful it will try individual record type enumeration. If chosen
     it will also perform a Google Search and scrape the results for host names and
-    perform an A and AAA query against them.
+    perform an A and AAAA query against them.
     """
     returned_records = []
 
@@ -1089,7 +1089,7 @@ def general_enum(res, domain, do_axfr, do_google, do_spf, do_whois, zw):
 
 def query_ds(target, ns, timeout=5.0):
     """
-    Function for performing DS Record queries. Retuns answer object. Since a
+    Function for performing DS Record queries. Returns answer object. Since a
     timeout will break the DS NSEC chain of a zone walk it will exit if a timeout
     happens.
     """
