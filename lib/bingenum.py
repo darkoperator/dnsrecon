@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-#    Copyright (C) 2010  Carlos Perez
+#    Copyright (C) 2017 Cristiano Maruti (twitter: @cmaruti)
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -20,7 +20,6 @@
 import urllib
 import re
 import time
-from lib.msf_print import *
 
 try:
     url_opener = urllib.FancyURLopener
@@ -30,31 +29,28 @@ except AttributeError:
 
 
 class AppURLopener(url_opener):
-  
-    version = "Mozilla/5.0 (compatible; Googlebot/2.1; + http://www.google.com/bot.html)"
+    version = "Mozilla/5.0 (compatible; bingbot/2.0; +http://www.bing.com/bingbot.htm)"
 
 
-def scrape_google(dom):
+def scrape_bing(dom):
     """
     Function for enumerating sub-domains and hosts by scraping Google.
     """
     results = []
     filtered = []
-    searches = ["0","100", "200", "300", "400", "500"]
+    searches = ["10","20", "30", "40", "50", "60", "70", "80", "90", "100", "110", "120","130",
+                "140","150"]
     data = ""
     urllib._urlopener = AppURLopener()
 
     for n in searches:
-        url = "http://www.google.com/search?hl=en&lr=&ie=UTF-8&q=site%3A" + dom + "&start=" + n + "&sa=N&filter=0&num=100"
+        url = "http://www.bing.com/search?q=domain%3A"+ dom + "&qs=n&first=" + n
         sock = urllib.urlopen(url)
         data = sock.read()
-        if re.search('Our systems have detected unusual traffic from your computer network',data) != None:
-            print_error("Google has detected the search as \'bot activity, stopping search...")
-            return results
         results.extend(re.findall("([a-zA-Z0-9\-\.]+" + dom + ")\/?", data))
 
         sock.close()
-        time.sleep(10)
+        time.sleep(5)
 
     return unique(results)
 
