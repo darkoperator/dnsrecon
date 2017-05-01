@@ -1432,7 +1432,7 @@ def main():
     output_file = arguments.xml
 
     if arguments.dictionary:
-        print(arguments.dictionary)
+        # print(arguments.dictionary)
         if os.path.isfile(arguments.dictionary.strip()):
             dict = arguments.dictionary.strip()
         else:
