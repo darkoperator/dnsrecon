@@ -952,7 +952,7 @@ def general_enum(res, domain, do_axfr, do_google, do_spf, do_whois, zw):
             if len(returned_records) == 0:
                 from_zt = True
 
-    # If a Zone Trasfer was possible there is no need to enumerate the rest
+    # If a Zone Transfer was possible there is no need to enumerate the rest
     if from_zt is None:
 
         # Check if DNSSEC is configured
