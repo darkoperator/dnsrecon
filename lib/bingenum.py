@@ -45,8 +45,13 @@ def scrape_bing(dom):
 
     for n in searches:
         url = "http://www.bing.com/search?q=domain%3A"+ dom + "&qs=n&first=" + n
-        sock = urllib.urlopen(url)
-        data = sock.read()
+        try:
+            sock = urllib.urlopen(url)
+            data = sock.read()
+        except AttributeError:
+            sock = urllib.request.urlopen(url)
+            data = sock.read().decode("utf-8") 
+        
         results.extend(re.findall("([a-zA-Z0-9\-\.]+" + dom + ")\/?", data))
 
         sock.close()

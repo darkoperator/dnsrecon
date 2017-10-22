@@ -18,7 +18,7 @@
 #    along with this program; if not, write to the Free Software
 #    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
-__version__ = '0.8.10'
+__version__ = '0.8.11'
 __author__ = 'Carlos Perez, Carlos_Perez@darkoperator.com'
 
 __doc__ = """
@@ -1208,11 +1208,17 @@ def ds_zone_walk(res, domain):
     print_status("Performing NSEC Zone Walk for {0}".format(domain))
 
     print_status("Getting SOA record for {0}".format(domain))
-    soa_rcd = res.get_soa()[0][2]
 
-    print_status("Name Server {0} will be used".format(soa_rcd))
-    res = DnsHelper(domain, soa_rcd, 3)
-    nameserver = soa_rcd
+    nameserver = ''
+
+    try:
+        soa_rcd = res.get_soa()[0][2]
+
+        print_status("Name Server {0} will be used".format(soa_rcd))
+        res = DnsHelper(domain, soa_rcd, 3)
+        nameserver = soa_rcd
+    except:
+        print_error("This zone appears to be miss configured, no SOA record found.")
 
     timeout = res._res.timeout
 
@@ -1253,7 +1259,10 @@ def ds_zone_walk(res, domain):
                 target = transformation(*params)
 
                 # Perform a DNS query for the target and process the response
-                response = get_a_answer(target, nameserver, timeout)
+                if not nameserver:
+                    response = get_a_answer(target, res._res.nameservers[0], timeout)
+                else:
+                    response = get_a_answer(target, nameserver, timeout)
                 for a in response.authority:
                     if a.rdtype != 47:
                         continue

@@ -31,7 +31,7 @@ except AttributeError:
 
 class AppURLopener(url_opener):
   
-    version = "Mozilla/5.0 (compatible; Googlebot/2.1; + http://www.google.com/bot.html)"
+    sudo  = "Mozilla/5.0 (compatible; Googlebot/2.1; + http://www.google.com/bot.html)"
 
 
 def scrape_google(dom):
@@ -44,10 +44,20 @@ def scrape_google(dom):
     data = ""
     urllib._urlopener = AppURLopener()
 
+    user_agent = 'Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.9.0.7) Gecko/2009021910 Firefox/3.0.7'
+
     for n in searches:
-        url = "http://www.google.com/search?hl=en&lr=&ie=UTF-8&q=site%3A" + dom + "&start=" + n + "&sa=N&filter=0&num=100"
-        sock = urllib.urlopen(url)
-        data = sock.read()
+        url = "https://www.google.com/search?hl=en&lr=&ie=UTF-8&q=site%3A" + dom + "&start=" + n + "&sa=N&filter=0&num=100"
+        headers={'User-Agent':user_agent,} 
+        
+        try:
+            sock = urllib.urlopen(url)
+            data = sock.read()
+        except AttributeError:
+            request=urllib.request.Request(url,None,headers)
+            sock = urllib.request.urlopen(request)
+            data = sock.read().decode("utf-8") 
+
         if re.search('Our systems have detected unusual traffic from your computer network',data) != None:
             print_error("Google has detected the search as \'bot activity, stopping search...")
             return results
