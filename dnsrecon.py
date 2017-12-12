@@ -18,7 +18,7 @@
 #    along with this program; if not, write to the Free Software
 #    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
-__version__ = '0.8.11'
+__version__ = '0.8.12'
 __author__ = 'Carlos Perez, Carlos_Perez@darkoperator.com'
 
 __doc__ = """
@@ -919,7 +919,7 @@ def general_enum(res, domain, do_axfr, do_google, do_bing, do_spf, do_whois, zw)
     from_zt = None
 
     # Perform test for Zone Transfer against all NS servers of a Domain
-    if do_axfr is not None:
+    if do_axfr == True :
         zonerecs = res.zone_transfer()
         if zonerecs is not None:
             returned_records.extend(res.zone_transfer())
@@ -1307,7 +1307,7 @@ def usage():
     print("   -f                           Filter out of brute force domain lookup, records that resolve to the wildcard defined")
     print("                                IP address when saving records.")
     print("   -t, --type        <types>    Type of enumeration to perform (comma separated):")
-    print("                                std       SOA, NS, A, AAAA, MX and SRV if AXRF on the NS servers fail.")
+    print("                                std       SOA, NS, A, AAAA, MX and SRV.")
     print("                                rvl       Reverse lookup of a given CIDR or IP range.")
     print("                                brt       Brute force domains and hosts using a given dictionary.")
     print("                                srv       SRV records.")
