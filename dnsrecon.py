@@ -850,6 +850,10 @@ def dns_sec_check(domain, res):
     except dns.resolver.NXDOMAIN:
         print_error("Could not resolve domain: {0}".format(domain))
         sys.exit(1)
+    
+    except dns.resolver.NoNameservers:
+        print_error("All nameservers failed to answer the DNSSEC query for {0}".format(domain))
+        sys.exit(1)
 
     except dns.exception.Timeout:
         print_error("A timeout error occurred please make sure you can reach the target DNS Servers")
