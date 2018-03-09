@@ -732,6 +732,8 @@ def make_csv(data):
                 csv_data += n["type"] + "," + n["name"] + "," + n["address"] + "," + n["target"] + "," + n["port"] + "\n"
 
             elif re.search(r"CNAME", n["type"]):
+                if "target" not in n.keys():
+                    n["target"] = ""
                 csv_data += n["type"] + "," + n["name"] + ",," + n["target"] + ",\n"
 
             else:
