@@ -64,6 +64,7 @@ import dns.flags
 import json
 from dns.dnssec import algorithm_to_text
 
+from lib.crtenum import scrape_crtsh
 from lib.gooenum import *
 from lib.bingenum import *
 from lib.whois import *
@@ -896,7 +897,7 @@ def check_recursive(ns_server, timeout):
     return is_recursive
 
 
-def general_enum(res, domain, do_axfr, do_google, do_bing, do_spf, do_whois, zw):
+def general_enum(res, domain, do_axfr, do_google, do_bing, do_spf, do_whois, do_crt, zw):
     """
     Function for performing general enumeration of a domain. It gets SOA, NS, MX
     A, AAAA and SRV records for a given domain. It will first try a Zone Transfer
@@ -1054,6 +1055,14 @@ def general_enum(res, domain, do_axfr, do_google, do_bing, do_spf, do_whois, zw)
                     if "address" in bing_rcd:
                         ip_for_whois.append(r["address"])
                 returned_records.extend(bing_rcd)
+
+        if do_crt:
+            print_status("Performing Crt.sh Search Enumeration")
+            crt_rcd = se_result_process(res, scrape_crtsh(domain))
+            for r in crt_rcd:
+                if "address" in crt_rcd:
+                    ip_for_whois.append(r["address"])
+            returned_records.extend(crt_rcd)
 
         if do_whois:
             whois_rcd = whois_ips(res, ip_for_whois)
@@ -1314,6 +1323,7 @@ def usage():
     print("                                axfr      Test all NS servers for a zone transfer.")
     print("                                goo       Perform Google search for subdomains and hosts.")
     print("                                bing      Perform Google search for subdomains and hosts.")
+    print("                                crt       Perform crt.sh search for subdomains and hosts.")
     print("                                snoop     Perform cache snooping against all NS servers for a given domain, testing")
     print("                                          all with file containing the domains, file given with -D option.")
     print("                                tld       Remove the TLD of given domain and test against all TLDs registered in IANA.")
@@ -1322,6 +1332,7 @@ def usage():
     print("   -s                           Perform a reverse lookup of IPv4 ranges in the SPF record with standard enumeration.")
     print("   -g                           Perform Google enumeration with standard enumeration.")
     print("   -b                           Perform Bing enumeration with standard enumeration.")
+    print("   -k                           Perform crt.sh enumeration with standard enumeration.")
     print("   -w                           Perform deep whois record analysis and reverse lookup of IP ranges found through")
     print("                                Whois when doing a standard enumeration.")
     print("   -z                           Performs a DNSSEC zone walk with standard enumeration.")
@@ -1355,6 +1366,7 @@ def main():
     bing = False
     spf_enum = False
     do_whois = False
+    do_crt = False
     thread_num = 10
     request_timeout = 3.0
     ip_range = None
@@ -1388,6 +1400,7 @@ def main():
         parser.add_argument("-s", help="Perform a reverse lookup of IPv4 ranges in the SPF record with standard enumeration.", action="store_true")
         parser.add_argument("-g", help="Perform Google enumeration with standard enumeration.", action="store_true")
         parser.add_argument("-b", help="Perform Bing enumeration with standard enumeration.", action="store_true")
+        parser.add_argument("-k", help="Perform crt.sh enumeration with standard enumeration.", action="store_true")
         parser.add_argument("-w", help="Perform deep whois record analysis and reverse lookup of IP ranges found through Whois when doing a standard enumeration.", action="store_true")
         parser.add_argument("-z", help="Performs a DNSSEC zone walk with standard enumeration.", action="store_true")
         parser.add_argument("--threads", type=int, dest="threads", help="Number of threads to use in reverse lookups, forward lookups, brute force and SRV record enumeration.")
@@ -1460,6 +1473,7 @@ def main():
     xfr = arguments.a
     goo = arguments.g
     bing = arguments.b
+    do_crt = arguments.k
     do_whois = arguments.w
     zonewalk = arguments.z
     spf_enum = arguments.s
@@ -1471,13 +1485,13 @@ def main():
     # Set the resolver
     res = DnsHelper(domain, ns_server, request_timeout)
 
-    domain_req = ["axfr", "std", "srv", "tld", "goo", "bing", "zonewalk"]
+    domain_req = ["axfr", "std", "srv", "tld", "goo", "bing", "crt", "zonewalk"]
     scan_info = [" ".join(sys.argv), str(datetime.datetime.now())]
 
     if type is not None:
 
         # Check for any illegal enumeration types from the user
-        valid_types = ["axfr","std","rvl","brt","srv","tld","goo","bing","snoop","zonewalk"]
+        valid_types = ["axfr","std","rvl","brt","srv","tld","goo","bing","crt","snoop","zonewalk"]
         incorrect_types = [t for t in type.split(',') if t not in valid_types]
         if incorrect_types:
             print_error("This type of scan is not in the list: {0}".format(','.join(incorrect_types)))
@@ -1499,7 +1513,7 @@ def main():
 
                 elif r == "std":
                     print_status("Performing General Enumeration of Domain:".format(domain))
-                    std_enum_records = general_enum(res, domain, xfr, goo, bing, spf_enum, do_whois, zonewalk)
+                    std_enum_records = general_enum(res, domain, xfr, goo, bing, spf_enum, do_whois, do_crt, zonewalk)
 
                     if (output_file is not None) or (results_db is not None) or (csv_file is not None) or (json_file is not None):
                         returned_records.extend(std_enum_records)
@@ -1562,6 +1576,12 @@ def main():
                     if (output_file is not None) or (results_db is not None) or (csv_file is not None) or (json_file is not None):
                         returned_records.extend(bing_enum_records)
 
+                elif r == "crt":
+                    print_status("Performing Crt.sh Search Enumeration against {0}".format(domain))
+                    crt_enum_records = se_result_process(res, scrape_crtsh(domain))
+                    if (output_file is not None) or (results_db is not None) or (csv_file is not None) or (json_file is not None):
+                        returned_records.extend(crt_enum_records)
+
                 elif r == "snoop":
                     if (dict is not None) and (ns_server is not None):
                         print_status("Performing Cache Snooping against NS Server: {0}".format(ns_server))
@@ -1620,7 +1640,7 @@ def main():
     elif domain is not None:
         try:
             print_status("Performing General Enumeration of Domain: {0}".format(domain))
-            std_enum_records = general_enum(res, domain, xfr, goo, bing, spf_enum, do_whois, zonewalk)
+            std_enum_records = general_enum(res, domain, xfr, goo, bing, spf_enum, do_whois, do_crt, zonewalk)
 
             returned_records.extend(std_enum_records)
 

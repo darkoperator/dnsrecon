@@ -1,2 +1,3 @@
 dnspython
 netaddr
+lxml
