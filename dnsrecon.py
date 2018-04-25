@@ -734,6 +734,8 @@ def make_csv(data):
                 csv_data += n["type"] + "," + n["name"] + "," + n["address"] + "," + n["target"] + "," + n["port"] + "\n"
 
             elif re.search(r"CNAME", n["type"]):
+                if "target" not in n.keys():
+                    n["target"] = ""
                 csv_data += n["type"] + "," + n["name"] + ",," + n["target"] + ",\n"
 
             else:
@@ -852,6 +854,9 @@ def dns_sec_check(domain, res):
     except dns.resolver.NXDOMAIN:
         print_error("Could not resolve domain: {0}".format(domain))
         sys.exit(1)
+    
+    except dns.resolver.NoNameservers:
+        print_error("All nameservers failed to answer the DNSSEC query for {0}".format(domain))
 
     except dns.exception.Timeout:
         print_error("A timeout error occurred please make sure you can reach the target DNS Servers")
