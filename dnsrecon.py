@@ -1164,7 +1164,7 @@ def lookup_next(target, res):
                 returned_records.append({'type': r[0],
                                          'name': r[1], 'strings': r[2]})
         else:
-            txt_answer = res_sys.get_txt(target)
+            txt_answer = res.get_txt(target)
             if len(txt_answer) > 0:
                 for r in txt_answer:
                     print_status("\t {0}".format(" ".join(r)))
