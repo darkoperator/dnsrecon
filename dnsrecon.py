@@ -18,7 +18,7 @@
 #    along with this program; if not, write to the Free Software
 #    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
-__version__ = '0.8.12'
+__version__ = '0.8.13'
 __author__ = 'Carlos Perez, Carlos_Perez@darkoperator.com'
 
 __doc__ = """
@@ -306,10 +306,10 @@ def brute_tlds(res, domain, verbose=False):
                 print_status("Trying {0}".format(domain_main + "." + t))
             pool.add_task(res.get_ip, domain_main + "." + t)
 
-	    for cc in cctld:
-                if verbose:
-		    print_status("Trying {0}".format(domain_main + "." + cc + "." + t))
-		pool.add_task(res.get_ip, domain_main + "." + cc + "." + t)
+        for cc in cctld:
+            if verbose:
+                print_status("Trying {0}".format(domain_main + "." + cc + "." + t))
+            pool.add_task(res.get_ip, domain_main + "." + cc + "." + t)
 
         for cc in cctld:
             if verbose:
@@ -364,7 +364,7 @@ def brute_srv(res, domain, verbose=False):
     try:
         for srvtype in srvrcd:
             if verbose:
-                print_status("Trying {0}".format(res.get_srv, srvtype + domain))
+                print_status("Trying {0}".format(srvtype + domain))
             pool.add_task(res.get_srv, srvtype + domain)
 
         # Wait for threads to finish.
@@ -646,13 +646,13 @@ def dns_record_from_dict(record_dict_list, scan_info, domain):
                         v = unicode(str(v))
                         elem.attrib[k] = v
                     except:
-                        print_error("Could not convert key or value to unicode: '{0} = {1}'".format((repr(k), repr(v))))
+                        print_error("Could not convert key or value to unicode: '{0} = {1}'".format((repr(k)), (repr(v))))
                         print_error("In element: {0}".format(repr(elem.attrib)))
                         continue
                 xml_doc.append(elem)
             except AttributeError:
                 continue
-                xml_doc.append(elem)
+
             except AttributeError:
                 continue
 
@@ -1518,7 +1518,7 @@ def main():
                         print_error("No records were returned in the zone transfer attempt.")
 
                 elif r == "std":
-                    print_status("Performing General Enumeration of Domain:".format(domain))
+                    print_status("Performing General Enumeration of Domain:{0}".format(domain))
                     std_enum_records = general_enum(res, domain, xfr, goo, bing, spf_enum, do_whois, do_crt, zonewalk)
 
                     if (output_file is not None) or (results_db is not None) or (csv_file is not None) or (json_file is not None):
@@ -1621,7 +1621,7 @@ def main():
 
         # if an output xml file is specified it will write returned results.
         if (output_file is not None):
-            print_status("Saving records to XML file: {0}".format(output_file, scan_info))
+            print_status("Saving records to XML file: {0}".format(output_file))
             xml_enum_doc = dns_record_from_dict(returned_records, scan_info, domain)
             write_to_file(xml_enum_doc, output_file)
 
@@ -1652,7 +1652,7 @@ def main():
 
             # if an output xml file is specified it will write returned results.
             if (output_file is not None):
-                print_status("Saving records to XML file: {0}".format(output_file, scan_info))
+                print_status("Saving records to XML file: {0}".format(output_file))
                 xml_enum_doc = dns_record_from_dict(returned_records, scan_info, domain)
                 write_to_file(xml_enum_doc, output_file)
 
