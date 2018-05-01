@@ -1,4 +1,13 @@
 
+## Version 0.8.13
+
+**Date: 12/12/17**
+**Changes:**
+
+- Fixed typos
+- Certificate Transparency logs consists a lot of domain information via Crt.sh thanks to @ginta1337
+
+
 ## Version 0.8.12
 
 **Date: 12/12/17**
