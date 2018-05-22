@@ -35,7 +35,7 @@ def scrape_crtsh(dom):
     """
     results = []
     headers = {'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64; rv:31.0) Gecko/20100101 Firefox/31.0'}
-    url = 'https://crt.sh/?q=%.{}'.format(dom)
+    url = 'https://crt.sh/?q=%25.{}'.format(dom)
 
     req = Request(url=url, headers=headers)
     try:
@@ -49,7 +49,7 @@ def scrape_crtsh(dom):
         return results
 
     root = etree.HTML(data)
-    tbl = root.xpath('//table/tr/td/table/tr/td[4]')
+    tbl = root.xpath('//table/tr/td/table/tr/td[5]')
     if len(tbl) < 1:
         print_error('Certificates for subdomains not found')
         return results
