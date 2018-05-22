@@ -1419,10 +1419,13 @@ def main():
         parser.add_argument("-v", help="Enable verbose", action="store_true")
         arguments = parser.parse_args()
 
+    except SystemExit:
+        # Handle exit() from passing --help
+        raise
     except:
         print_error("Wrong Option Provided!")
         parser.print_help()
-        sys.exit(0)
+        sys.exit(1)
     #
     # Parse options
     #
@@ -1684,7 +1687,7 @@ def main():
             sys.exit(1)
     else:
         usage()
-        sys.exit(0)
+        sys.exit(1)
 
 
 if __name__ == "__main__":
