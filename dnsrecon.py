@@ -18,7 +18,7 @@
 #    along with this program; if not, write to the Free Software
 #    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
-__version__ = '0.8.13'
+__version__ = '0.8.14'
 __author__ = 'Carlos Perez, Carlos_Perez@darkoperator.com'
 
 __doc__ = """
@@ -940,7 +940,7 @@ def general_enum(res, domain, do_axfr, do_google, do_bing, do_spf, do_whois, do_
         dns_sec_check(domain, res)
 
         # Enumerate SOA Record
-
+        found_soa_records = res.get_soa()
         try:
             found_soa_records = res.get_soa()
             for found_soa_record in found_soa_records:

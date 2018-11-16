@@ -200,9 +200,14 @@ class DnsHelper:
         """
         soa_records = []
         tcp = True if self._proto == "tcp" else False
-        query = dns.message.make_query(self._domain, dns.rdatatype.SOA)
+        querymsg = dns.message.make_query(self._domain, dns.rdatatype.SOA)
+        
         try:
-            response = query(query, self._res.nameservers[0], self._res.timeout)
+            if tcp:
+                response = dns.query.tcp(querymsg, self._res.nameservers[0], self._res.timeout)
+            else:
+                response = dns.query.udp(querymsg, self._res.nameservers[0], self._res.timeout)
+                
             if len(response.answer) > 0:
                 answers = response.answer
             elif len(response.authority) > 0:
