@@ -1058,7 +1058,7 @@ def general_enum(res, domain, do_axfr, do_google, do_bing, do_spf, do_whois, do_
         # Do Bing Search enumeration if selected
         if do_bing:
             print_status("Performing Bing Search Enumeration")
-            bing_rcd = se_result_process(res, scrape_google(domain))
+            bing_rcd = se_result_process(res, scrape_bing(domain))
             if bing_rcd:
                 for r in bing_rcd:
                     if "address" in bing_rcd:
