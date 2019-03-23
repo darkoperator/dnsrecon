@@ -986,6 +986,8 @@ def general_enum(res, domain, do_axfr, do_google, do_bing, do_spf, do_whois, do_
 
         except dns.resolver.NoAnswer:
             print_error("Could not Resolve MX Records for {0}".format(domain))
+        except dns.resolver.NoNameservers:
+            print_error("All nameservers failed to answer the MX query for {0}".format(domain))
 
         # Enumerate A Record for the targeted Domain
         for a_rcrd in res.get_ip(domain):
