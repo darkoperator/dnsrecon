@@ -207,33 +207,45 @@ class DnsHelper:
                 response = dns.query.tcp(querymsg, self._res.nameservers[0], self._res.timeout)
             else:
                 response = dns.query.udp(querymsg, self._res.nameservers[0], self._res.timeout)
-                
-            if len(response.answer) > 0:
-                answers = response.answer
-            elif len(response.authority) > 0:
+
+            if len(response.authority) > 0:
                 answers = response.authority
+            elif len(response.answer) > 0:
+                answers = response.answer
+            else:
+                return
+
             for rdata in answers:
-                # A zone only has one SOA record so we select the first.
-                name = rdata[0].mname.to_text()
-                ipv4_answers = self._res.query(name, 'A', tcp=tcp)
-                for ardata in ipv4_answers:
-                    if name.endswith('.'):
-                        soa_records.append(['SOA', name[:-1], ardata.address])
-                    else:
-                        soa_records.append(['SOA', name, ardata.address])
+                name = None
+                if isinstance(rdata[0], dns.rdtypes.ANY.SOA.SOA):
+                    name = rdata[0].mname.to_text()
+                else:
+                    continue
+
+                if name:
+                    ipv4_answers = self._res.query(name, 'A', tcp=tcp)
+                    for ardata in ipv4_answers:
+                        if name.endswith('.'):
+                            soa_records.append(['SOA', name[:-1], ardata.address])
+                        else:
+                            soa_records.append(['SOA', name, ardata.address])
         except (dns.resolver.NXDOMAIN, dns.exception.Timeout, dns.resolver.NoAnswer, socket.error, dns.query.BadResponse):
             print_error('Error while resolving SOA record.')
             return soa_records
 
         try:
             for rdata in answers:
-                name = rdata.mname.to_text()
-                ipv4_answers = self._res.query(name, 'AAAA', tcp=tcp)
-                for ardata in ipv4_answers:
-                    if name.endswith('.'):
-                        soa_records.append(['SOA', name[:-1], ardata.address])
-                    else:
-                        soa_records.append(['SOA', name, ardata.address])
+                name = None
+                if isinstance(rdata, dns.rdtypes.ANY.SOA.SOA):
+                    name = rdata.mname.to_text()
+
+                if name:
+                    ipv6_answers = self._res.query(name, 'AAAA', tcp=tcp)
+                    for ardata in ipv6_answers:
+                        if name.endswith('.'):
+                            soa_records.append(['SOA', name[:-1], ardata.address])
+                        else:
+                            soa_records.append(['SOA', name, ardata.address])
 
             return soa_records
         except:
