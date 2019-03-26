@@ -212,6 +212,8 @@ class DnsHelper:
                 answers = response.answer
             elif len(response.authority) > 0:
                 answers = response.authority
+            else:
+                return soa_records
             for rdata in answers:
                 # A zone only has one SOA record so we select the first.
                 name = rdata[0].mname.to_text()
