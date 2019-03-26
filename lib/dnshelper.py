@@ -213,7 +213,7 @@ class DnsHelper:
             elif len(response.answer) > 0:
                 answers = response.answer
             else:
-                return
+                return soa_records
 
             for rdata in answers:
                 name = None
