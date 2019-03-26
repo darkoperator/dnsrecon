@@ -1306,6 +1306,9 @@ def ds_zone_walk(res, domain):
         print_error("are not being filtered. Increase the timeout to a higher number")
         print_error("with --lifetime <time> option.")
 
+    except (socket.error):
+        print_error("SoA nameserver {} failed to answer the DNSSEC query for {}".format(nameserver, domain))
+
     # Give a summary of the walk
     if len(records) > 0:
         print_good("{0} records found".format(len(records)))
