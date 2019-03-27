@@ -1273,15 +1273,13 @@ def ds_zone_walk(res, domain):
             # Arrange the arguments for the transformations
             fields = re.search("^(^[^.]*)\.(\S+\.\S*)$", hostname)
 
+            domain_portion = hostname
             if fields and fields.group(2):
                 domain_portion = fields.group(2)
-            else:
-                domain_portion = hostname
 
+            host_portion = ""
             if fields and fields.group(1):
                 host_portion = fields.group(1)
-            else:
-                host_portion = ""
 
             params = [hostname, host_portion, domain_portion]
 
