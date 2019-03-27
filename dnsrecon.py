@@ -1368,7 +1368,7 @@ def usage():
     print("   --xml             <file>     XML file to save found records.")
     print("   --iw                         Continue brute forcing a domain even if a wildcard records are discovered.")
     print("   --disable_check_recursion    Disables check for recursion on name servers.")
-    print("   --disable_check_bindversion  Disables check for Bind version on name servers.")
+    print("   --disable_check_bindversion  Disables check for BIND version on name servers.")
     print("   -c, --csv         <file>     Comma separated value file.")
     print("   -j, --json        <file>     JSON file.")
     print("   -v                           Show attempts in the brute force modes.")
@@ -1439,7 +1439,7 @@ def main():
         parser.add_argument("-j", "--json", type=str, dest="json", help="JSON file.")
         parser.add_argument("--iw", help="Continue brute forcing a domain even if a wildcard records are discovered.", action="store_true")
         parser.add_argument("--disable_check_recursion", help="Disables check for recursion on name servers", action="store_true")
-        parser.add_argument("--disable_check_bindversion", help="Disables check for Bind version on name servers", action="store_true")
+        parser.add_argument("--disable_check_bindversion", help="Disables check for BIND version on name servers", action="store_true")
         parser.add_argument("-v", help="Enable verbose", action="store_true")
         arguments = parser.parse_args()
 
