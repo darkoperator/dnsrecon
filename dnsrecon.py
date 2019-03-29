@@ -1283,6 +1283,9 @@ def ds_zone_walk(res, domain):
 
             params = [hostname, host_portion, domain_portion]
 
+            walk_filter = "." + domain_portion
+            walk_filter_offset = len(walk_filter) + 1
+
             for transformation in transformations:
                 # Apply the transformation
                 target = transformation(*params)
@@ -1303,7 +1306,10 @@ def ds_zone_walk(res, domain):
                     #   2) The subsequent existing hostname that is signed
                     # Add the latter to our list of pending hostnames
                     for r in a:
-                        pending.add(r.next.to_text()[:-1])
+                        # Avoid walking outside of the target domain. This
+                        # happens with certain misconfigured domains.
+                        if r.next.to_text()[-walk_filter_offset:-1] == walk_filter:
+                            pending.add(r.next.to_text()[:-1])
 
             # Ensure nothing pending has already been queried
             pending -= finished
