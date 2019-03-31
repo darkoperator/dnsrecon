@@ -1326,6 +1326,7 @@ def usage():
     print("   -d, --domain      <domain>   Target domain.")
     print("   -r, --range       <range>    IP range for reverse lookup brute force in formats (first-last) or in (range/bitmask).")
     print("   -n, --name_server <name>     Domain server to use. If none is given, the SOA of the target will be used.")
+    print("                                Multiple servers can be specified using a comma separated list.")
     print("   -D, --dictionary  <file>     Dictionary file of subdomain and hostnames to use for brute force.")
     print("   -f                           Filter out of brute force domain lookup, records that resolve to the wildcard defined")
     print("                                IP address when saving records.")
@@ -1406,7 +1407,7 @@ def main():
     parser = argparse.ArgumentParser()
     try:
         parser.add_argument("-d", "--domain", type=str, dest="domain", help="Target domain.")
-        parser.add_argument("-n", "--name_server",type=str, dest="ns_server", help="Domain server to use. If none is given,    the SOA of the target will be used.")
+        parser.add_argument("-n", "--name_server",type=str, dest="ns_server", help="Domain server to use. If none is given,    the SOA of the target will be used. Multiple servers can be specified using a comma separated list.")
         parser.add_argument("-r", "--range",type=str, dest="range", help="IP range for reverse lookup brute force in formats   (first-last) or in (range/bitmask).")
         parser.add_argument("-D", "--dictionary",type=str, dest="dictionary", help="Dictionary file of subdomain and hostnames to use for brute force. Filter out of brute force domain lookup, records that resolve to the wildcard defined IP address when saving records.")
         parser.add_argument("-f", help="Filter out of brute force domain lookup, records that resolve to the wildcard defined IP address when saving records.", action="store_true")
