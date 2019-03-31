@@ -23,6 +23,7 @@ import dns.resolver
 import dns.reversename
 import dns.message
 import socket
+import random
 from dns.zone import *
 from dns.dnssec import algorithm_to_text
 from .msf_print import *
@@ -38,7 +39,9 @@ class DnsHelper:
         self._proto = proto
         if ns_server:
             self._res = dns.resolver.Resolver(configure=False)
-            self._res.nameservers = [ns_server]
+            self._res.nameservers = ns_server
+            if len(ns_server) > 1:
+                self._res.rotate = True
         else:
             self._res = dns.resolver.Resolver(configure=True)
         # Set timing
@@ -76,10 +79,17 @@ class DnsHelper:
         return answers
 
     def query(self, q, where, timeout=None, port=53, af=None, source=None, source_port=0, one_rr_per_rrset=False):
-        if self._proto == "tcp":
-            return dns.query.tcp(q, where, timeout, port, af, source, source_port, one_rr_per_rrset)
+
+        if isinstance(where, list):
+            random.shuffle(where)
+            target_server = where[0]
         else:
-            return dns.query.udp(q, where, timeout, port, af, source, source_port, False, one_rr_per_rrset)
+            target_server = where
+
+        if self._proto == "tcp":
+            return dns.query.tcp(q, target_server, timeout, port, af, source, source_port, one_rr_per_rrset)
+        else:
+            return dns.query.udp(q, target_server, timeout, port, af, source, source_port, False, one_rr_per_rrset)
 
     def get_a(self, host_trg):
         """
