@@ -594,7 +594,7 @@ def whois_ips(res, ip_list):
     print_status("Performing Whois lookup against records found.")
     list = get_whois_nets_iplist(unique(ip_list))
     if len(list) > 0:
-        print_status("The following IP Ranges where found:")
+        print_status("The following IP Ranges were found:")
         for i in range(len(list)):
             print_status(
                 "\t {0} {1}-{2} {3}".format(str(i) + ")", list[i]["start"], list[i]["end"], list[i]["orgname"]))
@@ -619,7 +619,7 @@ def whois_ips(res, ip_list):
                     "Performing Reverse Lookup of range {0}-{1}".format(net_selected['start'], net_selected['end']))
                 found_records.append(brute_reverse(res, expand_range(net_selected['start'], net_selected['end'])))
     else:
-        print_error("No IP Ranges where found in the Whois query results")
+        print_error("No IP Ranges were found in the Whois query results")
 
     return found_records
 
@@ -1047,7 +1047,7 @@ def general_enum(res, domain, do_axfr, do_google, do_bing, do_spf, do_whois, do_
                 print_status("Performing Reverse Look-up of SPF Ranges")
                 returned_records.extend(brute_reverse(res, unique(found_spf_ranges)))
             else:
-                print_status("No IP Ranges where found in SPF and TXT Records")
+                print_status("No IP Ranges were found in SPF and TXT Records")
 
         # Enumerate SRV Records for the targeted Domain
         print_status("Enumerating SRV Records")
@@ -1356,6 +1356,7 @@ def usage():
     print("   -d, --domain      <domain>   Target domain.")
     print("   -r, --range       <range>    IP range for reverse lookup brute force in formats (first-last) or in (range/bitmask).")
     print("   -n, --name_server <name>     Domain server to use. If none is given, the SOA of the target will be used.")
+    print("                                Multiple servers can be specified using a comma separated list.")
     print("   -D, --dictionary  <file>     Dictionary file of subdomain and hostnames to use for brute force.")
     print("   -f                           Filter out of brute force domain lookup, records that resolve to the wildcard defined")
     print("                                IP address when saving records.")
@@ -1438,7 +1439,7 @@ def main():
     parser = argparse.ArgumentParser()
     try:
         parser.add_argument("-d", "--domain", type=str, dest="domain", help="Target domain.")
-        parser.add_argument("-n", "--name_server",type=str, dest="ns_server", help="Domain server to use. If none is given,    the SOA of the target will be used.")
+        parser.add_argument("-n", "--name_server",type=str, dest="ns_server", help="Domain server to use. If none is given,    the SOA of the target will be used. Multiple servers can be specified using a comma separated list.")
         parser.add_argument("-r", "--range",type=str, dest="range", help="IP range for reverse lookup brute force in formats   (first-last) or in (range/bitmask).")
         parser.add_argument("-D", "--dictionary",type=str, dest="dictionary", help="Dictionary file of subdomain and hostnames to use for brute force. Filter out of brute force domain lookup, records that resolve to the wildcard defined IP address when saving records.")
         parser.add_argument("-f", help="Filter out of brute force domain lookup, records that resolve to the wildcard defined IP address when saving records.", action="store_true")
@@ -1477,19 +1478,26 @@ def main():
     domain = arguments.domain
 
     if arguments.ns_server:
-        if netaddr.valid_glob(arguments.ns_server):
-            ns_server = arguments.ns_server
-        else:
-            #Resolve in the case if FQDN
-            answer = socket_resolv(arguments.ns_server)
-            # Check we actually got a list
-            if len(answer) > 0:
-                # We will use the first IP found as the NS
-                ns_server = answer[0][2]
+        ns_server = []
+        ns_raw_list = list(set(arguments.ns_server.split(",")))
+        for entry in ns_raw_list:
+            if netaddr.valid_glob(entry):
+                ns_server.append(entry)
             else:
-                # Exit if we cannot resolve it
-                print_error("Could not resolve NS server provided")
-                sys.exit(1)
+                #Resolve in the case if FQDN
+                answer = socket_resolv(entry)
+                # Check we actually got a list
+                if len(answer) > 0:
+                    # We will use the first IP found as the NS
+                    ns_server.append(answer[0][2])
+                else:
+                    # Exit if we cannot resolve it
+                    print_error("Could not resolve NS server provided and server doesn't appear to be an IP: {}".format(entry))
+
+        # User specified name servers but none of them validated
+        if len(ns_server) == 0:
+            print_error("Please specify valid name servers.")
+            sys.exit(1)
 
     output_file = arguments.xml
 
