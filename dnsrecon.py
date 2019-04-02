@@ -74,6 +74,10 @@ from lib.msf_print import *
 # Global Variables for Brute force Threads
 brtdata = []
 
+CONFIG = {
+    "disable_check_recursion": False,
+    "disable_check_bindversion": False
+}
 
 # Function Definitions
 # -------------------------------------------------------------------------------
@@ -873,14 +877,17 @@ def check_bindversion(res, ns_server, timeout):
     Check if the version of Bind can be queried for.
     """
     version = ""
-    request = dns.message.make_query('version.bind', 'txt', 'ch')
-    try:
-        response = res.query(request, ns_server, timeout=timeout, one_rr_per_rrset=True)
-        if (len(response.answer) > 0):
-            print_status("\t Bind Version for {0} {1}".format(ns_server, response.answer[0].items[0].strings[0]))
-            version = response.answer[0].items[0].strings[0]
-    except (dns.resolver.NXDOMAIN, dns.exception.Timeout, dns.resolver.NoAnswer, socket.error, dns.query.BadResponse):
-        return version
+
+    if not CONFIG or not CONFIG.get("disable_check_bindversion", False):
+        request = dns.message.make_query('version.bind', 'txt', 'ch')
+        try:
+            response = res.query(request, ns_server, timeout=timeout, one_rr_per_rrset=True)
+            if (len(response.answer) > 0):
+                print_status("\t Bind Version for {0} {1}".format(ns_server, response.answer[0].items[0].strings[0]))
+                version = response.answer[0].items[0].strings[0]
+        except (dns.resolver.NXDOMAIN, dns.exception.Timeout, dns.resolver.NoAnswer, socket.error, dns.query.BadResponse):
+            pass
+
     return version
 
 
@@ -889,17 +896,20 @@ def check_recursive(res, ns_server, timeout):
     Check if a NS Server is recursive.
     """
     is_recursive = False
-    query = dns.message.make_query('www.google.com.', dns.rdatatype.NS)
-    try:
-        response = res.query(query, ns_server, timeout)
-        recursion_flag_pattern = "\.*RA\.*"
-        flags = dns.flags.to_text(response.flags)
-        result = re.findall(recursion_flag_pattern, flags)
-        if (result):
-            print_error("\t Recursion enabled on NS Server {0}".format(ns_server))
-        is_recursive = True
-    except (socket.error, dns.exception.Timeout):
-        return is_recursive
+
+    if not CONFIG or not CONFIG.get("disable_check_recursion", False):
+        query = dns.message.make_query('www.google.com.', dns.rdatatype.NS)
+        try:
+            response = res.query(query, ns_server, timeout)
+            recursion_flag_pattern = "\.*RA\.*"
+            flags = dns.flags.to_text(response.flags)
+            result = re.findall(recursion_flag_pattern, flags)
+            if (result):
+                print_error("\t Recursion enabled on NS Server {0}".format(ns_server))
+            is_recursive = True
+        except (socket.error, dns.exception.Timeout):
+            pass
+
     return is_recursive
 
 
@@ -1377,6 +1387,8 @@ def usage():
     print("   --db              <file>     SQLite 3 file to save found records.")
     print("   --xml             <file>     XML file to save found records.")
     print("   --iw                         Continue brute forcing a domain even if a wildcard records are discovered.")
+    print("   --disable_check_recursion    Disables check for recursion on name servers.")
+    print("   --disable_check_bindversion  Disables check for BIND version on name servers.")
     print("   -c, --csv         <file>     Comma separated value file.")
     print("   -j, --json        <file>     JSON file.")
     print("   -v                           Show attempts in the brute force modes.")
@@ -1446,6 +1458,8 @@ def main():
         parser.add_argument("-c", "--csv", type=str, dest="csv", help="Comma separated value file.")
         parser.add_argument("-j", "--json", type=str, dest="json", help="JSON file.")
         parser.add_argument("--iw", help="Continue brute forcing a domain even if a wildcard records are discovered.", action="store_true")
+        parser.add_argument("--disable_check_recursion", help="Disables check for recursion on name servers", action="store_true")
+        parser.add_argument("--disable_check_bindversion", help="Disables check for BIND version on name servers", action="store_true")
         parser.add_argument("-v", help="Enable verbose", action="store_true")
         arguments = parser.parse_args()
 
@@ -1508,6 +1522,8 @@ def main():
     json_file = arguments.json
     verbose = arguments.v
     ignore_wildcardrr = arguments.iw
+    CONFIG['disable_check_recursion'] = arguments.disable_check_recursion
+    CONFIG['disable_check_bindversion'] = arguments.disable_check_bindversion
 
     xfr = arguments.a
     goo = arguments.g
