@@ -1252,10 +1252,10 @@ def ds_zone_walk(res, domain):
         lambda h, hc, dc: "0.{0}".format(h),
 
         # Append a hyphen to the host portion
-        lambda h, hc, dc: "{0}-.{1}".format(hc, dc),
+        lambda h, hc, dc: "{0}-.{1}".format(hc, dc) if hc else None,
 
         # Double the last character of the host portion
-        lambda h, hc, dc: "{0}{1}.{2}".format(hc, hc[-1], dc)
+        lambda h, hc, dc: "{0}{1}.{2}".format(hc, hc[-1], dc) if hc else None
     ]
 
     pending = set([domain])
@@ -1271,12 +1271,26 @@ def ds_zone_walk(res, domain):
             records.extend(lookup_next(hostname, res))
 
             # Arrange the arguments for the transformations
-            fields = re.search("(^[^.]*).(\S*)", hostname)
-            params = [hostname, fields.group(1), fields.group(2)]
+            fields = re.search("^(^[^.]*)\.(\S+\.\S*)$", hostname)
+
+            domain_portion = hostname
+            if fields and fields.group(2):
+                domain_portion = fields.group(2)
+
+            host_portion = ""
+            if fields and fields.group(1):
+                host_portion = fields.group(1)
+
+            params = [hostname, host_portion, domain_portion]
+
+            walk_filter = "." + domain_portion
+            walk_filter_offset = len(walk_filter) + 1
 
             for transformation in transformations:
                 # Apply the transformation
                 target = transformation(*params)
+                if not target:
+                    continue
 
                 # Perform a DNS query for the target and process the response
                 if not nameserver:
@@ -1292,7 +1306,10 @@ def ds_zone_walk(res, domain):
                     #   2) The subsequent existing hostname that is signed
                     # Add the latter to our list of pending hostnames
                     for r in a:
-                        pending.add(r.next.to_text()[:-1])
+                        # Avoid walking outside of the target domain. This
+                        # happens with certain misconfigured domains.
+                        if r.next.to_text()[-walk_filter_offset:-1] == walk_filter:
+                            pending.add(r.next.to_text()[:-1])
 
             # Ensure nothing pending has already been queried
             pending -= finished
@@ -1305,6 +1322,9 @@ def ds_zone_walk(res, domain):
         print_error("sure you can reach the target DNS Servers directly and requests")
         print_error("are not being filtered. Increase the timeout to a higher number")
         print_error("with --lifetime <time> option.")
+
+    except (EOFError):
+        print_error("SoA nameserver {} failed to answer the DNSSEC query for {}".format(nameserver, target))
 
     except (socket.error):
         print_error("SoA nameserver {} failed to answer the DNSSEC query for {}".format(nameserver, domain))
