@@ -950,7 +950,6 @@ def general_enum(res, domain, do_axfr, do_google, do_bing, do_spf, do_whois, do_
         dns_sec_check(domain, res)
 
         # Enumerate SOA Record
-        found_soa_records = res.get_soa()
         try:
             found_soa_records = res.get_soa()
             for found_soa_record in found_soa_records:
@@ -1248,7 +1247,7 @@ def ds_zone_walk(res, domain):
         res = DnsHelper(domain, soa_rcd, 3)
         nameserver = soa_rcd
     except:
-        print_error("This zone appears to be miss configured, no SOA record found.")
+        print_error("This zone appears to be misconfigured, no SOA record found.")
 
     timeout = res._res.timeout
 
