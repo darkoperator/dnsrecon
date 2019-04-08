@@ -306,7 +306,7 @@ def check_nxdomain_hijack(nameserver):
 
     if len(address) > 0:
         print_error("Nameserver {} performs NXDOMAIN hijacking".format(nameserver))
-        print_error("It resolves non-existant domains to {}".format(", ".join(address)))
+        print_error("It resolves nonexistent domains to {}".format(", ".join(address)))
         print_error("This server has been removed from the name server list!")
         return True
 
