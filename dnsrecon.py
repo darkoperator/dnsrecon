@@ -273,6 +273,45 @@ def check_wildcard(res, domain_trg):
 
     return wildcard
 
+def check_nxdomain_hijack(nameserver):
+    """
+    Function for checking if a name server performs NXDOMAIN hijacking
+    """
+
+    test_name = ''.join(Random().sample(string.hexdigits + string.digits,
+                                        20)) + ".com"
+
+    res = dns.resolver.Resolver(configure=False)
+    res.nameservers = [nameserver]
+    res.timeout = 5.0
+
+    address = []
+
+    for record_type in ('A', 'AAAA'):
+        try:
+            answers = res.query(test_name, record_type, tcp=True)
+        except (dns.resolver.NXDOMAIN, dns.exception.Timeout, dns.resolver.NoAnswer, socket.error, dns.query.BadResponse):
+            continue
+
+        if answers:
+            for ardata in answers.response.answer:
+                for rdata in ardata:
+                    if rdata.rdtype == 5:
+                        if rdata.target.to_text().endswith('.'):
+                            address.append(rdata.target.to_text()[:-1])
+                        else:
+                            address.append(rdata.target.to_text())
+                    else:
+                        address.append(rdata.address)
+
+    if len(address) > 0:
+        print_error("Nameserver {} performs NXDOMAIN hijacking".format(nameserver))
+        print_error("It resolves nonexistent domains to {}".format(", ".join(address)))
+        print_error("This server has been removed from the name server list!")
+        return True
+
+    return False
+
 
 def brute_tlds(res, domain, verbose=False):
     """
@@ -1481,6 +1520,8 @@ def main():
         ns_server = []
         ns_raw_list = list(set(arguments.ns_server.split(",")))
         for entry in ns_raw_list:
+            if check_nxdomain_hijack(entry):
+                continue
             if netaddr.valid_glob(entry):
                 ns_server.append(entry)
             else:
