@@ -31,7 +31,7 @@ except AttributeError:
 
 class AppURLopener(url_opener):
   
-    sudo  = "Mozilla/5.0 (compatible; Googlebot/2.1; + http://www.google.com/bot.html)"
+    version  = "Mozilla/5.0 (compatible; Googlebot/2.1; + http://www.google.com/bot.html)"
 
 
 def scrape_google(dom):
