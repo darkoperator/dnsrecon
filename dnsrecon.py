@@ -290,7 +290,7 @@ def check_nxdomain_hijack(nameserver):
     for record_type in ('A', 'AAAA'):
         try:
             answers = res.query(test_name, record_type, tcp=True)
-        except (dns.resolver.NXDOMAIN, dns.exception.Timeout, dns.resolver.NoAnswer, socket.error, dns.query.BadResponse):
+        except (dns.resolver.NoNameservers, dns.resolver.NXDOMAIN, dns.exception.Timeout, dns.resolver.NoAnswer, socket.error, dns.query.BadResponse):
             continue
 
         if answers:
