@@ -42,6 +42,7 @@ acid
 activestat
 ad
 adam
+adfs
 adkit
 admin
 administracion
