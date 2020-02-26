@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 #    DNSRecon Data Parser
@@ -93,7 +93,7 @@ def xml_parse(xm_file, ifilter, tfilter, nfilter, list):
                         and re.search(nfilter, elem.attrib['name'], re.I):
                             if list:
                                 if elem.attrib['address'] not in iplist:
-                                    print elem.attrib['address']
+                                    print(elem.attrib['address'])
                             else:
                                 print_good("{0} {1} {2}".format(elem.attrib['type'], elem.attrib['name'], elem.attrib['address']))
 
@@ -153,7 +153,7 @@ def csv_parse(csv_file, ifilter, tfilter, nfilter, list):
     """
     iplist = []
     reader = csv.reader(open(csv_file, 'r'), delimiter=',')
-    reader.next()
+    next(reader)
     for row in reader:
         # Check if IP is in the filter list of addresses to ignore
         if ((len(ifilter) == 0) or (IPAddress(row[2]) in ifilter)) and (row[2] != "no_ip"):

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 #    DNSRecon
@@ -110,7 +110,7 @@ class Worker(Thread):
                     brtdata.append(found_record)
                     for r in found_record:
                         if type(r).__name__ == "dict":
-                            for k, v in r.iteritems():
+                            for k, v in r.items():
                                 print_status("\t{0}:{1}".format(k, v))
                             print_status()
                         else:
@@ -685,8 +685,8 @@ def dns_record_from_dict(record_dict_list, scan_info, domain):
             try:
                 for k, v in r.items():
                     try:
-                        k = unicode(str(k))
-                        v = unicode(str(v))
+                        k = str(k)
+                        v = str(v)
                         elem.attrib[k] = v
                     except:
                         print_error("Could not convert key or value to unicode: '{0} = {1}'".format((repr(k)), (repr(v))))
