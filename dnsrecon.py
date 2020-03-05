@@ -981,6 +981,7 @@ def general_enum(res, domain, do_axfr, do_google, do_spf, do_whois, zw):
 
         #sys.exit(0)
 
+    return returned_records 
 
 
 def usage():
