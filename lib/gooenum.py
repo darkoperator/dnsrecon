@@ -54,9 +54,14 @@ def scrape_google(dom):
             sock = urllib.urlopen(url)
             data = sock.read()
         except AttributeError:
-            request=urllib.request.Request(url,None,headers)
-            sock = urllib.request.urlopen(request)
-            data = sock.read().decode("utf-8") 
+            try:
+                request=urllib.request.Request(url,None,headers)
+                sock = urllib.request.urlopen(request)
+                data = sock.read().decode("utf-8") 
+
+            except urllib.error.HTTPError:
+                print_error("Google has return an HTTP error and detected the search as \'bot activity, stopping search...")
+                return results
 
         if re.search('Our systems have detected unusual traffic from your computer network',data) != None:
             print_error("Google has detected the search as \'bot activity, stopping search...")

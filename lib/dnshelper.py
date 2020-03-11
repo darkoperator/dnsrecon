@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-#    Copyright (C) 2017  Carlos Perez
+#    Copyright (C) 2020  Carlos Perez
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -271,7 +271,7 @@ class DnsHelper:
         try:
             answers = self._res.query(self._domain, 'SPF', tcp=tcp)
             for rdata in answers:
-                name = ''.join(rdata.strings)
+                name = bytes.join(b'',rdata.strings).decode('utf-8')
                 spf_record.append(['SPF', name])
         except:
             return None
@@ -289,7 +289,7 @@ class DnsHelper:
         try:
             answers = self._res.query(target, 'TXT', tcp=tcp)
             for rdata in answers:
-                string = "".join(rdata.strings)
+                string = bytes.join(b'',rdata.strings).decode('utf-8')
                 txt_record.append(['TXT', target, string])
         except:
             return []

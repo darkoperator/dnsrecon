@@ -1,9 +1,9 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 #    DNSRecon
 #
-#    Copyright (C) 2019  Carlos Perez
+#    Copyright (C) 2020  Carlos Perez
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -18,7 +18,7 @@
 #    along with this program; if not, write to the Free Software
 #    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
-__version__ = '0.9.0'
+__version__ = '0.10.0'
 __author__ = 'Carlos Perez, Carlos_Perez@darkoperator.com'
 
 __doc__ = """
@@ -110,7 +110,7 @@ class Worker(Thread):
                     brtdata.append(found_record)
                     for r in found_record:
                         if type(r).__name__ == "dict":
-                            for k, v in r.iteritems():
+                            for k, v in r.items():
                                 print_status("\t{0}:{1}".format(k, v))
                             print_status()
                         else:
@@ -685,8 +685,8 @@ def dns_record_from_dict(record_dict_list, scan_info, domain):
             try:
                 for k, v in r.items():
                     try:
-                        k = unicode(str(k))
-                        v = unicode(str(v))
+                        k = str(k)
+                        v = str(v)
                         elem.attrib[k] = v
                     except:
                         print_error("Could not convert key or value to unicode: '{0} = {1}'".format((repr(k)), (repr(v))))
