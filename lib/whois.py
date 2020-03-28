@@ -78,7 +78,7 @@ def get_whois_nets(data):
     where each list has the starting and ending IP of the found range.
     """
 
-    pattern = '([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}) - ([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})'
+    pattern = r'([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}) - ([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})'
     results = re.findall(pattern, data)
 
     return results
@@ -88,7 +88,7 @@ def get_whois_orgname(data):
     org_pattern = "OrgName\:\s*(.*)\n"
     result = re.findall(org_pattern, data)
     # Lets try RIPENET Format
-    if not result :
+    if not result:
         org_pattern = "netname\:\s*(.*)\n"
         result = re.findall(org_pattern, data)
     if not result:
