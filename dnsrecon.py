@@ -875,7 +875,7 @@ def check_recursive(res, ns_server, timeout):
             recursion_flag_pattern = "\.*RA\.*"
             flags = dns.flags.to_text(response.flags)
             result = re.findall(recursion_flag_pattern, flags)
-            if (result):
+            if result:
                 print_error("\t Recursion enabled on NS Server {0}".format(ns_server))
             is_recursive = True
         except (socket.error, dns.exception.Timeout):
@@ -884,7 +884,7 @@ def check_recursive(res, ns_server, timeout):
     return is_recursive
 
 
-def general_enum(res, domain, do_axfr, do_google, do_bing, do_spf, do_whois, do_crt, zw):
+def general_enum(res, domain, do_axfr, do_google, do_bing, do_spf, do_whois, do_crt, zw, thread_num=None):
     """
     Function for performing general enumeration of a domain. It gets SOA, NS, MX
     A, AAAA and SRV records for a given domain. It will first try a Zone Transfer
@@ -907,7 +907,7 @@ def general_enum(res, domain, do_axfr, do_google, do_bing, do_spf, do_whois, do_
     from_zt = None
 
     # Perform test for Zone Transfer against all NS servers of a Domain
-    if do_axfr == True:
+    if do_axfr:
         zonerecs = res.zone_transfer()
         if zonerecs is not None:
             returned_records.extend(res.zone_transfer())
@@ -1021,7 +1021,7 @@ def general_enum(res, domain, do_axfr, do_google, do_bing, do_spf, do_whois, do_
 
         # Enumerate SRV Records for the targeted Domain
         print_status("Enumerating SRV Records")
-        srv_rcd = brute_srv(res, domain)
+        srv_rcd = brute_srv(res, domain, thread_num=thread_num)
         if srv_rcd:
             for r in srv_rcd:
                 ip_for_whois.append(r["address"])
@@ -1571,7 +1571,8 @@ def main():
 
                 elif r == "std":
                     print_status("Performing General Enumeration of Domain:{0}".format(domain))
-                    std_enum_records = general_enum(res, domain, xfr, goo, bing, spf_enum, do_whois, do_crt, zonewalk)
+                    std_enum_records = general_enum(res, domain, xfr, goo, bing, spf_enum, do_whois, do_crt, zonewalk,
+                                                    thread_num=thread_num)
 
                     if (output_file is not None) or (results_db is not None) or (csv_file is not None) or (
                             json_file is not None):
@@ -1591,12 +1592,13 @@ def main():
                 elif r == "brt":
                     if (dict is not None) and (domain is not None):
                         print_status("Performing host and subdomain brute force against {0}".format(domain))
-                        brt_enum_records = brute_domain(res, dict, domain, wildcard_filter, verbose, ignore_wildcardrr, thread_num=thread_num)
+                        brt_enum_records = brute_domain(res, dict, domain, wildcard_filter, verbose, ignore_wildcardrr,
+                                                        thread_num=thread_num)
 
                         if (output_file is not None) or (results_db is not None) or (csv_file is not None) or (
                                 json_file is not None):
                             returned_records.extend(brt_enum_records)
-                    elif (domain is not None):
+                    elif domain is not None:
                         script_dir = os.path.dirname(os.path.realpath(__file__)) + os.sep
                         print_status("No file was specified with domains to check.")
                         name_list_dic = script_dir + "namelist.txt"
