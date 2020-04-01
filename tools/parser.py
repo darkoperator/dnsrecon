@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 #    DNSRecon Data Parser
@@ -29,6 +29,7 @@ import sys
 import re
 
 from netaddr import *
+
 
 # Function Definitions
 # ------------------------------------------------------------------------------
@@ -85,53 +86,60 @@ def xml_parse(xm_file, ifilter, tfilter, nfilter, list):
             # Check that it is a RR Type that has an IP Address
             if "address" in elem.attrib:
                 # Check if the IP is in the filter list of IPs to ignore
-                if (len(ifilter) == 0 or IPAddress(elem.attrib['address']) in ifilter) and (elem.attrib['address'] != "no_ip"):
+                if (len(ifilter) == 0 or IPAddress(elem.attrib['address']) in ifilter) and (
+                        elem.attrib['address'] != "no_ip"):
                     # Check if the RR Type against the types
                     if re.match(tfilter, elem.attrib['type'], re.I):
                         # Process A, AAAA and PTR Records
                         if re.search(r'PTR|^[A]$|AAAA', elem.attrib['type']) \
-                        and re.search(nfilter, elem.attrib['name'], re.I):
+                                and re.search(nfilter, elem.attrib['name'], re.I):
                             if list:
                                 if elem.attrib['address'] not in iplist:
-                                    print elem.attrib['address']
+                                    print(elem.attrib['address'])
                             else:
-                                print_good("{0} {1} {2}".format(elem.attrib['type'], elem.attrib['name'], elem.attrib['address']))
+                                print_good("{0} {1} {2}".format(elem.attrib['type'], elem.attrib['name'],
+                                                                elem.attrib['address']))
 
                         # Process NS Records
                         elif re.search(r'NS', elem.attrib['type']) and \
-                        re.search(nfilter, elem.attrib['target'], re.I):
+                                re.search(nfilter, elem.attrib['target'], re.I):
                             if list:
                                 if elem.attrib['address'] not in iplist:
                                     iplist.append(elem.attrib['address'])
                             else:
-                                print_good("{0} {1} {2}".format(elem.attrib['type'], elem.attrib['target'], elem.attrib['address']))
+                                print_good("{0} {1} {2}".format(elem.attrib['type'], elem.attrib['target'],
+                                                                elem.attrib['address']))
 
                         # Process SOA Records
                         elif re.search(r'SOA', elem.attrib['type']) and \
-                        re.search(nfilter, elem.attrib['mname'], re.I):
+                                re.search(nfilter, elem.attrib['mname'], re.I):
                             if list:
                                 if elem.attrib['address'] not in iplist:
                                     iplist.append(elem.attrib['address'])
                             else:
-                                print_good("{0} {1} {2}".format(elem.attrib['type'], elem.attrib['mname'], elem.attrib['address']))
+                                print_good("{0} {1} {2}".format(elem.attrib['type'], elem.attrib['mname'],
+                                                                elem.attrib['address']))
 
                         # Process MS Records
                         elif re.search(r'MX', elem.attrib['type']) and \
-                        re.search(nfilter, elem.attrib['exchange'], re.I):
+                                re.search(nfilter, elem.attrib['exchange'], re.I):
                             if list:
                                 if elem.attrib['address'] not in iplist:
                                     iplist.append(elem.attrib['address'])
                             else:
-                                print_good("{0} {1} {2}".format(elem.attrib['type'], elem.attrib['exchange'], elem.attrib['address']))
+                                print_good("{0} {1} {2}".format(elem.attrib['type'], elem.attrib['exchange'],
+                                                                elem.attrib['address']))
 
                         # Process SRV Records
                         elif re.search(r'SRV', elem.attrib['type']) and \
-                        re.search(nfilter, elem.attrib['target'], re.I):
+                                re.search(nfilter, elem.attrib['target'], re.I):
                             if list:
                                 if elem.attrib['address'] not in iplist:
                                     iplist.append(elem.attrib['address'])
                             else:
-                                print_good("{0} {1} {2} {3}".format(elem.attrib['type'], elem.attrib['name'], elem.attrib['address'], elem.attrib['target'], elem.attrib['port']))
+                                print_good("{0} {1} {2} {3}".format(elem.attrib['type'], elem.attrib['name'],
+                                                                    elem.attrib['address'], elem.attrib['target'],
+                                                                    elem.attrib['port']))
             else:
                 if re.match(tfilter, elem.attrib['type'], re.I):
                     # Process TXT and SPF Records
@@ -153,7 +161,7 @@ def csv_parse(csv_file, ifilter, tfilter, nfilter, list):
     """
     iplist = []
     reader = csv.reader(open(csv_file, 'r'), delimiter=',')
-    reader.next()
+    next(reader)
     for row in reader:
         # Check if IP is in the filter list of addresses to ignore
         if ((len(ifilter) == 0) or (IPAddress(row[2]) in ifilter)) and (row[2] != "no_ip"):
@@ -165,7 +173,7 @@ def csv_parse(csv_file, ifilter, tfilter, nfilter, list):
                 else:
                     print_good(" ".join(row))
     # Process IPs for target list if available
-    #if len(iplist) > 0:
+    # if len(iplist) > 0:
     #    for ip in filter(None, iplist):
     #        print_line(ip)
 
@@ -252,8 +260,9 @@ def usage():
     print("                            For A, AAAA, NS, MX, SOA, SRV and PTR Records.")
     sys.exit(0)
 
+
 # Main
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
 
 
 def main():
@@ -266,21 +275,21 @@ def main():
     target_list = False
     file = None
     names = False
-    #ip_set = []
+    # ip_set = []
 
     #
     # Define options
     #
     try:
         options, args = getopt.getopt(sys.argv[1:], 'hi:t:s:lf:n',
-                                           ['help',
-                                           'ips='
-                                           'type=',
-                                           'str=',
-                                           'list',
-                                           'file=',
-                                           'name'
-                                           ])
+                                      ['help',
+                                       'ips='
+                                       'type=',
+                                       'str=',
+                                       'list',
+                                       'file=',
+                                       'name'
+                                       ])
 
     except getopt.GetoptError as error:
         print_error("Wrong Option Provided!")
@@ -298,7 +307,7 @@ def main():
             ipranges = arg.split(",")
             for r in ipranges:
                 ip_filter.extend(process_range(r))
-            #ip_set = IPSet(ip_filter)
+            # ip_set = IPSet(ip_filter)
 
         elif opt in ('-s', '--str'):
             name_filter = "({0})".format(arg)
@@ -308,7 +317,7 @@ def main():
 
         elif opt in ('-f', '--file'):
 
-            #Check if the dictionary file exists
+            # Check if the dictionary file exists
             if os.path.isfile(arg):
                 file = arg
             else:
@@ -346,6 +355,7 @@ def main():
     else:
         print_error("A DNSRecon XML or CSV output file must be provided to be parsed")
         usage()
+
 
 if __name__ == "__main__":
     main()
