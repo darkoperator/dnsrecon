@@ -397,7 +397,6 @@ class DnsHelper:
         try:
             soa_srvs = self.get_soa()
             for s in soa_srvs:
-                print(f'Inside for loop s is: {s} and type is: {type(s)}')
                 print_good("\t {0}".format(" ".join(s)))
                 ns_records.append(s[2])
         except:
@@ -424,9 +423,7 @@ class DnsHelper:
         for ns_srv in ns_records:
             print_status(" ")
             print_status('Trying NS server {0}'.format(ns_srv))
-            print(f'inside ns_rv type is: {ns_srv}')
             if self.check_tcp_dns(ns_srv):
-
                 print_good('{0} Has port 53 TCP Open'.format(ns_srv))
                 try:
                     zone = self.from_wire(dns.query.xfr(ns_srv, self._domain))
