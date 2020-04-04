@@ -397,6 +397,7 @@ class DnsHelper:
         try:
             soa_srvs = self.get_soa()
             for s in soa_srvs:
+                print(f'Inside for loop s is: {s} and type is: {type(s)}')
                 print_good("\t {0}".format(" ".join(s)))
                 ns_records.append(s[2])
         except:
@@ -423,6 +424,7 @@ class DnsHelper:
         for ns_srv in ns_records:
             print_status(" ")
             print_status('Trying NS server {0}'.format(ns_srv))
+            print(f'inside ns_rv type is: {ns_srv}')
             if self.check_tcp_dns(ns_srv):
 
                 print_good('{0} Has port 53 TCP Open'.format(ns_srv))
@@ -470,9 +472,10 @@ class DnsHelper:
 
                     for (name, rdataset) in zone.iterate_rdatasets(dns.rdatatype.TXT):
                         for rdata in rdataset:
-                            print_status('\t TXT {0}'.format(''.join(rdata.strings)))
+                            rdata = [string.decode() for string in rdata.strings]
+                            print_status('\t TXT {0}'.format(''.join(rdata)))
                             zone_records.append({'zone_server': ns_srv, 'type': 'TXT',
-                                                'strings': ''.join(rdata.strings)})
+                                                'strings': ''.join(rdata)})
 
                     for (name, rdataset) in zone.iterate_rdatasets(dns.rdatatype.SPF):
                         for rdata in rdataset:
@@ -560,9 +563,9 @@ class DnsHelper:
 
                     for (name, rdataset) in zone.iterate_rdatasets(dns.rdatatype.HINFO):
                         for rdata in rdataset:
-                            print_status('\t HINFO {0} {1}'.format(rdata.cpu, rdata.os))
+                            print_status('\t HINFO {0} {1}'.format(rdata.cpu.decode(), rdata.os.decode()))
                             zone_records.append({'zone_server': ns_srv, 'type': 'HINFO',
-                                                'cpu': rdata.cpu, 'os': rdata.os})
+                                                'cpu': rdata.cpu.decode(), 'os': rdata.os.decode()})
 
                     for (name, rdataset) in zone.iterate_rdatasets(dns.rdatatype.WKS):
                         for rdata in rdataset:
@@ -615,18 +618,18 @@ class DnsHelper:
 
                     for (name, rdataset) in zone.iterate_rdatasets(dns.rdatatype.NAPTR):
                         for rdata in rdataset:
-                            print_status('\t NAPTR {0} {1} {2} {3} {4} {5}'.format(rdata.flags,
+                            print_status('\t NAPTR {0} {1} {2} {3} {4} {5}'.format(rdata.flags.decode(),
                                                                                    rdata.order,
                                                                                    rdata.preference,
-                                                                                   rdata.regexp,
-                                                                                   rdata.replacement,
-                                                                                   rdata.service))
+                                                                                   rdata.regexp.decode(),
+                                                                                   rdata.replacement.to_text(),
+                                                                                   rdata.service.decode()))
                             zone_records.append({'zone_server': ns_srv, 'type': 'NAPTR',
                                                  'order': str(rdata.order),
                                                  'preference': str(rdata.preference),
-                                                 'regex': rdata.regexp,
+                                                 'regex': rdata.regexp.decode(),
                                                  'replacement': rdata.replacement.to_text(),
-                                                 'service': rdata.service})
+                                                 'service': rdata.service.decode()})
 
                     for (name, rdataset) in zone.iterate_rdatasets(dns.rdatatype.CERT):
                         for rdata in rdataset:
@@ -731,6 +734,8 @@ class DnsHelper:
                 except Exception as e:
                     print_error('Zone Transfer Failed!')
                     print_error(e)
+                    import traceback as t
+                    t.print_exc()
                     zone_records.append({'type': 'info', 'zone_transfer': 'failed', 'ns_server': ns_srv})
             else:
                 print_error('Zone Transfer Failed for {0}!'.format(ns_srv))
