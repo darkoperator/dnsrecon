@@ -287,6 +287,14 @@ def brute_tlds(res, domain, verbose=False, thread_num=None):
         time.strftime('%H:%M:%S', time.gmtime((len(itld) + len(gtld) + len(grtld) + len(stld) + len(cctld)) / 3))))
 
     total_tlds = list(set(itld + gtld + grtld + stld))
+
+    if verbose:
+        for tld in total_tlds:
+            print_status(f'Trying: {domain_main}.{tld}')
+        for cc in cctld:
+            print_status(f'Trying: {domain_main}.{cc}')
+        for cc, tld in zip(cctld, total_tlds):
+            print_status(f'Trying: {domain_main}.{cc}.{tld}')
     try:
         with futures.ThreadPoolExecutor(max_workers=thread_num) as executor:
             future_results = {**{executor.submit(res.get_ip, f'{domain_main}.{tld}'): tld for tld in total_tlds},
@@ -297,20 +305,14 @@ def brute_tlds(res, domain, verbose=False, thread_num=None):
             brtdata = [future.result() for future in futures.as_completed(future_results)]
             brtdata = [result for result in brtdata if len(result) > 0]
 
-        if verbose:
-            for tld in total_tlds:
-                print_status(f'Tried: {domain_main}.{tld}')
-            for cc in cctld:
-                print_status(f'Tried: {domain_main}.{cc}')
-            for cc, tld in zip(cctld, total_tlds):
-                print_status(f'Tried: {domain_main}.{cc}.{tld}')
     except Exception as e:
         print_error(e)
-
-    found_tlds = [[{"type": rcd[0], "name": rcd[1], "address": rcd[2]}] for rcd_found in brtdata for rcd in rcd_found
-                  if re.search(r"^A", rcd[0])]
-    for tld in found_tlds:
-        print(tld)
+    found_tlds = []
+    for rcd_found in brtdata:
+        for rcd in rcd_found:
+            if re.search(r"^A", rcd[0]):
+                print_good({"type": rcd[0], "name": rcd[1], "address": rcd[2]})
+                found_tlds.append([{"type": rcd[0], "name": rcd[1], "address": rcd[2]}])
     print_good(f"{len(found_tlds)} Records Found")
     return found_tlds
 
@@ -353,13 +355,15 @@ def brute_srv(res, domain, verbose=False, thread_num=None):
     except Exception as ex:
         print_error(ex)
 
-    # Make sure we clear the variable
     if len(brtdata) > 0:
-        returned_records = [[{"type": rcd[0],
-                              "name": rcd[1],
-                              "target": rcd[2],
-                              "address": rcd[3],
-                              "port": rcd[4]}] for rcd_found in brtdata for rcd in rcd_found]
+        for rcd_found in brtdata:
+            for rcd in rcd_found:
+                returned_records.append([{"type": rcd[0],
+                                         "name": rcd[1],
+                                         "target": rcd[2],
+                                         "address": rcd[3],
+                                         "port": rcd[4]}])
+                print_good({"type": rcd[0], "name": rcd[1], "target": rcd[2], "address": rcd[3], "port": rcd[4]})
     else:
         print_error(f"No SRV Records Found for {domain}")
 
@@ -381,7 +385,6 @@ def brute_reverse(res, ip_list, verbose=False, thread_num=None):
     # Resolve each IP in a separate thread.
 
     ip_range = range(len(ip_list) - 1)
-    import pprint as p
 
     try:
 
@@ -397,11 +400,11 @@ def brute_reverse(res, ip_list, verbose=False, thread_num=None):
     except Exception as ex:
         print_error(ex)
 
-    returned_records = [[{'type': rcd[0],
-                          'name': rcd[1],
-                          'address': rcd[2]}] for rcd_found in brtdata for rcd in rcd_found]
-
-    p.pprint(returned_records, indent=4)
+    returned_records = []
+    for rcd_found in brtdata:
+        for rcd in rcd_found:
+            returned_records.append([{'type': rcd[0], 'name': rcd[1], 'address': rcd[2]}])
+            print_good({'type': rcd[0], 'name': rcd[1], 'address': rcd[2]})
 
     print_good("{0} Records Found".format(len(returned_records)))
 
@@ -1239,7 +1242,7 @@ def ds_zone_walk(res, domain):
         lambda h, hc, dc: "{0}{1}.{2}".format(hc, hc[-1], dc) if hc else None
     ]
 
-    pending = set([domain])
+    pending = {domain}
     finished = set()
 
     try:
@@ -1295,10 +1298,10 @@ def ds_zone_walk(res, domain):
             # Ensure nothing pending has already been queried
             pending -= finished
 
-    except (KeyboardInterrupt):
+    except KeyboardInterrupt:
         print_error("You have pressed Ctrl + C. Saving found records.")
 
-    except (dns.exception.Timeout):
+    except dns.exception.Timeout:
         print_error("A timeout error occurred while performing the zone walk please make ")
         print_error("sure you can reach the target DNS Servers directly and requests")
         print_error("are not being filtered. Increase the timeout to a higher number")
@@ -1686,24 +1689,24 @@ def main():
                 sys.exit(1)
 
         # if an output xml file is specified it will write returned results.
-        if (output_file is not None):
+        if output_file is not None:
             print_status("Saving records to XML file: {0}".format(output_file))
             xml_enum_doc = dns_record_from_dict(returned_records, scan_info, domain)
             write_to_file(xml_enum_doc, output_file)
 
         # if an output db file is specified it will write returned results.
-        if (results_db is not None):
+        elif results_db is not None:
             print_status("Saving records to SQLite3 file: {0}".format(results_db))
             create_db(results_db)
             write_db(results_db, returned_records)
 
         # if an output csv file is specified it will write returned results.
-        if (csv_file is not None):
+        elif csv_file is not None:
             print_status("Saving records to CSV file: {0}".format(csv_file))
             write_to_file(make_csv(returned_records), csv_file)
 
         # if an output json file is specified it will write returned results.
-        if (json_file is not None):
+        elif json_file is not None:
             print_status("Saving records to JSON file: {0}".format(json_file))
             write_json(json_file, returned_records, scan_info)
 
@@ -1717,27 +1720,26 @@ def main():
             returned_records.extend(std_enum_records)
 
             # if an output xml file is specified it will write returned results.
-            if (output_file is not None):
+            if output_file is not None:
                 print_status("Saving records to XML file: {0}".format(output_file))
                 xml_enum_doc = dns_record_from_dict(returned_records, scan_info, domain)
                 write_to_file(xml_enum_doc, output_file)
 
             # if an output db file is specified it will write returned results.
-            if (results_db is not None):
+            elif results_db is not None:
                 print_status("Saving records to SQLite3 file: {0}".format(results_db))
                 create_db(results_db)
                 write_db(results_db, returned_records)
 
             # if an output csv file is specified it will write returned results.
-            if (csv_file is not None):
+            elif csv_file is not None:
                 print_status("Saving records to CSV file: {0}".format(csv_file))
                 write_to_file(make_csv(returned_records), csv_file)
 
                 # if an output json file is specified it will write returned results.
-            if (json_file is not None):
+            elif json_file is not None:
                 print_status("Saving records to JSON file: {0}".format(json_file))
                 write_json(json_file, returned_records, scan_info)
-
             sys.exit(0)
         except dns.resolver.NXDOMAIN:
             print_error("Could not resolve domain: {0}".format(domain))
