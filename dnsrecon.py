@@ -1025,10 +1025,6 @@ def general_enum(res, domain, do_axfr, do_google, do_bing, do_spf, do_whois, do_
         # Enumerate SRV Records for the targeted Domain
         print_status("Enumerating SRV Records")
         srv_rcd = brute_srv(res, domain, thread_num=thread_num)
-        # import pprint as p
-        # p.pprint(srv_rcd, indent=4)
-        # print(type(srv_rcd))
-        # exit(-2)
         if srv_rcd:
             for r in srv_rcd:
                 ip_for_whois.append(r["address"])
