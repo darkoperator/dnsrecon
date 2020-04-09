@@ -30,6 +30,7 @@ requires dnspython http://www.dnspython.org/
 requires netaddr https://github.com/drkjam/netaddr/
 
 """
+
 import argparse
 import os
 import string
@@ -37,13 +38,6 @@ import sqlite3
 import datetime
 
 import netaddr
-
-
-# Manage the change in Python3 of the name of the Queue Library
-try:
-    from Queue import Queue
-except ImportError:
-    from queue import Queue
 
 from random import Random
 from threading import Lock, Thread
@@ -71,6 +65,8 @@ from lib.whois import *
 from lib.dnshelper import DnsHelper
 from lib.msf_print import *
 
+from concurrent import futures
+
 # Global Variables for Brute force Threads
 brtdata = []
 
@@ -79,82 +75,9 @@ CONFIG = {
     "disable_check_bindversion": False
 }
 
+
 # Function Definitions
 # -------------------------------------------------------------------------------
-
-# Worker & Threadpool classes ripped from
-# http://code.activestate.com/recipes/577187-python-thread-pool/
-
-class Worker(Thread):
-    """Thread executing tasks from a given tasks queue"""
-
-    lck = Lock()
-
-    def __init__(self, tasks):
-        Thread.__init__(self)
-        self.tasks = tasks
-        self.daemon = True
-        self.start()
-        # Global variable that will hold the results
-        global brtdata
-
-    def run(self):
-
-        found_record = []
-        while True:
-            (func, args, kargs) = self.tasks.get()
-            try:
-                found_record = func(*args, **kargs)
-                if found_record:
-                    Worker.lck.acquire()
-                    brtdata.append(found_record)
-                    for r in found_record:
-                        if type(r).__name__ == "dict":
-                            for k, v in r.items():
-                                print_status("\t{0}:{1}".format(k, v))
-                            print_status()
-                        else:
-                            print_status("\t {0}".format(" ".join(r)))
-                    Worker.lck.release()
-
-            except Exception as e:
-                print_debug(e)
-            finally:
-                self.tasks.task_done()
-
-
-class ThreadPool:
-    """Pool of threads consuming tasks from a queue"""
-
-    def __init__(self, num_threads):
-        self.tasks = Queue(num_threads)
-        for _ in range(num_threads):
-            Worker(self.tasks)
-
-    def add_task(self,
-                 func,
-                 *args,
-                 **kargs):
-        """Add a task to the queue"""
-
-        self.tasks.put((func, args, kargs))
-
-    def wait_completion(self):
-        """Wait for completion of all the tasks in the queue"""
-
-        self.tasks.join()
-
-    def count(self):
-        """Return number of tasks in the queue"""
-
-        return self.tasks.qsize()
-
-
-def exit_brute(pool):
-    print_error("You have pressed Ctrl-C. Saving found records.")
-    print_status("Waiting for {0} remaining threads to finish.".format(pool.count()))
-    pool.wait_completion()
-
 
 def process_range(arg):
     """
@@ -273,6 +196,7 @@ def check_wildcard(res, domain_trg):
 
     return wildcard
 
+
 def check_nxdomain_hijack(nameserver):
     """
     Function for checking if a name server performs NXDOMAIN hijacking
@@ -290,7 +214,10 @@ def check_nxdomain_hijack(nameserver):
     for record_type in ('A', 'AAAA'):
         try:
             answers = res.query(test_name, record_type, tcp=True)
-        except (dns.resolver.NoNameservers, dns.resolver.NXDOMAIN, dns.exception.Timeout, dns.resolver.NoAnswer, socket.error, dns.query.BadResponse):
+        except (
+                dns.resolver.NoNameservers, dns.resolver.NXDOMAIN, dns.exception.Timeout, dns.resolver.NoAnswer,
+                socket.error,
+                dns.query.BadResponse):
             continue
 
         if answers:
@@ -313,7 +240,7 @@ def check_nxdomain_hijack(nameserver):
     return False
 
 
-def brute_tlds(res, domain, verbose=False):
+def brute_tlds(res, domain, verbose=False, thread_num=None):
     """
     This function performs a check of a given domain for known TLD values.
     prints and returns a dictionary of the results.
@@ -327,56 +254,68 @@ def brute_tlds(res, domain, verbose=False):
     itld = ['arpa']
 
     # Generic TLD
-    gtld = ['co', 'com',  'info', 'net', 'org']
+    gtld = ['co', 'com', 'info', 'net', 'org']
 
     # Generic restricted TLD
-    grtld = ['biz', 'name', 'online', 'pro', 'shop', 'site', 'top', 'xyz' ]
+    grtld = ['biz', 'name', 'online', 'pro', 'shop', 'site', 'top', 'xyz']
 
     # Sponsored TLD
-    stld = ['aero', 'app', 'asia', 'cat', 'coop', 'dev', 'edu', 'gov', 'int', 'jobs', 'mil', 'mobi', 'museum', 'post', 'tel', 'travel', 'xxx']
+    stld = ['aero', 'app', 'asia', 'cat', 'coop', 'dev', 'edu', 'gov', 'int', 'jobs', 'mil', 'mobi', 'museum', 'post',
+            'tel', 'travel', 'xxx']
 
     # Country Code TLD
-    cctld = ['ac', 'ad', 'ae', 'af', 'ag', 'ai', 'al', 'am', 'an', 'ao', 'aq', 'ar', 'as', 'at', 'au', 'aw', 'ax', 'az', 'ba', 'bb', 'bd', 'be', 'bf', 'bg', 'bh', 'bi', 'bj', 'bl', 'bm', 'bn', 'bo', 'bq', 'br', 'bs', 'bt', 'bv', 'bw', 'by', 'bz', 'ca', 'cc', 'cd', 'cf', 'cg', 'ch', 'ci', 'ck', 'cl', 'cm', 'cn', 'co', 'cr', 'cu', 'cv', 'cw', 'cx', 'cy', 'cz', 'de', 'dj', 'dk', 'dm', 'do', 'dz', 'ec', 'ee', 'eg', 'eh', 'er', 'es', 'et', 'eu', 'fi', 'fj', 'fk', 'fm', 'fo', 'fr', 'ga', 'gb', 'gd', 'ge', 'gf', 'gg', 'gh', 'gi', 'gl', 'gm', 'gn', 'gp', 'gq', 'gr', 'gs', 'gt', 'gu', 'gw', 'gy', 'hk', 'hm', 'hn', 'hr', 'ht', 'hu', 'id', 'ie', 'il', 'im', 'in', 'io', 'iq', 'ir', 'is', 'it', 'je', 'jm', 'jo', 'jp', 'ke', 'kg', 'kh', 'ki', 'km', 'kn', 'kp', 'kr', 'kw', 'ky', 'kz', 'la', 'lb', 'lc', 'li', 'lk', 'lr', 'ls', 'lt', 'lu', 'lv', 'ly', 'ma', 'mc', 'md', 'me', 'mf', 'mg', 'mh', 'mk', 'ml', 'mm', 'mn', 'mo', 'mp', 'mq', 'mr', 'ms', 'mt', 'mu', 'mv', 'mw', 'mx', 'my', 'mz', 'na', 'nc', 'ne', 'nf', 'ng', 'ni', 'nl', 'no', 'np', 'nr', 'nu', 'nz', 'om', 'pa', 'pe', 'pf', 'pg', 'ph', 'pk', 'pl', 'pm', 'pn', 'pr', 'ps', 'pt', 'pw', 'py', 'qa', 're', 'ro', 'rs', 'ru', 'rw', 'sa', 'sb', 'sc', 'sd', 'se', 'sg', 'sh', 'si', 'sj', 'sk', 'sl', 'sm', 'sn', 'so', 'sr', 'ss', 'st', 'su', 'sv', 'sx', 'sy', 'sz', 'tc', 'td', 'tf', 'tg', 'th', 'tj', 'tk', 'tl', 'tm', 'tn', 'to', 'tp', 'tr', 'tt', 'tv', 'tw', 'tz', 'ua', 'ug', 'uk', 'um', 'us', 'uy', 'uz', 'va', 'vc', 've', 'vg', 'vi', 'vn', 'vu', 'wf', 'ws', 'yt', 'za', 'zm', 'zw']
+    cctld = ['ac', 'ad', 'ae', 'af', 'ag', 'ai', 'al', 'am', 'an', 'ao', 'aq', 'ar', 'as', 'at', 'au', 'aw', 'ax', 'az',
+             'ba', 'bb', 'bd', 'be', 'bf', 'bg', 'bh', 'bi', 'bj', 'bl', 'bm', 'bn', 'bo', 'bq', 'br', 'bs', 'bt', 'bv',
+             'bw', 'by', 'bz', 'ca', 'cc', 'cd', 'cf', 'cg', 'ch', 'ci', 'ck', 'cl', 'cm', 'cn', 'co', 'cr', 'cu', 'cv',
+             'cw', 'cx', 'cy', 'cz', 'de', 'dj', 'dk', 'dm', 'do', 'dz', 'ec', 'ee', 'eg', 'eh', 'er', 'es', 'et', 'eu',
+             'fi', 'fj', 'fk', 'fm', 'fo', 'fr', 'ga', 'gb', 'gd', 'ge', 'gf', 'gg', 'gh', 'gi', 'gl', 'gm', 'gn', 'gp',
+             'gq', 'gr', 'gs', 'gt', 'gu', 'gw', 'gy', 'hk', 'hm', 'hn', 'hr', 'ht', 'hu', 'id', 'ie', 'il', 'im', 'in',
+             'io', 'iq', 'ir', 'is', 'it', 'je', 'jm', 'jo', 'jp', 'ke', 'kg', 'kh', 'ki', 'km', 'kn', 'kp', 'kr', 'kw',
+             'ky', 'kz', 'la', 'lb', 'lc', 'li', 'lk', 'lr', 'ls', 'lt', 'lu', 'lv', 'ly', 'ma', 'mc', 'md', 'me', 'mf',
+             'mg', 'mh', 'mk', 'ml', 'mm', 'mn', 'mo', 'mp', 'mq', 'mr', 'ms', 'mt', 'mu', 'mv', 'mw', 'mx', 'my', 'mz',
+             'na', 'nc', 'ne', 'nf', 'ng', 'ni', 'nl', 'no', 'np', 'nr', 'nu', 'nz', 'om', 'pa', 'pe', 'pf', 'pg', 'ph',
+             'pk', 'pl', 'pm', 'pn', 'pr', 'ps', 'pt', 'pw', 'py', 'qa', 're', 'ro', 'rs', 'ru', 'rw', 'sa', 'sb', 'sc',
+             'sd', 'se', 'sg', 'sh', 'si', 'sj', 'sk', 'sl', 'sm', 'sn', 'so', 'sr', 'ss', 'st', 'su', 'sv', 'sx', 'sy',
+             'sz', 'tc', 'td', 'tf', 'tg', 'th', 'tj', 'tk', 'tl', 'tm', 'tn', 'to', 'tp', 'tr', 'tt', 'tv', 'tw', 'tz',
+             'ua', 'ug', 'uk', 'um', 'us', 'uy', 'uz', 'va', 'vc', 've', 'vg', 'vi', 'vn', 'vu', 'wf', 'ws', 'yt', 'za',
+             'zm', 'zw']
 
-    found_tlds = []
     domain_main = domain.split(".")[0]
 
     # Let the user know how long it could take
-    print_status("The operation could take up to: {0}".format(time.strftime('%H:%M:%S', time.gmtime(( len (itld) + len(gtld) + len(grtld) + len(stld) + len(cctld) ) / 3))))
+    print_status("The operation could take up to: {0}".format(
+        time.strftime('%H:%M:%S', time.gmtime((len(itld) + len(gtld) + len(grtld) + len(stld) + len(cctld)) / 3))))
+
+    total_tlds = list(set(itld + gtld + grtld + stld))
     try:
-        for t in list(set( itld + gtld + grtld + stld )):
-            if verbose:
-                print_status("Trying {0}".format(domain_main + "." + t))
-            pool.add_task(res.get_ip, domain_main + "." + t)
+        with futures.ThreadPoolExecutor(max_workers=thread_num) as executor:
+            future_results = {**{executor.submit(res.get_ip, f'{domain_main}.{tld}'): tld for tld in total_tlds},
+                              **{executor.submit(res.get_ip, f'{domain_main}.{cc}'): cc for cc in cctld},
+                              **{executor.submit(res.get_ip, f'{domain_main}.{cc}.{tld}'): (cc, tld) for (cc, tld) in
+                                 zip(cctld, total_tlds)}}
 
-        for cc in cctld:
-            if verbose:
-                print_status("Trying {0}".format(domain_main + "." + cc + "." + t))
-            pool.add_task(res.get_ip, domain_main + "." + cc + "." + t)
+            brtdata = [future.result() for future in futures.as_completed(future_results)]
+            brtdata = [result for result in brtdata if len(result) > 0]
 
-        for cc in cctld:
-            if verbose:
-                print_status("Trying {0}".format(domain_main + "." + cc))
-            pool.add_task(res.get_ip, domain_main + "." + cc)
+        if verbose:
+            for tld in total_tlds:
+                print_status(f'Tried: {domain_main}.{tld}')
+            for cc in cctld:
+                print_status(f'Tried: {domain_main}.{cc}')
+            for cc, tld in zip(cctld, total_tlds):
+                print_status(f'Tried: {domain_main}.{cc}.{tld}')
+    except Exception as e:
+        print_error(e)
 
-        # Wait for threads to finish.
-        pool.wait_completion()
-
-    except (KeyboardInterrupt):
-        exit_brute(pool)
-
-    # Process the output of the threads.
-    for rcd_found in brtdata:
-        for rcd in rcd_found:
-            if re.search(r"^A", rcd[0]):
-                found_tlds.extend([{"type": rcd[0], "name": rcd[1], "address": rcd[2]}])
-
-    print_good("{0} Records Found".format(len(found_tlds)))
-
+    found_tlds = [[{"type": rcd[0], "name": rcd[1], "address": rcd[2]}] for rcd_found in brtdata for rcd in rcd_found
+                  if re.search(r"^A", rcd[0])]
+    for tld in found_tlds:
+        print(tld)
+    print_good(f"{len(found_tlds)} Records Found")
     return found_tlds
 
 
-def brute_srv(res, domain, verbose=False):
+def brute_srv(res, domain, verbose=False, thread_num=None):
     """
     Brute-force most common SRV records for a given Domain. Returns an Array with
     records found.
@@ -405,36 +344,31 @@ def brute_srv(res, domain, verbose=False):
         '_x-puppet._tcp.', '_x-puppet-ca._tcp.', '_autodiscover._tcp.']
 
     try:
-        for srvtype in srvrcd:
+        with futures.ThreadPoolExecutor(max_workers=thread_num) as executor:
+            future_results = {executor.submit(res.get_srv, srvtype + domain): srvtype for srvtype in srvrcd}
+            brtdata = [future.result() for future in futures.as_completed(future_results)]
             if verbose:
-                print_status("Trying {0}".format(srvtype + domain))
-            pool.add_task(res.get_srv, srvtype + domain)
-
-        # Wait for threads to finish.
-        pool.wait_completion()
-
-    except (KeyboardInterrupt):
-        exit_brute(pool)
+                for srvtype in srvrcd:
+                    print_status("Trying {0}".format(srvtype + domain))
+    except Exception as ex:
+        print_error(ex)
 
     # Make sure we clear the variable
     if len(brtdata) > 0:
-        for rcd_found in brtdata:
-            for rcd in rcd_found:
-                returned_records.extend([{"type": rcd[0],
-                                          "name": rcd[1],
-                                          "target": rcd[2],
-                                          "address": rcd[3],
-                                          "port": rcd[4]}])
-
+        returned_records = [[{"type": rcd[0],
+                              "name": rcd[1],
+                              "target": rcd[2],
+                              "address": rcd[3],
+                              "port": rcd[4]}] for rcd_found in brtdata for rcd in rcd_found]
     else:
-        print_error("No SRV Records Found for {0}".format(domain))
+        print_error(f"No SRV Records Found for {domain}")
 
     print_good("{0} Records Found".format(len(returned_records)))
 
     return returned_records
 
 
-def brute_reverse(res, ip_list, verbose=False):
+def brute_reverse(res, ip_list, verbose=False, thread_num=None):
     """
     Reverse look-up brute force for given CIDR example 192.168.1.1/24. Returns an
     Array of found records.
@@ -442,40 +376,39 @@ def brute_reverse(res, ip_list, verbose=False):
     global brtdata
     brtdata = []
 
-    returned_records = []
     print_status("Performing Reverse Lookup from {0} to {1}".format(ip_list[0], ip_list[-1]))
 
     # Resolve each IP in a separate thread.
-    try:
-        ip_range = xrange(len(ip_list) - 1)
-    except NameError:
-        ip_range = range(len(ip_list) - 1)
+
+    ip_range = range(len(ip_list) - 1)
+    import pprint as p
 
     try:
-        for x in ip_range:
-            ipaddress = str(ip_list[x])
-            if verbose:
+
+        with futures.ThreadPoolExecutor(max_workers=thread_num) as executor:
+            future_results = {executor.submit(res.get_ptr, str(ip_list[x])): x for x in ip_range}
+            brtdata = [future.result() for future in futures.as_completed(future_results)]
+            brtdata = [result for result in brtdata if result]
+            # Filter out results that are None
+        if verbose:
+            for x in ip_range:
+                ipaddress = str(ip_list[x])
                 print_status("Trying {0}".format(ipaddress))
-            pool.add_task(res.get_ptr, ipaddress)
+    except Exception as ex:
+        print_error(ex)
 
-        # Wait for threads to finish.
-        pool.wait_completion()
+    returned_records = [[{'type': rcd[0],
+                          'name': rcd[1],
+                          'address': rcd[2]}] for rcd_found in brtdata for rcd in rcd_found]
 
-    except (KeyboardInterrupt):
-        exit_brute(pool)
-
-    for rcd_found in brtdata:
-        for rcd in rcd_found:
-            returned_records.extend([{'type': rcd[0],
-                                      "name": rcd[1],
-                                      'address': rcd[2]}])
+    p.pprint(returned_records, indent=4)
 
     print_good("{0} Records Found".format(len(returned_records)))
 
     return returned_records
 
 
-def brute_domain(res, dict, dom, filter=None, verbose=False, ignore_wildcard=False):
+def brute_domain(res, dict, dom, filter=None, verbose=False, ignore_wildcard=False, thread_num=None):
     """
     Main Function for domain brute forcing
     """
@@ -492,23 +425,15 @@ def brute_domain(res, dict, dom, filter=None, verbose=False, ignore_wildcard=Fal
         continue_brt = str(sys.stdin.readline()[:-1])
     if re.search(r"y", continue_brt, re.I):
         # Check if Dictionary file exists
-
         if os.path.isfile(dict):
-            with open(dict) as f:
-
-                # Thread brute-force.
-                try:
-                    for line in f:
-                        if verbose:
-                            print_status("Trying {0}".format(line.strip() + '.' + dom.strip()))
-                        target = line.strip() + "." + dom.strip()
-                        pool.add_task(res.get_ip, target)
-
-                    # Wait for threads to finish
-                    pool.wait_completion()
-
-                except (KeyboardInterrupt):
-                    exit_brute(pool)
+            with open(dict) as file:
+                targets = [f'{line.strip()}.{dom.strip()}' for line in file]
+                if verbose:
+                    for target in targets:
+                        print_status(f'Trying: {target}')
+            with futures.ThreadPoolExecutor(max_workers=thread_num) as executor:
+                future_results = {executor.submit(res.get_ip, target): target for target in targets}
+                brtdata = [future.result() for future in futures.as_completed(future_results)]
 
         # Process the output of the threads.
         for rcd_found in brtdata:
@@ -517,10 +442,13 @@ def brute_domain(res, dict, dom, filter=None, verbose=False, ignore_wildcard=Fal
                     # Filter Records if filtering was enabled
                     if filter:
                         if not wildcard_ip == rcd[2]:
+                            print_good(f'{rcd[1]}: {rcd[0]} : {rcd[2]}')
                             found_hosts.extend([{"type": rcd[0], "name": rcd[1], "address": rcd[2]}])
                     else:
                         found_hosts.extend([{"type": rcd[0], "name": rcd[1], "address": rcd[2]}])
+                        print_good(f'{rcd[1]}: {rcd[0]} : {rcd[2]}')
                 elif re.search(r"^CNAME", rcd[0]):
+                    print_good(f'{rcd[1]}: {rcd[0]} : {rcd[2]}')
                     found_hosts.extend([{"type": rcd[0], "name": rcd[1], "target": rcd[2]}])
 
         # Clear Global variable
@@ -537,7 +465,6 @@ def in_cache(res, dict_file, ns):
     """
     found_records = []
     with open(dict_file) as f:
-
         for zone in f:
             dom_to_query = str.strip(zone)
             query = dns.message.make_query(dom_to_query, dns.rdatatype.A, dns.rdataclass.IN)
@@ -547,13 +474,15 @@ def in_cache(res, dict_file, ns):
                 for an in answer.answer:
                     for rcd in an:
                         if rcd.rdtype == 1:
-                            print_status("\tName: {0} TTL: {1} Address: {2} Type: A".format(an.name, an.ttl, rcd.address))
+                            print_status(
+                                "\tName: {0} TTL: {1} Address: {2} Type: A".format(an.name, an.ttl, rcd.address))
 
                             found_records.extend([{"type": "A", "name": an.name,
                                                    "address": rcd.address, "ttl": an.ttl}])
 
                         elif rcd.rdtype == 5:
-                            print_status("\tName: {0} TTL: {1} Target: {2} Type: CNAME".format(an.name, an.ttl, rcd.target))
+                            print_status(
+                                "\tName: {0} TTL: {1} Target: {2} Type: CNAME".format(an.name, an.ttl, rcd.target))
                             found_records.extend([{"type": "CNAME", "name": an.name,
                                                    "target": rcd.target, "ttl": an.ttl}])
 
@@ -618,7 +547,7 @@ def get_whois_nets_iplist(ip_list):
                             net = get_whois_nets(recordentrie.group(2))
                             for network in net:
                                 found_nets.append({"start": network[0], "end": network[1], "orgname": "".join(org)})
-    #Remove Duplicates
+    # Remove Duplicates
     return [seen.setdefault(idfun(e), e) for e in found_nets if idfun(e) not in seen]
 
 
@@ -637,7 +566,7 @@ def whois_ips(res, ip_list):
         for i in range(len(list)):
             print_status(
                 "\t {0} {1}-{2} {3}".format(str(i) + ")", list[i]["start"], list[i]["end"], list[i]["orgname"]))
-        print_status("What Range do you wish to do a Revers Lookup for?")
+        print_status("What Range do you wish to do a Reverse Lookup for?")
         print_status("number, comma separated list, a for all or n for none")
         val = sys.stdin.readline()[:-1]
         answer = str(val).split(",")
@@ -689,7 +618,8 @@ def dns_record_from_dict(record_dict_list, scan_info, domain):
                         v = str(v)
                         elem.attrib[k] = v
                     except:
-                        print_error("Could not convert key or value to unicode: '{0} = {1}'".format((repr(k)), (repr(v))))
+                        print_error(
+                            "Could not convert key or value to unicode: '{0} = {1}'".format((repr(k)), (repr(v))))
                         print_error("In element: {0}".format(repr(elem.attrib)))
                         continue
                 xml_doc.append(elem)
@@ -774,7 +704,8 @@ def make_csv(data):
                     csv_data += n["type"] + "," + n["name"] + ",,,,\'" + n["strings"] + "\'\n"
 
             elif re.search(r"SRV", n["type"]):
-                csv_data += n["type"] + "," + n["name"] + "," + n["address"] + "," + n["target"] + "," + n["port"] + "\n"
+                csv_data += n["type"] + "," + n["name"] + "," + n["address"] + "," + n["target"] + "," + n[
+                    "port"] + "\n"
 
             elif re.search(r"CNAME", n["type"]):
                 if "target" not in n.keys():
@@ -809,7 +740,6 @@ def write_db(db, data):
     # Set the cursor for connection
     con.isolation_level = None
     cur = con.cursor()
-
 
     # Normalize the dictionary data
     for n in data:
@@ -924,7 +854,9 @@ def check_bindversion(res, ns_server, timeout):
             if (len(response.answer) > 0):
                 print_status("\t Bind Version for {0} {1}".format(ns_server, response.answer[0].items[0].strings[0]))
                 version = response.answer[0].items[0].strings[0]
-        except (dns.resolver.NXDOMAIN, dns.exception.Timeout, dns.resolver.NoAnswer, socket.error, dns.query.BadResponse):
+        except (
+                dns.resolver.NXDOMAIN, dns.exception.Timeout, dns.resolver.NoAnswer, socket.error,
+                dns.query.BadResponse):
             pass
 
     return version
@@ -943,7 +875,7 @@ def check_recursive(res, ns_server, timeout):
             recursion_flag_pattern = "\.*RA\.*"
             flags = dns.flags.to_text(response.flags)
             result = re.findall(recursion_flag_pattern, flags)
-            if (result):
+            if result:
                 print_error("\t Recursion enabled on NS Server {0}".format(ns_server))
             is_recursive = True
         except (socket.error, dns.exception.Timeout):
@@ -952,7 +884,7 @@ def check_recursive(res, ns_server, timeout):
     return is_recursive
 
 
-def general_enum(res, domain, do_axfr, do_google, do_bing, do_spf, do_whois, do_crt, zw):
+def general_enum(res, domain, do_axfr, do_google, do_bing, do_spf, do_whois, do_crt, zw, thread_num=None):
     """
     Function for performing general enumeration of a domain. It gets SOA, NS, MX
     A, AAAA and SRV records for a given domain. It will first try a Zone Transfer
@@ -975,7 +907,7 @@ def general_enum(res, domain, do_axfr, do_google, do_bing, do_spf, do_whois, do_
     from_zt = None
 
     # Perform test for Zone Transfer against all NS servers of a Domain
-    if do_axfr == True :
+    if do_axfr:
         zonerecs = res.zone_transfer()
         if zonerecs is not None:
             returned_records.extend(res.zone_transfer())
@@ -1089,7 +1021,7 @@ def general_enum(res, domain, do_axfr, do_google, do_bing, do_spf, do_whois, do_
 
         # Enumerate SRV Records for the targeted Domain
         print_status("Enumerating SRV Records")
-        srv_rcd = brute_srv(res, domain)
+        srv_rcd = brute_srv(res, domain, thread_num=thread_num)
         if srv_rcd:
             for r in srv_rcd:
                 ip_for_whois.append(r["address"])
@@ -1136,7 +1068,7 @@ def general_enum(res, domain, do_axfr, do_google, do_bing, do_spf, do_whois, do_
 
         return returned_records
 
-        #sys.exit(0)
+        # sys.exit(0)
 
 
 def query_ds(res, target, ns, timeout=5.0):
@@ -1153,7 +1085,8 @@ def query_ds(res, target, ns, timeout=5.0):
         answer = res.query(query, ns, timeout)
     except dns.exception.Timeout:
         print_error("A timeout error occurred please make sure you can reach the target DNS Servers")
-        print_error("directly and requests are not being filtered. Increase the timeout from {0} second".format(timeout))
+        print_error(
+            "directly and requests are not being filtered. Increase the timeout from {0} second".format(timeout))
         print_error("to a higher number with --lifetime <time> option.")
         sys.exit(1)
     except:
@@ -1392,11 +1325,13 @@ def usage():
     print("Options:")
     print("   -h, --help                   Show this help message and exit.")
     print("   -d, --domain      <domain>   Target domain.")
-    print("   -r, --range       <range>    IP range for reverse lookup brute force in formats (first-last) or in (range/bitmask).")
+    print(
+        "   -r, --range       <range>    IP range for reverse lookup brute force in formats (first-last) or in (range/bitmask).")
     print("   -n, --name_server <name>     Domain server to use. If none is given, the SOA of the target will be used.")
     print("                                Multiple servers can be specified using a comma separated list.")
     print("   -D, --dictionary  <file>     Dictionary file of subdomain and hostnames to use for brute force.")
-    print("   -f                           Filter out of brute force domain lookup, records that resolve to the wildcard defined")
+    print(
+        "   -f                           Filter out of brute force domain lookup, records that resolve to the wildcard defined")
     print("                                IP address when saving records.")
     print("   -t, --type        <types>    Type of enumeration to perform (comma separated):")
     print("                                std       SOA, NS, A, AAAA, MX and SRV.")
@@ -1407,19 +1342,24 @@ def usage():
     print("                                goo       Perform Google search for subdomains and hosts.")
     print("                                bing      Perform Google search for subdomains and hosts.")
     print("                                crt       Perform crt.sh search for subdomains and hosts.")
-    print("                                snoop     Perform cache snooping against all NS servers for a given domain, testing")
+    print(
+        "                                snoop     Perform cache snooping against all NS servers for a given domain, testing")
     print("                                          all with file containing the domains, file given with -D option.")
-    print("                                tld       Remove the TLD of given domain and test against all TLDs registered in IANA.")
+    print(
+        "                                tld       Remove the TLD of given domain and test against all TLDs registered in IANA.")
     print("                                zonewalk  Perform a DNSSEC zone walk using NSEC records.")
     print("   -a                           Perform AXFR with standard enumeration.")
-    print("   -s                           Perform a reverse lookup of IPv4 ranges in the SPF record with standard enumeration.")
+    print(
+        "   -s                           Perform a reverse lookup of IPv4 ranges in the SPF record with standard enumeration.")
     print("   -g                           Perform Google enumeration with standard enumeration.")
     print("   -b                           Perform Bing enumeration with standard enumeration.")
     print("   -k                           Perform crt.sh enumeration with standard enumeration.")
-    print("   -w                           Perform deep whois record analysis and reverse lookup of IP ranges found through")
+    print(
+        "   -w                           Perform deep whois record analysis and reverse lookup of IP ranges found through")
     print("                                Whois when doing a standard enumeration.")
     print("   -z                           Performs a DNSSEC zone walk with standard enumeration.")
-    print("   --threads         <number>   Number of threads to use in reverse lookups, forward lookups, brute force and SRV")
+    print(
+        "   --threads         <number>   Number of threads to use in reverse lookups, forward lookups, brute force and SRV")
     print("                                record enumeration.")
     print("   --tcp                        Force using TCP protocol when making DNS queries.")
     print("   --lifetime        <number>   Time to wait for a server to response to a query.")
@@ -1433,9 +1373,8 @@ def usage():
     print("   -v                           Show attempts in the brute force modes.")
 
 
-
 # Main
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
 def main():
     #
     # Option Variables
@@ -1453,7 +1392,12 @@ def main():
     spf_enum = False
     do_whois = False
     do_crt = False
-    thread_num = 10
+    thread_num = None
+    # By default thread_num will be None
+    # If None number of workers will be default number of processors on machine * 5 with version 3.5 - 3.7
+    # If using version 3.8+ will be min(32, os.cpu_count() + 4)
+
+    # https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.as_completed
     request_timeout = 3.0
     ip_range = None
     ip_list = []
@@ -1469,36 +1413,48 @@ def main():
     # Global Vars
     #
 
-    global pool
-
     #
     # Define options
     #
     parser = argparse.ArgumentParser()
     try:
         parser.add_argument("-d", "--domain", type=str, dest="domain", help="Target domain.")
-        parser.add_argument("-n", "--name_server",type=str, dest="ns_server", help="Domain server to use. If none is given,    the SOA of the target will be used. Multiple servers can be specified using a comma separated list.")
-        parser.add_argument("-r", "--range",type=str, dest="range", help="IP range for reverse lookup brute force in formats   (first-last) or in (range/bitmask).")
-        parser.add_argument("-D", "--dictionary",type=str, dest="dictionary", help="Dictionary file of subdomain and hostnames to use for brute force. Filter out of brute force domain lookup, records that resolve to the wildcard defined IP address when saving records.")
-        parser.add_argument("-f", help="Filter out of brute force domain lookup, records that resolve to the wildcard defined IP address when saving records.", action="store_true")
+        parser.add_argument("-n", "--name_server", type=str, dest="ns_server",
+                            help="Domain server to use. If none is given,    the SOA of the target will be used. Multiple servers can be specified using a comma separated list.")
+        parser.add_argument("-r", "--range", type=str, dest="range",
+                            help="IP range for reverse lookup brute force in formats   (first-last) or in (range/bitmask).")
+        parser.add_argument("-D", "--dictionary", type=str, dest="dictionary",
+                            help="Dictionary file of subdomain and hostnames to use for brute force. Filter out of brute force domain lookup, records that resolve to the wildcard defined IP address when saving records.")
+        parser.add_argument("-f",
+                            help="Filter out of brute force domain lookup, records that resolve to the wildcard defined IP address when saving records.",
+                            action="store_true")
         parser.add_argument("-t", "--type", type=str, dest="type", help="Type of enumeration to perform.")
         parser.add_argument("-a", help="Perform AXFR with standard enumeration.", action="store_true")
-        parser.add_argument("-s", help="Perform a reverse lookup of IPv4 ranges in the SPF record with standard enumeration.", action="store_true")
+        parser.add_argument("-s",
+                            help="Perform a reverse lookup of IPv4 ranges in the SPF record with standard enumeration.",
+                            action="store_true")
         parser.add_argument("-g", help="Perform Google enumeration with standard enumeration.", action="store_true")
         parser.add_argument("-b", help="Perform Bing enumeration with standard enumeration.", action="store_true")
         parser.add_argument("-k", help="Perform crt.sh enumeration with standard enumeration.", action="store_true")
-        parser.add_argument("-w", help="Perform deep whois record analysis and reverse lookup of IP ranges found through Whois when doing a standard enumeration.", action="store_true")
+        parser.add_argument("-w",
+                            help="Perform deep whois record analysis and reverse lookup of IP ranges found through Whois when doing a standard enumeration.",
+                            action="store_true")
         parser.add_argument("-z", help="Performs a DNSSEC zone walk with standard enumeration.", action="store_true")
-        parser.add_argument("--threads", type=int, dest="threads", help="Number of threads to use in reverse lookups, forward lookups, brute force and SRV record enumeration.")
-        parser.add_argument("--lifetime", type=int, dest="lifetime", help="Time to wait for a server to response to a query.")
+        parser.add_argument("--threads", type=int, dest="threads",
+                            help="Number of threads to use in reverse lookups, forward lookups, brute force and SRV record enumeration.")
+        parser.add_argument("--lifetime", type=int, dest="lifetime",
+                            help="Time to wait for a server to response to a query.")
         parser.add_argument("--tcp", dest="tcp", help="Use TCP protocol to make queries.", action="store_true")
         parser.add_argument("--db", type=str, dest="db", help="SQLite 3 file to save found records.")
         parser.add_argument("-x", "--xml", type=str, dest="xml", help="XML file to save found records.")
         parser.add_argument("-c", "--csv", type=str, dest="csv", help="Comma separated value file.")
         parser.add_argument("-j", "--json", type=str, dest="json", help="JSON file.")
-        parser.add_argument("--iw", help="Continue brute forcing a domain even if a wildcard records are discovered.", action="store_true")
-        parser.add_argument("--disable_check_recursion", help="Disables check for recursion on name servers", action="store_true")
-        parser.add_argument("--disable_check_bindversion", help="Disables check for BIND version on name servers", action="store_true")
+        parser.add_argument("--iw", help="Continue brute forcing a domain even if a wildcard records are discovered.",
+                            action="store_true")
+        parser.add_argument("--disable_check_recursion", help="Disables check for recursion on name servers",
+                            action="store_true")
+        parser.add_argument("--disable_check_bindversion", help="Disables check for BIND version on name servers",
+                            action="store_true")
         parser.add_argument("-v", help="Enable verbose", action="store_true")
         arguments = parser.parse_args()
 
@@ -1524,7 +1480,7 @@ def main():
             if netaddr.valid_glob(entry):
                 ns_server.append(entry)
             else:
-                #Resolve in the case if FQDN
+                # Resolve in the case if FQDN
                 answer = socket_resolv(entry)
                 # Check we actually got a list
                 if len(answer) > 0:
@@ -1532,7 +1488,8 @@ def main():
                     ns_server.append(answer[0][2])
                 else:
                     # Exit if we cannot resolve it
-                    print_error("Could not resolve NS server provided and server doesn't appear to be an IP: {}".format(entry))
+                    print_error(
+                        "Could not resolve NS server provided and server doesn't appear to be an IP: {}".format(entry))
 
         # User specified name servers but none of them validated
         if len(ns_server) == 0:
@@ -1583,8 +1540,6 @@ def main():
     wildcard_filter = arguments.f
     proto = "tcp" if arguments.tcp else "udp"
     # Setting the number of threads to 10
-    pool = ThreadPool(thread_num)
-
     # Set the resolver
     res = DnsHelper(domain, ns_server, request_timeout, proto)
 
@@ -1594,7 +1549,7 @@ def main():
     if type is not None:
 
         # Check for any illegal enumeration types from the user
-        valid_types = ["axfr","std","rvl","brt","srv","tld","goo","bing","crt","snoop","zonewalk"]
+        valid_types = ["axfr", "std", "rvl", "brt", "srv", "tld", "goo", "bing", "crt", "snoop", "zonewalk"]
         incorrect_types = [t for t in type.split(',') if t not in valid_types]
         if incorrect_types:
             print_error("This type of scan is not in the list: {0}".format(','.join(incorrect_types)))
@@ -1616,17 +1571,20 @@ def main():
 
                 elif r == "std":
                     print_status("Performing General Enumeration of Domain:{0}".format(domain))
-                    std_enum_records = general_enum(res, domain, xfr, goo, bing, spf_enum, do_whois, do_crt, zonewalk)
+                    std_enum_records = general_enum(res, domain, xfr, goo, bing, spf_enum, do_whois, do_crt, zonewalk,
+                                                    thread_num=thread_num)
 
-                    if (output_file is not None) or (results_db is not None) or (csv_file is not None) or (json_file is not None):
+                    if (output_file is not None) or (results_db is not None) or (csv_file is not None) or (
+                            json_file is not None):
                         returned_records.extend(std_enum_records)
 
                 elif r == "rvl":
                     if len(ip_list) > 0:
                         print_status("Reverse Look-up of a Range")
-                        rvl_enum_records = brute_reverse(res, ip_list, verbose)
+                        rvl_enum_records = brute_reverse(res, ip_list, verbose, thread_num=thread_num)
 
-                        if (output_file is not None) or (results_db is not None) or (csv_file is not None) or (json_file is not None):
+                        if (output_file is not None) or (results_db is not None) or (csv_file is not None) or (
+                                json_file is not None):
                             returned_records.extend(rvl_enum_records)
                     else:
                         print_error("Failed CIDR or Range is Required for type rvl")
@@ -1634,18 +1592,22 @@ def main():
                 elif r == "brt":
                     if (dict is not None) and (domain is not None):
                         print_status("Performing host and subdomain brute force against {0}".format(domain))
-                        brt_enum_records = brute_domain(res, dict, domain, wildcard_filter, verbose, ignore_wildcardrr)
+                        brt_enum_records = brute_domain(res, dict, domain, wildcard_filter, verbose, ignore_wildcardrr,
+                                                        thread_num=thread_num)
 
-                        if (output_file is not None) or (results_db is not None) or (csv_file is not None) or (json_file is not None):
+                        if (output_file is not None) or (results_db is not None) or (csv_file is not None) or (
+                                json_file is not None):
                             returned_records.extend(brt_enum_records)
-                    elif (domain is not None):
+                    elif domain is not None:
                         script_dir = os.path.dirname(os.path.realpath(__file__)) + os.sep
                         print_status("No file was specified with domains to check.")
                         name_list_dic = script_dir + "namelist.txt"
                         if os.path.isfile(name_list_dic):
                             print_status("Using file provided with tool: " + name_list_dic)
-                            brt_enum_records = brute_domain(res, name_list_dic, domain, wildcard_filter, verbose, ignore_wildcardrr)
-                            if (output_file is not None) or (results_db is not None) or (csv_file is not None) or (json_file is not None):
+                            brt_enum_records = brute_domain(res, name_list_dic, domain, wildcard_filter, verbose,
+                                                            ignore_wildcardrr, thread_num=thread_num)
+                            if (output_file is not None) or (results_db is not None) or (csv_file is not None) or (
+                                    json_file is not None):
                                 returned_records.extend(brt_enum_records)
                         else:
                             print_error("File {0} does not exist!".format(name_list_dic))
@@ -1656,40 +1618,46 @@ def main():
 
                 elif r == "srv":
                     print_status("Enumerating Common SRV Records against {0}".format(domain))
-                    srv_enum_records = brute_srv(res, domain, verbose)
+                    srv_enum_records = brute_srv(res, domain, verbose, thread_num=thread_num)
 
-                    if (output_file is not None) or (results_db is not None) or (csv_file is not None) or (json_file is not None):
+                    if (output_file is not None) or (results_db is not None) or (csv_file is not None) or (
+                            json_file is not None):
                         returned_records.extend(srv_enum_records)
 
                 elif r == "tld":
                     print_status("Performing TLD Brute force Enumeration against {0}".format(domain))
-                    tld_enum_records = brute_tlds(res, domain, verbose)
-                    if (output_file is not None) or (results_db is not None) or (csv_file is not None) or (json_file is not None):
+                    tld_enum_records = brute_tlds(res, domain, verbose, thread_num=thread_num)
+                    if (output_file is not None) or (results_db is not None) or (csv_file is not None) or (
+                            json_file is not None):
                         returned_records.extend(tld_enum_records)
 
                 elif r == "goo":
                     print_status("Performing Google Search Enumeration against {0}".format(domain))
                     goo_enum_records = se_result_process(res, scrape_google(domain))
-                    if (output_file is not None) or (results_db is not None) or (csv_file is not None) or (json_file is not None):
+                    if (output_file is not None) or (results_db is not None) or (csv_file is not None) or (
+                            json_file is not None):
                         returned_records.extend(goo_enum_records)
 
                 elif r == "bing":
                     print_status("Performing Bing Search Enumeration against {0}".format(domain))
                     bing_enum_records = se_result_process(res, scrape_bing(domain))
-                    if (output_file is not None) or (results_db is not None) or (csv_file is not None) or (json_file is not None):
+                    if (output_file is not None) or (results_db is not None) or (csv_file is not None) or (
+                            json_file is not None):
                         returned_records.extend(bing_enum_records)
 
                 elif r == "crt":
                     print_status("Performing Crt.sh Search Enumeration against {0}".format(domain))
                     crt_enum_records = se_result_process(res, scrape_crtsh(domain))
-                    if (output_file is not None) or (results_db is not None) or (csv_file is not None) or (json_file is not None):
+                    if (output_file is not None) or (results_db is not None) or (csv_file is not None) or (
+                            json_file is not None):
                         returned_records.extend(crt_enum_records)
 
                 elif r == "snoop":
                     if (dict is not None) and (ns_server is not None):
                         print_status("Performing Cache Snooping against NS Server: {0}".format(ns_server))
                         cache_enum_records = in_cache(res, dict, ns_server)
-                        if (output_file is not None) or (results_db is not None) or (csv_file is not None) or (json_file is not None):
+                        if (output_file is not None) or (results_db is not None) or (csv_file is not None) or (
+                                json_file is not None):
                             returned_records.extend(cache_enum_records)
 
                     else:
@@ -1697,7 +1665,8 @@ def main():
                         sys.exit(1)
 
                 elif r == "zonewalk":
-                    if (output_file is not None) or (results_db is not None) or (csv_file is not None) or (json_file is not None):
+                    if (output_file is not None) or (results_db is not None) or (csv_file is not None) or (
+                            json_file is not None):
                         returned_records.extend(ds_zone_walk(res, domain))
                     else:
                         ds_zone_walk(res, domain)
