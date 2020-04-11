@@ -1,4 +1,5 @@
-.idea/*
+*.idea/*.*
+*.idea/inspectionProfiles/
 *.orig
 *.pyc
 *.pyo
