@@ -36,23 +36,23 @@ from netaddr import *
 
 
 def print_status(message=""):
-    print("\033[1;34m[*]\033[1;m {0}".format(message))
+    print(f"\033[1;34m[*]\033[1;m {message}")
 
 
 def print_good(message=""):
-    print("\033[1;32m[*]\033[1;m {0}".format(message))
+    print(f"\033[1;32m[*]\033[1;m {message}")
 
 
 def print_error(message=""):
-    print("\033[1;31m[-]\033[1;m {0}".format(message))
+    print(f"\033[1;31m[-]\033[1;m {message}")
 
 
 def print_debug(message=""):
-    print("\033[1;31m[!]\033[1;m {0}".format(message))
+    print(f"\033[1;31m[!]\033[1;m {message}")
 
 
 def print_line(message=""):
-    print("{0}".format(message))
+    print(f"{message}")
 
 
 def process_range(arg):
@@ -63,14 +63,14 @@ def process_range(arg):
     try:
         ip_list = None
         range_vals = []
-        if re.match(r'\S*\/\S*', arg):
+        if re.match(r'\S*/\S*', arg):
             ip_list = IPNetwork(arg)
 
         range_vals.extend(arg.split("-"))
         if len(range_vals) == 2:
             ip_list = IPNetwork(IPRange(range_vals[0], range_vals[1])).cidrs()[-1]
-    except:
-        print_error("Range provided is not valid: {0}".format(arg()))
+    except Exception:
+        print_error(f"Range provided is not valid: {arg()}")
         return []
     return ip_list
 
@@ -97,8 +97,7 @@ def xml_parse(xm_file, ifilter, tfilter, nfilter, list):
                                 if elem.attrib['address'] not in iplist:
                                     print(elem.attrib['address'])
                             else:
-                                print_good("{0} {1} {2}".format(elem.attrib['type'], elem.attrib['name'],
-                                                                elem.attrib['address']))
+                                print_good(f"{elem.attrib['type']} {elem.attrib['name']} {elem.attrib['address']}")
 
                         # Process NS Records
                         elif re.search(r'NS', elem.attrib['type']) and \
@@ -107,8 +106,7 @@ def xml_parse(xm_file, ifilter, tfilter, nfilter, list):
                                 if elem.attrib['address'] not in iplist:
                                     iplist.append(elem.attrib['address'])
                             else:
-                                print_good("{0} {1} {2}".format(elem.attrib['type'], elem.attrib['target'],
-                                                                elem.attrib['address']))
+                                print_good(f"{elem.attrib['type']} {elem.attrib['target']} {elem.attrib['address']}")
 
                         # Process SOA Records
                         elif re.search(r'SOA', elem.attrib['type']) and \
@@ -117,8 +115,7 @@ def xml_parse(xm_file, ifilter, tfilter, nfilter, list):
                                 if elem.attrib['address'] not in iplist:
                                     iplist.append(elem.attrib['address'])
                             else:
-                                print_good("{0} {1} {2}".format(elem.attrib['type'], elem.attrib['mname'],
-                                                                elem.attrib['address']))
+                                print_good(f"{elem.attrib['type']} {elem.attrib['mname']} {elem.attrib['address']}")
 
                         # Process MS Records
                         elif re.search(r'MX', elem.attrib['type']) and \
@@ -127,8 +124,7 @@ def xml_parse(xm_file, ifilter, tfilter, nfilter, list):
                                 if elem.attrib['address'] not in iplist:
                                     iplist.append(elem.attrib['address'])
                             else:
-                                print_good("{0} {1} {2}".format(elem.attrib['type'], elem.attrib['exchange'],
-                                                                elem.attrib['address']))
+                                print_good(f"{elem.attrib['type']} {elem.attrib['exchange']} {elem.attrib['address']}")
 
                         # Process SRV Records
                         elif re.search(r'SRV', elem.attrib['type']) and \
@@ -137,9 +133,9 @@ def xml_parse(xm_file, ifilter, tfilter, nfilter, list):
                                 if elem.attrib['address'] not in iplist:
                                     iplist.append(elem.attrib['address'])
                             else:
-                                print_good("{0} {1} {2} {3}".format(elem.attrib['type'], elem.attrib['name'],
-                                                                    elem.attrib['address'], elem.attrib['target'],
-                                                                    elem.attrib['port']))
+                                print_good("{0} {1} {2} {3} {4}".format(elem.attrib['type'], elem.attrib['name'],
+                                                                        elem.attrib['address'], elem.attrib['target'],
+                                                                        elem.attrib['port']))
             else:
                 if re.match(tfilter, elem.attrib['type'], re.I):
                     # Process TXT and SPF Records
@@ -261,10 +257,6 @@ def usage():
     sys.exit(0)
 
 
-# Main
-# -------------------------------------------------------------------------------
-
-
 def main():
     #
     # Option Variables
@@ -333,7 +325,7 @@ def main():
         elif opt in ('-n', '--name'):
             names = True
 
-        elif opt in ('-h'):
+        elif opt in '-h':
             usage()
 
     # start execution based on options
