@@ -40,7 +40,6 @@ import datetime
 import netaddr
 
 from random import Random
-from threading import Lock, Thread
 from xml.dom import minidom
 from xml.etree import ElementTree
 from xml.etree.ElementTree import Element
@@ -51,9 +50,7 @@ import dns.rdatatype
 import dns.resolver
 import dns.reversename
 import dns.zone
-import dns.message
 import dns.rdata
-import dns.rdatatype
 import dns.flags
 import json
 from dns.dnssec import algorithm_to_text
@@ -87,17 +84,17 @@ def process_range(arg):
     try:
         ip_list = None
         range_vals = []
-        if re.match(r"\S*\/\S*", arg):
+        if re.match(r"\S*/\S*", arg):
             ip_list = IPNetwork(arg)
 
-        elif (re.match(r"\S*\-\S*", arg)):
+        elif re.match(r"\S*-\S*", arg):
             range_vals.extend(arg.split("-"))
             if len(range_vals) == 2:
                 ip_list = IPRange(range_vals[0], range_vals[1])
         else:
             print_error("Range provided is not valid")
             return []
-    except:
+    except Exception:
         print_error("Range provided is not valid")
         return []
     return ip_list
@@ -116,12 +113,12 @@ def process_spf_data(res, data):
     ip_list = []
 
     # check first if it is a sfp record
-    if not re.search(r"v\=spf", data):
+    if not re.search(r"v=spf", data):
         return
 
     # Parse the record for IPv4 Ranges, individual IPs and include TXT Records.
-    ipv4.extend(re.findall("ip4:(\S*)", "".join(data)))
-    ipv6.extend(re.findall("ip6:(\S*)", "".join(data)))
+    ipv4.extend(re.findall(r"ip4:(\S*)", "".join(data)))
+    ipv6.extend(re.findall(r"ip6:(\S*)", "".join(data)))
 
     # Create a list of IPNetwork objects.
     for ip in ipv4:
@@ -133,7 +130,7 @@ def process_spf_data(res, data):
             ip_list.append(i)
 
     # Extract and process include values.
-    includes.extend(re.findall("include:(\S*)", "".join(data)))
+    includes.extend(re.findall(r"include:(\S*)", "".join(data)))
     for inc_ranges in includes:
         for spr_rec in res.get_txt(inc_ranges):
             spf_data = process_spf_data(res, spr_rec[2])
@@ -360,9 +357,9 @@ def brute_srv(res, domain, verbose=False, thread_num=None):
             for rcd in rcd_found:
                 returned_records.append([{"type": rcd[0],
                                          "name": rcd[1],
-                                         "target": rcd[2],
-                                         "address": rcd[3],
-                                         "port": rcd[4]}])
+                                          "target": rcd[2],
+                                          "address": rcd[3],
+                                          "port": rcd[4]}])
                 print_good({"type": rcd[0], "name": rcd[1], "target": rcd[2], "address": rcd[3], "port": rcd[4]})
     else:
         print_error(f"No SRV Records Found for {domain}")
@@ -477,15 +474,13 @@ def in_cache(res, dict_file, ns):
                 for an in answer.answer:
                     for rcd in an:
                         if rcd.rdtype == 1:
-                            print_status(
-                                "\tName: {0} TTL: {1} Address: {2} Type: A".format(an.name, an.ttl, rcd.address))
+                            print_status(f"\tName: {an.name} TTL: {an.ttl} Address: {rcd.address} Type: A")
 
                             found_records.extend([{"type": "A", "name": an.name,
                                                    "address": rcd.address, "ttl": an.ttl}])
 
                         elif rcd.rdtype == 5:
-                            print_status(
-                                "\tName: {0} TTL: {1} Target: {2} Type: CNAME".format(an.name, an.ttl, rcd.target))
+                            print_status(f"\tName: {an.name} TTL: {an.ttl} Target: {rcd.target} Type: CNAME")
                             found_records.extend([{"type": "CNAME", "name": an.name,
                                                    "target": rcd.target, "ttl": an.ttl}])
 
@@ -501,7 +496,7 @@ def se_result_process(res, found_hosts):
     with all the results found.
     """
     returned_records = []
-    if found_hosts == None:
+    if found_hosts is None:
         return None
     for sd in found_hosts:
         for sdip in res.get_ip(sd):
@@ -536,7 +531,7 @@ def get_whois_nets_iplist(ip_list):
                 whois_data = whois(ip, whois_server)
                 arin_style = re.search("NetRange", whois_data)
                 ripe_apic_style = re.search("netname", whois_data)
-                if (arin_style or ripe_apic_style):
+                if arin_style or ripe_apic_style:
                     net = get_whois_nets(whois_data)
                     if net:
                         for network in net:
@@ -544,7 +539,7 @@ def get_whois_nets_iplist(ip_list):
                             found_nets.append({"start": network[0], "end": network[1], "orgname": "".join(org)})
                 else:
                     for line in whois_data.splitlines():
-                        recordentrie = re.match("^(.*)\s\S*-\w*\s\S*\s(\S*\s-\s\S*)", line)
+                        recordentrie = re.match(r"^(.*)\s\S*-\w*\s\S*\s(\S*\s-\s\S*)", line)
                         if recordentrie:
                             org = recordentrie.group(1)
                             net = get_whois_nets(recordentrie.group(2))
@@ -620,7 +615,7 @@ def dns_record_from_dict(record_dict_list, scan_info, domain):
                         k = str(k)
                         v = str(v)
                         elem.attrib[k] = v
-                    except:
+                    except Exception:
                         print_error(
                             "Could not convert key or value to unicode: '{0} = {1}'".format((repr(k)), (repr(v))))
                         print_error("In element: {0}".format(repr(elem.attrib)))
@@ -854,7 +849,7 @@ def check_bindversion(res, ns_server, timeout):
         request = dns.message.make_query('version.bind', 'txt', 'ch')
         try:
             response = res.query(request, ns_server, timeout=timeout, one_rr_per_rrset=True)
-            if (len(response.answer) > 0):
+            if len(response.answer) > 0:
                 print_status("\t Bind Version for {0} {1}".format(ns_server, response.answer[0].items[0].strings[0]))
                 version = response.answer[0].items[0].strings[0]
         except (
@@ -875,7 +870,7 @@ def check_recursive(res, ns_server, timeout):
         query = dns.message.make_query('www.google.com.', dns.rdatatype.NS)
         try:
             response = res.query(query, ns_server, timeout)
-            recursion_flag_pattern = "\.*RA\.*"
+            recursion_flag_pattern = r"\.*RA\.*"
             flags = dns.flags.to_text(response.flags)
             result = re.findall(recursion_flag_pattern, flags)
             if result:
@@ -935,8 +930,8 @@ def general_enum(res, domain, do_axfr, do_google, do_bing, do_spf, do_whois, do_
 
                 ip_for_whois.append(found_soa_record[2])
 
-        except:
-            print_error("Could not Resolve SOA Record for {0}".format(domain))
+        except Exception:
+            print_error(f"Could not Resolve SOA Record for {domain}")
 
         # Enumerate Name Servers
         try:
@@ -968,9 +963,9 @@ def general_enum(res, domain, do_axfr, do_google, do_bing, do_spf, do_whois, do_
                 ip_for_whois.append(mx_rcrd[2])
 
         except dns.resolver.NoAnswer:
-            print_error("Could not Resolve MX Records for {0}".format(domain))
+            print_error(f"Could not Resolve MX Records for {domain}")
         except dns.resolver.NoNameservers:
-            print_error("All nameservers failed to answer the MX query for {0}".format(domain))
+            print_error(f"All nameservers failed to answer the MX query for {domain}")
 
         # Enumerate A Record for the targeted Domain
         for a_rcrd in res.get_ip(domain):
@@ -1092,7 +1087,7 @@ def query_ds(res, target, ns, timeout=5.0):
             "directly and requests are not being filtered. Increase the timeout from {0} second".format(timeout))
         print_error("to a higher number with --lifetime <time> option.")
         sys.exit(1)
-    except:
+    except Exception:
         print("Unexpected error: {0}".format(sys.exc_info()[0]))
         raise
     return answer
@@ -1122,7 +1117,7 @@ def socket_resolv(target):
                 found_recs.append(["A", target, sockaddr[0]])
             elif families[family] == "AF_INET6" and types[socktype] == "SOCK_DGRAM":
                 found_recs.append(["AAAA", target, sockaddr[0]])
-    except:
+    except Exception:
         return found_recs
     return found_recs
 
@@ -1134,7 +1129,7 @@ def lookup_next(target, res):
     res_sys = DnsHelper(target)
     returned_records = []
 
-    if re.search("^_[A-Za-z0-9_-]*._[A-Za-z0-9_-]*.", target, re.I):
+    if re.search(r"^_[A-Za-z0-9_-]*._[A-Za-z0-9_-]*.", target, re.I):
         srv_answer = res.get_srv(target)
         if len(srv_answer) > 0:
             for r in srv_answer:
@@ -1145,7 +1140,7 @@ def lookup_next(target, res):
                                          "address": r[3],
                                          "port": r[4]})
 
-    elif re.search("(_autodiscover\\.|_spf\\.|_domainkey\\.)", target, re.I):
+    elif re.search(r"(_autodiscover\\.|_spf\\.|_domainkey\\.)", target, re.I):
         txt_answer = res.get_txt(target)
         if len(txt_answer) > 0:
             for r in txt_answer:
@@ -1221,7 +1216,7 @@ def ds_zone_walk(res, domain):
         print_status("Name Server {0} will be used".format(soa_rcd))
         res = DnsHelper(domain, soa_rcd, 3)
         nameserver = soa_rcd
-    except:
+    except Exception:
         print_error("This zone appears to be misconfigured, no SOA record found.")
 
     timeout = res._res.timeout
@@ -1255,7 +1250,7 @@ def ds_zone_walk(res, domain):
             records.extend(lookup_next(hostname, res))
 
             # Arrange the arguments for the transformations
-            fields = re.search("^(^[^.]*)\.(\S+\.\S*)$", hostname)
+            fields = re.search(r"^(^[^.]*)\.(\S+\.\S*)$", hostname)
 
             domain_portion = hostname
             if fields and fields.group(2):
@@ -1307,10 +1302,10 @@ def ds_zone_walk(res, domain):
         print_error("are not being filtered. Increase the timeout to a higher number")
         print_error("with --lifetime <time> option.")
 
-    except (EOFError):
-        print_error("SoA nameserver {} failed to answer the DNSSEC query for {}".format(nameserver, target))
+    except EOFError:
+        print_error(f"SoA nameserver {nameserver} failed to answer the DNSSEC query for {target}")
 
-    except (socket.error):
+    except socket.error:
         print_error("SoA nameserver {} failed to answer the DNSSEC query for {}".format(nameserver, domain))
 
     # Give a summary of the walk
@@ -1422,49 +1417,35 @@ def main():
     parser = argparse.ArgumentParser()
     try:
         parser.add_argument("-d", "--domain", type=str, dest="domain", help="Target domain.")
-        parser.add_argument("-n", "--name_server", type=str, dest="ns_server",
-                            help="Domain server to use. If none is given,    the SOA of the target will be used. Multiple servers can be specified using a comma separated list.")
-        parser.add_argument("-r", "--range", type=str, dest="range",
-                            help="IP range for reverse lookup brute force in formats   (first-last) or in (range/bitmask).")
-        parser.add_argument("-D", "--dictionary", type=str, dest="dictionary",
-                            help="Dictionary file of subdomain and hostnames to use for brute force. Filter out of brute force domain lookup, records that resolve to the wildcard defined IP address when saving records.")
-        parser.add_argument("-f",
-                            help="Filter out of brute force domain lookup, records that resolve to the wildcard defined IP address when saving records.",
-                            action="store_true")
+        parser.add_argument("-n", "--name_server", type=str, dest="ns_server", help="Domain server to use. If none is given, the SOA of the target will be used. Multiple servers can be specified using a comma separated list.")
+        parser.add_argument("-r", "--range", type=str, dest="range", help="IP range for reverse lookup brute force in formats   (first-last) or in (range/bitmask).")
+        parser.add_argument("-D", "--dictionary", type=str, dest="dictionary", help="Dictionary file of subdomain and hostnames to use for brute force. Filter out of brute force domain lookup, records that resolve to the wildcard defined IP address when saving records.")
+        parser.add_argument("-f", help="Filter out of brute force domain lookup, records that resolve to the wildcard defined IP address when saving records.", action="store_true")
         parser.add_argument("-t", "--type", type=str, dest="type", help="Type of enumeration to perform.")
         parser.add_argument("-a", help="Perform AXFR with standard enumeration.", action="store_true")
-        parser.add_argument("-s",
-                            help="Perform a reverse lookup of IPv4 ranges in the SPF record with standard enumeration.",
-                            action="store_true")
+        parser.add_argument("-s", help="Perform a reverse lookup of IPv4 ranges in the SPF record with standard enumeration.", action="store_true")
         parser.add_argument("-g", help="Perform Google enumeration with standard enumeration.", action="store_true")
         parser.add_argument("-b", help="Perform Bing enumeration with standard enumeration.", action="store_true")
         parser.add_argument("-k", help="Perform crt.sh enumeration with standard enumeration.", action="store_true")
-        parser.add_argument("-w",
-                            help="Perform deep whois record analysis and reverse lookup of IP ranges found through Whois when doing a standard enumeration.",
-                            action="store_true")
+        parser.add_argument("-w", help="Perform deep whois record analysis and reverse lookup of IP ranges found through Whois when doing a standard enumeration.", action="store_true")
         parser.add_argument("-z", help="Performs a DNSSEC zone walk with standard enumeration.", action="store_true")
-        parser.add_argument("--threads", type=int, dest="threads",
-                            help="Number of threads to use in reverse lookups, forward lookups, brute force and SRV record enumeration.")
-        parser.add_argument("--lifetime", type=int, dest="lifetime",
-                            help="Time to wait for a server to response to a query.")
+        parser.add_argument("--threads", type=int, dest="threads", help="Number of threads to use in reverse lookups, forward lookups, brute force and SRV record enumeration.")
+        parser.add_argument("--lifetime", type=int, dest="lifetime", help="Time to wait for a server to response to a query.")
         parser.add_argument("--tcp", dest="tcp", help="Use TCP protocol to make queries.", action="store_true")
         parser.add_argument("--db", type=str, dest="db", help="SQLite 3 file to save found records.")
         parser.add_argument("-x", "--xml", type=str, dest="xml", help="XML file to save found records.")
         parser.add_argument("-c", "--csv", type=str, dest="csv", help="Comma separated value file.")
         parser.add_argument("-j", "--json", type=str, dest="json", help="JSON file.")
-        parser.add_argument("--iw", help="Continue brute forcing a domain even if a wildcard records are discovered.",
-                            action="store_true")
-        parser.add_argument("--disable_check_recursion", help="Disables check for recursion on name servers",
-                            action="store_true")
-        parser.add_argument("--disable_check_bindversion", help="Disables check for BIND version on name servers",
-                            action="store_true")
+        parser.add_argument("--iw", help="Continue brute forcing a domain even if a wildcard records are discovered.", action="store_true")
+        parser.add_argument("--disable_check_recursion", help="Disables check for recursion on name servers", action="store_true")
+        parser.add_argument("--disable_check_bindversion", help="Disables check for BIND version on name servers", action="store_true")
         parser.add_argument("-v", help="Enable verbose", action="store_true")
         arguments = parser.parse_args()
 
     except SystemExit:
         # Handle exit() from passing --help
         raise
-    except:
+    except Exception:
         print_error("Wrong Option Provided!")
         parser.print_help()
         sys.exit(1)
@@ -1491,8 +1472,7 @@ def main():
                     ns_server.append(answer[0][2])
                 else:
                     # Exit if we cannot resolve it
-                    print_error(
-                        "Could not resolve NS server provided and server doesn't appear to be an IP: {}".format(entry))
+                    print_error(f"Could not resolve NS server provided and server doesn't appear to be an IP: {entry}")
 
         # User specified name servers but none of them validated
         if len(ns_server) == 0:

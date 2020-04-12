@@ -28,6 +28,6 @@ setuptools.setup(
             'subdomains-top1mil-5000.txt',
             'subdomains-top1mil.txt',
         ]
-         )
+        )
     ],
 )

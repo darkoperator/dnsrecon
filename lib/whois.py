@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 #    Copyright (C) 2010  Carlos Perez
@@ -68,7 +67,7 @@ def whois(target, whois_srv):
         s.close()
     except Exception as e:
         print(e)
-        pass
+
     return response
 
 
@@ -85,11 +84,11 @@ def get_whois_nets(data):
 
 
 def get_whois_orgname(data):
-    org_pattern = "OrgName\:\s*(.*)\n"
+    org_pattern = r"OrgName\:\s*(.*)\n"
     result = re.findall(org_pattern, data)
     # Lets try RIPENET Format
     if not result:
-        org_pattern = "netname\:\s*(.*)\n"
+        org_pattern = r"netname\:\s*(.*)\n"
         result = re.findall(org_pattern, data)
     if not result:
         result.append("Not Found")

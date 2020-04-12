@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 import sys
 import platform
 
@@ -22,31 +21,31 @@ import platform
 
 def print_status(message=""):
     if sys.stdout.isatty() and platform.system() != "Windows":
-        print("\033[1;34m[*]\033[1;m {0}".format(message))
+        print(f"\033[1;34m[*]\033[1;m {message}")
     else:
-        print("[*] {0}".format(message))
+        print(f"[*] {message}")
 
 
 def print_good(message=""):
     if sys.stdout.isatty() and platform.system() != "Windows":
-        print("\033[1;32m[+]\033[1;m {0}".format(message))
+        print(f"\033[1;32m[+]\033[1;m {message}")
     else:
-        print("[+] {0}".format(message))
+        print(f"[+] {message}")
 
 
 def print_error(message=""):
     if sys.stdout.isatty() and platform.system() != "Windows":
-        print("\033[1;31m[-]\033[1;m {0}".format(message))
+        print(f"\033[1;31m[-]\033[1;m {message}")
     else:
-        print("[-] {0}".format(message))
+        print(f"[-] {message}")
 
 
 def print_debug(message=""):
     if sys.stdout.isatty() and platform.system() != "Windows":
-        print("\033[1;31m[!]\033[1;m {0}".format(message))
+        print(f"\033[1;31m[!]\033[1;m {message}")
     else:
-        print("[!] {0}".format(message))
+        print(f"[!] {message}")
 
 
 def print_line(message=""):
-    print("{0}".format(message))
+    print(f"{message}")

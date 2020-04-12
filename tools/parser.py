@@ -223,11 +223,10 @@ def detect_type(file):
     ftype = None
 
     # Get the fist lile of the file for checking
-    f = open(file, 'r')
-    firs_line = f.readline()
+    with open(file, 'r') as file:
+        firs_line = file.readline()
 
     # Determine file type based on the fist line content
-    import re
     if re.search("(xml version)", firs_line):
         ftype = "xml"
     elif re.search(r'\w*,[^,]*,[^,]*', firs_line):
@@ -267,7 +266,6 @@ def main():
     target_list = False
     file = None
     names = False
-    # ip_set = []
 
     #
     # Define options
@@ -275,7 +273,7 @@ def main():
     try:
         options, args = getopt.getopt(sys.argv[1:], 'hi:t:s:lf:n',
                                       ['help',
-                                       'ips='
+                                       'ips=',
                                        'type=',
                                        'str=',
                                        'list',
@@ -299,7 +297,6 @@ def main():
             ipranges = arg.split(",")
             for r in ipranges:
                 ip_filter.extend(process_range(r))
-            # ip_set = IPSet(ip_filter)
 
         elif opt in ('-s', '--str'):
             name_filter = "({0})".format(arg)
@@ -317,6 +314,7 @@ def main():
                 exit(1)
 
         elif opt in ('-r', '--range'):
+            ip_list = []
             ip_range = process_range(arg)
             if len(ip_range) > 0:
                 ip_list.extend(ip_range)

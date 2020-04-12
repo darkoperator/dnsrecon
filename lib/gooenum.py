@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 #    Copyright (C) 2010  Carlos Perez
@@ -17,21 +16,17 @@
 #    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 
-import urllib
+import urllib.request
+import urllib.error
 import re
 import time
 from lib.msf_print import *
 
-try:
-    url_opener = urllib.FancyURLopener
-except AttributeError:
-    import urllib.request
-    url_opener = urllib.request.FancyURLopener
+url_opener = urllib.request.FancyURLopener
 
 
 class AppURLopener(url_opener):
-  
-    version  = "Mozilla/5.0 (compatible; Googlebot/2.1; + http://www.google.com/bot.html)"
+    version = "Mozilla/5.0 (compatible; Googlebot/2.1; + http://www.google.com/bot.html)"
 
 
 def scrape_google(dom):
@@ -39,39 +34,38 @@ def scrape_google(dom):
     Function for enumerating sub-domains and hosts by scraping Google.
     """
     results = []
-    filtered = []
-    searches = ["0","100", "200", "300", "400", "500"]
-    data = ""
+    searches = ["0", "100", "200", "300", "400", "500"]
     urllib._urlopener = AppURLopener()
 
     user_agent = 'Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.9.0.7) Gecko/2009021910 Firefox/3.0.7'
 
     for n in searches:
         url = "https://www.google.com/search?hl=en&lr=&ie=UTF-8&q=site%3A" + dom + "&start=" + n + "&sa=N&filter=0&num=100"
-        headers={'User-Agent':user_agent,} 
-        
+        headers = {'User-Agent': user_agent}
+
         try:
-            sock = urllib.urlopen(url)
+            sock = urllib.request.urlopen(url)
             data = sock.read()
         except AttributeError:
             try:
-                request=urllib.request.Request(url,None,headers)
+                request = urllib.request.Request(url, None, headers)
                 sock = urllib.request.urlopen(request)
-                data = sock.read().decode("utf-8") 
+                data = sock.read().decode("utf-8")
 
             except urllib.error.HTTPError:
-                print_error("Google has return an HTTP error and detected the search as \'bot activity, stopping search...")
+                print_error("Google has return an error and detected the search as \'bot activity, stopping search")
                 return results
 
-        if re.search('Our systems have detected unusual traffic from your computer network',data) != None:
+        if re.search('Our systems have detected unusual traffic from your computer network', data) is not None:
             print_error("Google has detected the search as \'bot activity, stopping search...")
             return results
-        results.extend(re.findall("([a-zA-Z0-9\-\.]+" + dom + ")\/?", data))
+        results.extend(re.findall(r"([a-zA-Z0-9\-.]+" + dom + ")/?", data))
 
         sock.close()
         time.sleep(10)
 
     return unique(results)
+
 
 def unique(seq, idfun=repr):
     """
