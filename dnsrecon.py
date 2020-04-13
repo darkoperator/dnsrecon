@@ -703,8 +703,7 @@ def make_csv(data):
                     csv_data += n["type"] + "," + n["name"] + ",,,,\'" + n["strings"] + "\'\n"
 
             elif re.search(r"SRV", n["type"]):
-                csv_data += n["type"] + "," + n["name"] + "," + n["address"] + "," + n["target"] + "," + n[
-                    "port"] + "\n"
+                csv_data += n["type"] + "," + n["name"] + "," + n["address"] + "," + n["target"] + "," + n["port"] + "\n"
 
             elif re.search(r"CNAME", n["type"]):
                 if "target" not in n.keys():
@@ -723,6 +722,10 @@ def make_csv(data):
 
 
 def write_json(jsonfile, data, scan_info):
+    """
+    Function to write DNS Records SOA, PTR, NS, A, AAAA, MX, TXT, SPF and SRV to
+    JSON file.
+    """
     scaninfo = {"type": "ScanInfo", "arguments": scan_info[0], "date": scan_info[1]}
     data.insert(0, scaninfo)
     json_data = json.dumps(data, sort_keys=True, indent=4, separators=(',', ': '))
@@ -1594,14 +1597,14 @@ def main():
                                     json_file is not None):
                                 returned_records.extend(brt_enum_records)
                         else:
-                            print_error("File {0} does not exist!".format(name_list_dic))
+                            print_error(f"File {name_list_dic} does not exist!")
                             exit(1)
                     else:
                         print_error('Could not execute a brute force enumeration. A domain was not given.')
                         sys.exit(1)
 
                 elif r == "srv":
-                    print_status("Enumerating Common SRV Records against {0}".format(domain))
+                    print_status(f"Enumerating Common SRV Records against {domain}")
                     srv_enum_records = brute_srv(res, domain, verbose, thread_num=thread_num)
 
                     if (output_file is not None) or (results_db is not None) or (csv_file is not None) or (
@@ -1609,28 +1612,28 @@ def main():
                         returned_records.extend(srv_enum_records)
 
                 elif r == "tld":
-                    print_status("Performing TLD Brute force Enumeration against {0}".format(domain))
+                    print_status(f"Performing TLD Brute force Enumeration against {domain}")
                     tld_enum_records = brute_tlds(res, domain, verbose, thread_num=thread_num)
                     if (output_file is not None) or (results_db is not None) or (csv_file is not None) or (
                             json_file is not None):
                         returned_records.extend(tld_enum_records)
 
                 elif r == "goo":
-                    print_status("Performing Google Search Enumeration against {0}".format(domain))
+                    print_status(f"Performing Google Search Enumeration against {domain}")
                     goo_enum_records = se_result_process(res, scrape_google(domain))
                     if (output_file is not None) or (results_db is not None) or (csv_file is not None) or (
                             json_file is not None):
                         returned_records.extend(goo_enum_records)
 
                 elif r == "bing":
-                    print_status("Performing Bing Search Enumeration against {0}".format(domain))
+                    print_status(f"Performing Bing Search Enumeration against {domain}")
                     bing_enum_records = se_result_process(res, scrape_bing(domain))
                     if (output_file is not None) or (results_db is not None) or (csv_file is not None) or (
                             json_file is not None):
                         returned_records.extend(bing_enum_records)
 
                 elif r == "crt":
-                    print_status("Performing Crt.sh Search Enumeration against {0}".format(domain))
+                    print_status(f"Performing Crt.sh Search Enumeration against {domain}")
                     crt_enum_records = se_result_process(res, scrape_crtsh(domain))
                     if (output_file is not None) or (results_db is not None) or (csv_file is not None) or (
                             json_file is not None):
@@ -1638,7 +1641,7 @@ def main():
 
                 elif r == "snoop":
                     if (dict is not None) and (ns_server is not None):
-                        print_status("Performing Cache Snooping against NS Server: {0}".format(ns_server))
+                        print_status(f"Performing Cache Snooping against NS Server: {ns_server}")
                         cache_enum_records = in_cache(res, dict, ns_server)
                         if (output_file is not None) or (results_db is not None) or (csv_file is not None) or (
                                 json_file is not None):
@@ -1656,7 +1659,7 @@ def main():
                         ds_zone_walk(res, domain)
 
                 else:
-                    print_error("This type of scan is not in the list: {0}".format(r))
+                    print_error(f"This type of scan is not in the list: {r}")
 
             except dns.resolver.NXDOMAIN:
                 print_error("Could not resolve domain: {0}".format(domain))
