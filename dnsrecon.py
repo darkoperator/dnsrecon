@@ -56,7 +56,6 @@ import json
 from dns.dnssec import algorithm_to_text
 
 from lib.crtenum import scrape_crtsh
-from lib.gooenum import *
 from lib.bingenum import *
 from lib.whois import *
 from lib.dnshelper import DnsHelper
@@ -885,13 +884,11 @@ def check_recursive(res, ns_server, timeout):
     return is_recursive
 
 
-def general_enum(res, domain, do_axfr, do_google, do_bing, do_spf, do_whois, do_crt, zw, thread_num=None):
+def general_enum(res, domain, do_axfr, do_bing, do_spf, do_whois, do_crt, zw, thread_num=None):
     """
     Function for performing general enumeration of a domain. It gets SOA, NS, MX
     A, AAAA and SRV records for a given domain. It will first try a Zone Transfer
-    if not successful it will try individual record type enumeration. If chosen
-    it will also perform a Google Search and scrape the results for host names and
-    perform an A and AAAA query against them.
+    if not successful it will try individual record type enumeration.
     """
     returned_records = []
 
@@ -1028,16 +1025,6 @@ def general_enum(res, domain, do_axfr, do_google, do_bing, do_spf, do_whois, do_
                 ip_for_whois.append(r["address"])
                 returned_records.append(r)
 
-        # Do Google Search enumeration if selected
-        if do_google:
-            print_status("Performing Google Search Enumeration")
-            goo_rcd = se_result_process(res, scrape_google(domain))
-            if goo_rcd:
-                for r in goo_rcd:
-                    if "address" in goo_rcd:
-                        ip_for_whois.append(r["address"])
-                returned_records.extend(goo_rcd)
-
         # Do Bing Search enumeration if selected
         if do_bing:
             print_status("Performing Bing Search Enumeration")
@@ -1068,8 +1055,6 @@ def general_enum(res, domain, do_axfr, do_google, do_bing, do_spf, do_whois, do_
                 returned_records.extend(zone_info)
 
         return returned_records
-
-        # sys.exit(0)
 
 
 def query_ds(res, target, ns, timeout=5.0):
@@ -1319,8 +1304,7 @@ def ds_zone_walk(res, domain):
 
     return records
 
-# Main
-# -------------------------------------------------------------------------------
+
 def main():
     #
     # Option Variables
@@ -1333,7 +1317,6 @@ def main():
     dict = None
     type = None
     xfr = None
-    goo = False
     bing = False
     spf_enum = False
     do_whois = False
@@ -1371,7 +1354,6 @@ def main():
         parser.add_argument("-f", help="Filter out of brute force domain lookup, records that resolve to the wildcard defined IP address when saving records.", action="store_true")
         parser.add_argument("-a", help="Perform AXFR with standard enumeration.", action="store_true")
         parser.add_argument("-s", help="Perform a reverse lookup of IPv4 ranges in the SPF record with standard enumeration.", action="store_true")
-        parser.add_argument("-g", help="Perform Google enumeration with standard enumeration.", action="store_true")
         parser.add_argument("-b", help="Perform Bing enumeration with standard enumeration.", action="store_true")
         parser.add_argument("-k", help="Perform crt.sh enumeration with standard enumeration.", action="store_true")
         parser.add_argument("-w", help="Perform deep whois record analysis and reverse lookup of IP ranges found through Whois when doing a standard enumeration.", action="store_true")
@@ -1393,7 +1375,6 @@ def main():
                                brt:       Brute force domains and hosts using a given dictionary.
                                srv:       SRV records.
                                axfr:      Test all NS servers for a zone transfer.
-                               goo:       Perform Google search for subdomains and hosts.
                                bing:      Perform Bing search for subdomains and hosts.
                                crt:       Perform crt.sh search for subdomains and hosts.
                                snoop:     Perform cache snooping against all NS servers for a given domain, testing
@@ -1447,7 +1428,7 @@ def main():
         if os.path.isfile(arguments.dictionary.strip()):
             dict = arguments.dictionary.strip()
         else:
-            print_error("File {0} does not exist!".format(arguments.dictionary.strip()))
+            print_error(f"File {arguments.dictionary.strip()} does not exist!")
             exit(1)
 
     if arguments.range:
@@ -1475,7 +1456,6 @@ def main():
     CONFIG['disable_check_bindversion'] = arguments.disable_check_bindversion
 
     xfr = arguments.a
-    goo = arguments.g
     bing = arguments.b
     do_crt = arguments.k
     do_whois = arguments.w
@@ -1487,13 +1467,13 @@ def main():
     # Set the resolver
     res = DnsHelper(domain, ns_server, request_timeout, proto)
 
-    domain_req = ["axfr", "std", "srv", "tld", "goo", "bing", "crt", "zonewalk"]
+    domain_req = ["axfr", "std", "srv", "tld", "bing", "crt", "zonewalk"]
     scan_info = [" ".join(sys.argv), str(datetime.datetime.now())]
 
     if type is not None:
 
         # Check for any illegal enumeration types from the user
-        valid_types = ["axfr", "std", "rvl", "brt", "srv", "tld", "goo", "bing", "crt", "snoop", "zonewalk"]
+        valid_types = ["axfr", "std", "rvl", "brt", "srv", "tld", "bing", "crt", "snoop", "zonewalk"]
         incorrect_types = [t for t in type.split(',') if t not in valid_types]
         if incorrect_types:
             print_error("This type of scan is not in the list: {0}".format(','.join(incorrect_types)))
@@ -1515,7 +1495,7 @@ def main():
 
                 elif r == "std":
                     print_status(f"Performing General Enumeration of Domain:{domain}")
-                    std_enum_records = general_enum(res, domain, xfr, goo, bing, spf_enum, do_whois, do_crt, zonewalk,
+                    std_enum_records = general_enum(res, domain, xfr, bing, spf_enum, do_whois, do_crt, zonewalk,
                                                     thread_num=thread_num)
 
                     if (output_file is not None) or (results_db is not None) or (csv_file is not None) or (
@@ -1574,13 +1554,6 @@ def main():
                     if (output_file is not None) or (results_db is not None) or (csv_file is not None) or (
                             json_file is not None):
                         returned_records.extend(tld_enum_records)
-
-                elif r == "goo":
-                    print_status(f"Performing Google Search Enumeration against {domain}")
-                    goo_enum_records = se_result_process(res, scrape_google(domain))
-                    if (output_file is not None) or (results_db is not None) or (csv_file is not None) or (
-                            json_file is not None):
-                        returned_records.extend(goo_enum_records)
 
                 elif r == "bing":
                     print_status(f"Performing Bing Search Enumeration against {domain}")
@@ -1655,7 +1628,7 @@ def main():
     elif domain is not None:
         try:
             print_status(f"Performing General Enumeration of Domain: {domain}")
-            std_enum_records = general_enum(res, domain, xfr, goo, bing, spf_enum, do_whois, do_crt, zonewalk)
+            std_enum_records = general_enum(res, domain, xfr, bing, spf_enum, do_whois, do_crt, zonewalk)
 
             returned_records.extend(std_enum_records)
 
