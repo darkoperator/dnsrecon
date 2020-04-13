@@ -827,11 +827,11 @@ def dns_sec_check(domain, res):
                                                     dns.rdata._hexify(rdata.key)))
 
     except dns.resolver.NXDOMAIN:
-        print_error("Could not resolve domain: {0}".format(domain))
+        print_error(f"Could not resolve domain: {domain}")
         sys.exit(1)
 
     except dns.resolver.NoNameservers:
-        print_error("All nameservers failed to answer the DNSSEC query for {0}".format(domain))
+        print_error(f"All nameservers failed to answer the DNSSEC query for {domain}")
 
     except dns.exception.Timeout:
         print_error("A timeout error occurred please make sure you can reach the target DNS Servers")
@@ -840,7 +840,7 @@ def dns_sec_check(domain, res):
         print_error("to a higher number with --lifetime <time> option.")
         sys.exit(1)
     except dns.resolver.NoAnswer:
-        print_error("DNSSEC is not configured for {0}".format(domain))
+        print_error(f"DNSSEC is not configured for {domain}")
 
 
 def check_bindversion(res, ns_server, timeout):
@@ -854,10 +854,9 @@ def check_bindversion(res, ns_server, timeout):
         try:
             response = res.query(request, ns_server, timeout=timeout, one_rr_per_rrset=True)
             if len(response.answer) > 0:
-                print_status("\t Bind Version for {0} {1}".format(ns_server, response.answer[0].items[0].strings[0]))
+                print_status(f"\t Bind Version for {ns_server} {response.answer[0].items[0].strings[0]}")
                 version = response.answer[0].items[0].strings[0]
-        except (
-                dns.resolver.NXDOMAIN, dns.exception.Timeout, dns.resolver.NoAnswer, socket.error,
+        except (dns.resolver.NXDOMAIN, dns.exception.Timeout, dns.resolver.NoAnswer, socket.error,
                 dns.query.BadResponse):
             pass
 
@@ -878,7 +877,7 @@ def check_recursive(res, ns_server, timeout):
             flags = dns.flags.to_text(response.flags)
             result = re.findall(recursion_flag_pattern, flags)
             if result:
-                print_error("\t Recursion enabled on NS Server {0}".format(ns_server))
+                print_error(f"\t Recursion enabled on NS Server {ns_server}")
             is_recursive = True
         except (socket.error, dns.exception.Timeout):
             pass
@@ -1310,7 +1309,7 @@ def ds_zone_walk(res, domain):
         print_error(f"SoA nameserver {nameserver} failed to answer the DNSSEC query for {target}")
 
     except socket.error:
-        print_error("SoA nameserver {} failed to answer the DNSSEC query for {}".format(nameserver, domain))
+        print_error(f"SoA nameserver {nameserver} failed to answer the DNSSEC query for {domain}")
 
     # Give a summary of the walk
     if len(records) > 0:
@@ -1319,61 +1318,6 @@ def ds_zone_walk(res, domain):
         print_error("Zone could not be walked")
 
     return records
-
-
-def usage():
-    print("Version: {0}".format(__version__))
-    print("Usage: dnsrecon.py <options>\n")
-    print("Options:")
-    print("   -h, --help                   Show this help message and exit.")
-    print("   -d, --domain      <domain>   Target domain.")
-    print(
-        "   -r, --range       <range>    IP range for reverse lookup brute force in formats (first-last) or in (range/bitmask).")
-    print("   -n, --name_server <name>     Domain server to use. If none is given, the SOA of the target will be used.")
-    print("                                Multiple servers can be specified using a comma separated list.")
-    print("   -D, --dictionary  <file>     Dictionary file of subdomain and hostnames to use for brute force.")
-    print(
-        "   -f                           Filter out of brute force domain lookup, records that resolve to the wildcard defined")
-    print("                                IP address when saving records.")
-    print("   -t, --type        <types>    Type of enumeration to perform (comma separated):")
-    print("                                std       SOA, NS, A, AAAA, MX and SRV.")
-    print("                                rvl       Reverse lookup of a given CIDR or IP range.")
-    print("                                brt       Brute force domains and hosts using a given dictionary.")
-    print("                                srv       SRV records.")
-    print("                                axfr      Test all NS servers for a zone transfer.")
-    print("                                goo       Perform Google search for subdomains and hosts.")
-    print("                                bing      Perform Google search for subdomains and hosts.")
-    print("                                crt       Perform crt.sh search for subdomains and hosts.")
-    print(
-        "                                snoop     Perform cache snooping against all NS servers for a given domain, testing")
-    print("                                          all with file containing the domains, file given with -D option.")
-    print(
-        "                                tld       Remove the TLD of given domain and test against all TLDs registered in IANA.")
-    print("                                zonewalk  Perform a DNSSEC zone walk using NSEC records.")
-    print("   -a                           Perform AXFR with standard enumeration.")
-    print(
-        "   -s                           Perform a reverse lookup of IPv4 ranges in the SPF record with standard enumeration.")
-    print("   -g                           Perform Google enumeration with standard enumeration.")
-    print("   -b                           Perform Bing enumeration with standard enumeration.")
-    print("   -k                           Perform crt.sh enumeration with standard enumeration.")
-    print(
-        "   -w                           Perform deep whois record analysis and reverse lookup of IP ranges found through")
-    print("                                Whois when doing a standard enumeration.")
-    print("   -z                           Performs a DNSSEC zone walk with standard enumeration.")
-    print(
-        "   --threads         <number>   Number of threads to use in reverse lookups, forward lookups, brute force and SRV")
-    print("                                record enumeration.")
-    print("   --tcp                        Force using TCP protocol when making DNS queries.")
-    print("   --lifetime        <number>   Time to wait for a server to response to a query.")
-    print("   --db              <file>     SQLite 3 file to save found records.")
-    print("   --xml             <file>     XML file to save found records.")
-    print("   --iw                         Continue brute forcing a domain even if a wildcard records are discovered.")
-    print("   --disable_check_recursion    Disables check for recursion on name servers.")
-    print("   --disable_check_bindversion  Disables check for BIND version on name servers.")
-    print("   -c, --csv         <file>     Comma separated value file.")
-    print("   -j, --json        <file>     JSON file.")
-    print("   -v                           Show attempts in the brute force modes.")
-
 
 # Main
 # -------------------------------------------------------------------------------
@@ -1420,12 +1364,11 @@ def main():
     #
     parser = argparse.ArgumentParser()
     try:
-        parser.add_argument("-d", "--domain", type=str, dest="domain", help="Target domain.")
+        parser.add_argument("-d", "--domain", type=str, dest="domain", help="Target domain.", required=True)
         parser.add_argument("-n", "--name_server", type=str, dest="ns_server", help="Domain server to use. If none is given, the SOA of the target will be used. Multiple servers can be specified using a comma separated list.")
         parser.add_argument("-r", "--range", type=str, dest="range", help="IP range for reverse lookup brute force in formats   (first-last) or in (range/bitmask).")
         parser.add_argument("-D", "--dictionary", type=str, dest="dictionary", help="Dictionary file of subdomain and hostnames to use for brute force. Filter out of brute force domain lookup, records that resolve to the wildcard defined IP address when saving records.")
         parser.add_argument("-f", help="Filter out of brute force domain lookup, records that resolve to the wildcard defined IP address when saving records.", action="store_true")
-        parser.add_argument("-t", "--type", type=str, dest="type", help="Type of enumeration to perform.")
         parser.add_argument("-a", help="Perform AXFR with standard enumeration.", action="store_true")
         parser.add_argument("-s", help="Perform a reverse lookup of IPv4 ranges in the SPF record with standard enumeration.", action="store_true")
         parser.add_argument("-g", help="Perform Google enumeration with standard enumeration.", action="store_true")
@@ -1438,12 +1381,26 @@ def main():
         parser.add_argument("--tcp", dest="tcp", help="Use TCP protocol to make queries.", action="store_true")
         parser.add_argument("--db", type=str, dest="db", help="SQLite 3 file to save found records.")
         parser.add_argument("-x", "--xml", type=str, dest="xml", help="XML file to save found records.")
-        parser.add_argument("-c", "--csv", type=str, dest="csv", help="Comma separated value file.")
-        parser.add_argument("-j", "--json", type=str, dest="json", help="JSON file.")
+        parser.add_argument("-c", "--csv", type=str, dest="csv", help="Save output to a comma separated value file.")
+        parser.add_argument("-j", "--json", type=str, dest="json", help="save output to a JSON file.")
         parser.add_argument("--iw", help="Continue brute forcing a domain even if a wildcard records are discovered.", action="store_true")
         parser.add_argument("--disable_check_recursion", help="Disables check for recursion on name servers", action="store_true")
         parser.add_argument("--disable_check_bindversion", help="Disables check for BIND version on name servers", action="store_true")
         parser.add_argument("-v", help="Enable verbose", action="store_true")
+        parser.add_argument("-t", "--type", type=str, dest="type", help="""Type of enumeration to perform.
+                               std:       SOA, NS, A, AAAA, MX and SRV.
+                               rvl:       Reverse lookup of a given CIDR or IP range.
+                               brt:       Brute force domains and hosts using a given dictionary.
+                               srv:       SRV records.
+                               axfr:      Test all NS servers for a zone transfer.
+                               goo:       Perform Google search for subdomains and hosts.
+                               bing:      Perform Bing search for subdomains and hosts.
+                               crt:       Perform crt.sh search for subdomains and hosts.
+                               snoop:     Perform cache snooping against all NS servers for a given domain, testing
+                                          all with file containing the domains, file given with -D option.
+
+                              tld:       Remove the TLD of given domain and test against all TLDs registered in IANA.
+                              zonewalk:  Perform a DNSSEC zone walk using NSEC records.""")
         arguments = parser.parse_args()
 
     except SystemExit:
@@ -1557,7 +1514,7 @@ def main():
                         print_error("No records were returned in the zone transfer attempt.")
 
                 elif r == "std":
-                    print_status("Performing General Enumeration of Domain:{0}".format(domain))
+                    print_status(f"Performing General Enumeration of Domain:{domain}")
                     std_enum_records = general_enum(res, domain, xfr, goo, bing, spf_enum, do_whois, do_crt, zonewalk,
                                                     thread_num=thread_num)
 
@@ -1578,7 +1535,7 @@ def main():
 
                 elif r == "brt":
                     if (dict is not None) and (domain is not None):
-                        print_status("Performing host and subdomain brute force against {0}".format(domain))
+                        print_status(f"Performing host and subdomain brute force against {domain}")
                         brt_enum_records = brute_domain(res, dict, domain, wildcard_filter, verbose, ignore_wildcardrr,
                                                         thread_num=thread_num)
 
@@ -1590,7 +1547,7 @@ def main():
                         print_status("No file was specified with domains to check.")
                         name_list_dic = script_dir + "namelist.txt"
                         if os.path.isfile(name_list_dic):
-                            print_status("Using file provided with tool: " + name_list_dic)
+                            print_status(f"Using file provided with tool: {name_list_dic}")
                             brt_enum_records = brute_domain(res, name_list_dic, domain, wildcard_filter, verbose,
                                                             ignore_wildcardrr, thread_num=thread_num)
                             if (output_file is not None) or (results_db is not None) or (csv_file is not None) or (
@@ -1662,71 +1619,70 @@ def main():
                     print_error(f"This type of scan is not in the list: {r}")
 
             except dns.resolver.NXDOMAIN:
-                print_error("Could not resolve domain: {0}".format(domain))
+                print_error(f"Could not resolve domain: {domain}")
                 sys.exit(1)
 
             except dns.exception.Timeout:
                 print_error("A timeout error occurred please make sure you can reach the target DNS Servers")
-                print_error("directly and requests are not being filtered. Increase the timeout from {0} second".format(
-                    request_timeout))
+                print_error(f"directly and requests are not being filtered. Increase the timeout from {request_timeout} seconds")
                 print_error("to a higher number with --lifetime <time> option.")
                 sys.exit(1)
 
         # if an output xml file is specified it will write returned results.
         if output_file is not None:
-            print_status("Saving records to XML file: {0}".format(output_file))
+            print_status(f"Saving records to XML file: {output_file}")
             xml_enum_doc = dns_record_from_dict(returned_records, scan_info, domain)
             write_to_file(xml_enum_doc, output_file)
 
         # if an output db file is specified it will write returned results.
         elif results_db is not None:
-            print_status("Saving records to SQLite3 file: {0}".format(results_db))
+            print_status(f"Saving records to SQLite3 file: {results_db}")
             create_db(results_db)
             write_db(results_db, returned_records)
 
         # if an output csv file is specified it will write returned results.
         elif csv_file is not None:
-            print_status("Saving records to CSV file: {0}".format(csv_file))
+            print_status(f"Saving records to CSV file: {csv_file}")
             write_to_file(make_csv(returned_records), csv_file)
 
         # if an output json file is specified it will write returned results.
         elif json_file is not None:
-            print_status("Saving records to JSON file: {0}".format(json_file))
+            print_status(f"Saving records to JSON file: {json_file}")
             write_json(json_file, returned_records, scan_info)
 
         sys.exit(0)
 
     elif domain is not None:
         try:
-            print_status("Performing General Enumeration of Domain: {0}".format(domain))
+            print_status(f"Performing General Enumeration of Domain: {domain}")
             std_enum_records = general_enum(res, domain, xfr, goo, bing, spf_enum, do_whois, do_crt, zonewalk)
 
             returned_records.extend(std_enum_records)
 
             # if an output xml file is specified it will write returned results.
             if output_file is not None:
-                print_status("Saving records to XML file: {0}".format(output_file))
+                print_status(f"Saving records to XML file: {output_file}")
                 xml_enum_doc = dns_record_from_dict(returned_records, scan_info, domain)
                 write_to_file(xml_enum_doc, output_file)
 
             # if an output db file is specified it will write returned results.
             elif results_db is not None:
-                print_status("Saving records to SQLite3 file: {0}".format(results_db))
+                print_status(f"Saving records to SQLite3 file: {results_db}")
                 create_db(results_db)
                 write_db(results_db, returned_records)
 
             # if an output csv file is specified it will write returned results.
             elif csv_file is not None:
-                print_status("Saving records to CSV file: {0}".format(csv_file))
+                print_status(f"Saving records to CSV file: {csv_file}")
                 write_to_file(make_csv(returned_records), csv_file)
 
                 # if an output json file is specified it will write returned results.
             elif json_file is not None:
-                print_status("Saving records to JSON file: {0}".format(json_file))
+                print_status(f"Saving records to JSON file: {json_file}")
                 write_json(json_file, returned_records, scan_info)
             sys.exit(0)
         except dns.resolver.NXDOMAIN:
-            print_error("Could not resolve domain: {0}".format(domain))
+            print_error(f"Could not resolve domain: {domain}")
             sys.exit(1)
 
         except dns.exception.Timeout:
@@ -1735,7 +1691,6 @@ def main():
             print_error("to a higher number with --lifetime <time> option.")
             sys.exit(1)
     else:
-        usage()
         sys.exit(1)
 
 
