@@ -677,7 +677,8 @@ def make_csv(data):
     for n in data:
         # make sure that we are working with a dictionary.
         if isinstance(n, dict):
-            if re.search(r"PTR|^[A]$|AAAA", n["type"]):
+            print(n)
+            if n['type'] in ['PTR', 'A', 'AAAA']:
                 csv_data += n["type"] + "," + n["name"] + "," + n["address"] + "\n"
 
             elif re.search(r"NS$", n["type"]):
