@@ -358,7 +358,7 @@ def brute_srv(res, domain, verbose=False, thread_num=None):
     if len(brtdata) > 0:
         for rcd_found in brtdata:
             for rcd in rcd_found:
-                returned_records.append([{"type": rcd[0],
+                returned_records.extend([{"type": rcd[0],
                                          "name": rcd[1],
                                          "target": rcd[2],
                                          "address": rcd[3],
