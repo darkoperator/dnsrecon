@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 #    Copyright (C) 2017 Cristiano Maruti (twitter: @cmaruti)
@@ -16,16 +15,11 @@
 #    along with this program; if not, write to the Free Software
 #    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
-
-import urllib
+import urllib.request
 import re
 import time
 
-try:
-    url_opener = urllib.FancyURLopener
-except AttributeError:
-    import urllib.request
-    url_opener = urllib.request.FancyURLopener
+url_opener = urllib.request.FancyURLopener
 
 
 class AppURLopener(url_opener):
@@ -37,27 +31,20 @@ def scrape_bing(dom):
     Function for enumerating sub-domains and hosts by scraping Bing.
     """
     results = []
-    filtered = []
-    searches = ["10","20", "30", "40", "50", "60", "70", "80", "90", "100", "110", "120","130",
-                "140","150"]
-    data = ""
+    searches = ["10", "20", "30", "40", "50", "60", "70", "80", "90", "100", "110", "120", "130",
+                "140", "150"]
     urllib._urlopener = AppURLopener()
 
     for n in searches:
-        url = "http://www.bing.com/search?q=domain%3A"+ dom + "&qs=n&first=" + n
-        try:
-            sock = urllib.urlopen(url)
-            data = sock.read()
-        except AttributeError:
-            sock = urllib.request.urlopen(url)
-            data = sock.read().decode("utf-8") 
-        
-        results.extend(re.findall("([a-zA-Z0-9\-\.]+" + dom + ")\/?", data))
-
+        url = "http://www.bing.com/search?q=domain%3A" + dom + "&qs=n&first=" + n
+        sock = urllib.request.urlopen(url)
+        data = sock.read().decode("utf-8")
+        results.extend(re.findall(r"([a-zA-Z0-9\-.]+" + dom + ")/?", data))
         sock.close()
         time.sleep(5)
 
     return unique(results)
+
 
 def unique(seq, idfun=repr):
     """
