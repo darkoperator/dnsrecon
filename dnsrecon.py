@@ -359,7 +359,7 @@ def brute_srv(res, domain, verbose=False, thread_num=None):
                                          "target": rcd[2],
                                          "address": rcd[3],
                                          "port": rcd[4]})
-                print_good({"type": rcd[0], "name": rcd[1], "target": rcd[2], "address": rcd[3], "port": rcd[4]})
+                print_good(f"     {rcd[0]} {rcd[1]} {rcd[2]} {rcd[3]} {rcd[4]}")
     else:
         print_error(f"No SRV Records Found for {domain}")
 
