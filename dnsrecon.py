@@ -1316,8 +1316,6 @@ def ds_zone_walk(res, domain):
     return records
 
 
-<<<<<<< HEAD
-=======
 def usage():
     print("Version: {0}".format(__version__))
     print("Usage: dnsrecon.py <options>\n")
@@ -1370,7 +1368,6 @@ def usage():
 
 # Main
 # -------------------------------------------------------------------------------
->>>>>>> eddd6a5... Yandex subdomains enumeration module
 def main():
     #
     # Option Variables
@@ -1535,29 +1532,13 @@ def main():
     # Set the resolver
     res = DnsHelper(domain, ns_server, request_timeout, proto)
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-    domain_req = ["axfr", "std", "srv", "tld", "bing", "crt", "zonewalk"]
-=======
     domain_req = ["axfr", "std", "srv", "tld", "goo", "bing", "yan", "crt", "zonewalk"]
->>>>>>> eddd6a5... Yandex subdomains enumeration module
-=======
-    domain_req = ["axfr", "std", "srv", "tld", "goo", "bing", "yan", "crt", "zonewalk"]
->>>>>>> eddd6a519de6993b3ba69378262d2ab04c913235
     scan_info = [" ".join(sys.argv), str(datetime.datetime.now())]
 
     if type is not None:
 
         # Check for any illegal enumeration types from the user
-<<<<<<< HEAD
-<<<<<<< HEAD
-        valid_types = ["axfr", "std", "rvl", "brt", "srv", "tld", "bing", "crt", "snoop", "zonewalk"]
-=======
         valid_types = ["axfr", "std", "rvl", "brt", "srv", "tld", "goo", "bing", "yan", "crt", "snoop", "zonewalk"]
->>>>>>> eddd6a5... Yandex subdomains enumeration module
-=======
-        valid_types = ["axfr", "std", "rvl", "brt", "srv", "tld", "goo", "bing", "yan", "crt", "snoop", "zonewalk"]
->>>>>>> eddd6a519de6993b3ba69378262d2ab04c913235
         incorrect_types = [t for t in type.split(',') if t not in valid_types]
         if incorrect_types:
             print_error("This type of scan is not in the list: {0}".format(','.join(incorrect_types)))
@@ -1578,16 +1559,8 @@ def main():
                         print_error("No records were returned in the zone transfer attempt.")
 
                 elif r == "std":
-<<<<<<< HEAD
-                    print_status(f"Performing General Enumeration of Domain:{domain}")
-                    std_enum_records = general_enum(res, domain, xfr, bing, spf_enum, do_whois, do_crt, zonewalk,
-=======
                     print_status("Performing General Enumeration of Domain:{0}".format(domain))
                     std_enum_records = general_enum(res, domain, xfr, goo, bing, yan, spf_enum, do_whois, do_crt, zonewalk,
-<<<<<<< HEAD
->>>>>>> eddd6a5... Yandex subdomains enumeration module
-=======
->>>>>>> eddd6a519de6993b3ba69378262d2ab04c913235
                                                     thread_num=thread_num)
 
                     if (output_file is not None) or (results_db is not None) or (csv_file is not None) or (
