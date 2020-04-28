@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-#    Copyright (C) 2020 Cristiano Maruti (twitter: @cmaruti)
+#    Copyright (C) 2010  Carlos Perez
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -20,7 +20,6 @@
 import urllib
 import re
 import time
-
 from lib.msf_print import *
 
 try:
@@ -31,33 +30,42 @@ except AttributeError:
 
 
 class AppURLopener(url_opener):
-    version = """Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 
-                     (KHTML, like Gecko) Chrome/42.0.2311.135 Safari/537.36 Edge/12.246"""
+  
+    version  = "Mozilla/5.0 (compatible; Googlebot/2.1; + http://www.google.com/bot.html)"
 
 
-def scrape_yandex(dom):
+def scrape_google(dom):
     """
-    Function for enumerating sub-domains and hosts by scraping Bing.
+    Function for enumerating sub-domains and hosts by scraping Google.
     """
     results = []
     filtered = []
-    searches = ["1", "2", "3", "4", "5", "10", "20", "30"]
+    searches = ["0","100", "200", "300", "400", "500"]
     data = ""
     urllib._urlopener = AppURLopener()
 
+    user_agent = 'Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.9.0.7) Gecko/2009021910 Firefox/3.0.7'
+
     for n in searches:
-        url = "https://yandex.com/search/?text=site%3A" + dom
+        url = "https://www.google.com/search?hl=en&lr=&ie=UTF-8&q=site%3A" + dom + "&start=" + n + "&sa=N&filter=0&num=100"
+        headers={'User-Agent':user_agent,} 
+        
         try:
             sock = urllib.urlopen(url)
             data = sock.read()
         except AttributeError:
-            sock = urllib.request.urlopen(url)
-            data = sock.read().decode("utf-8")
+            try:
+                request=urllib.request.Request(url,None,headers)
+                sock = urllib.request.urlopen(request)
+                data = sock.read().decode("utf-8") 
 
-        if re.search("enter_captcha_value",data) != None:
-            print_error("Yandex has detected the search as \'bot activity, stopping search...")
+            except urllib.error.HTTPError:
+                print_error("Google has return an HTTP error and detected the search as \'bot activity, stopping search...")
+                return results
+
+        if re.search('Our systems have detected unusual traffic from your computer network',data) != None:
+            print_error("Google has detected the search as \'bot activity, stopping search...")
             return unique(results)
-
         results.extend(re.findall("([a-zA-Z0-9\-\.]+" + dom + ")\/?", data))
 
         sock.close()

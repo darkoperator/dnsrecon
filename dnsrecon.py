@@ -57,6 +57,7 @@ from dns.dnssec import algorithm_to_text
 
 from lib.crtenum import scrape_crtsh
 from lib.bingenum import *
+from lib.yandexenum import *
 from lib.whois import *
 from lib.dnshelper import DnsHelper
 from lib.msf_print import *
@@ -1035,6 +1036,16 @@ def general_enum(res, domain, do_axfr, do_bing, do_spf, do_whois, do_crt, zw, th
                         ip_for_whois.append(r["address"])
                 returned_records.extend(bing_rcd)
 
+        # Do Yandex Search enumeration if selected
+        if do_yan:
+            print_status("Performing Yandex Search Enumeration")
+            yandex_rcd = se_result_process(res, scrape_yandex(domain))
+            if yandex_rcd:
+                for r in yandex_rcd:
+                    if "address" in yandex_rcd:
+                        ip_for_whois.append(r["address"])
+                returned_records.extend(yandex_rcd)
+
         if do_crt:
             print_status("Performing Crt.sh Search Enumeration")
             crt_rcd = se_result_process(res, scrape_crtsh(domain))
@@ -1305,6 +1316,61 @@ def ds_zone_walk(res, domain):
     return records
 
 
+<<<<<<< HEAD
+=======
+def usage():
+    print("Version: {0}".format(__version__))
+    print("Usage: dnsrecon.py <options>\n")
+    print("Options:")
+    print("   -h, --help                   Show this help message and exit.")
+    print("   -d, --domain      <domain>   Target domain.")
+    print(
+        "   -r, --range       <range>    IP range for reverse lookup brute force in formats (first-last) or in (range/bitmask).")
+    print("   -n, --name_server <name>     Domain server to use. If none is given, the SOA of the target will be used.")
+    print("                                Multiple servers can be specified using a comma separated list.")
+    print("   -D, --dictionary  <file>     Dictionary file of subdomain and hostnames to use for brute force.")
+    print(
+        "   -f                           Filter out of brute force domain lookup, records that resolve to the wildcard defined")
+    print("                                IP address when saving records.")
+    print("   -t, --type        <types>    Type of enumeration to perform (comma separated):")
+    print("                                std       SOA, NS, A, AAAA, MX and SRV.")
+    print("                                rvl       Reverse lookup of a given CIDR or IP range.")
+    print("                                brt       Brute force domains and hosts using a given dictionary.")
+    print("                                srv       SRV records.")
+    print("                                axfr      Test all NS servers for a zone transfer.")
+    print("                                goo       Perform Google search for subdomains and hosts.")
+    print("                                bing      Perform Google search for subdomains and hosts.")
+    print("                                yan       Perform Yandex search for subdomains and hosts.")
+    print("                                crt       Perform crt.sh search for subdomains and hosts.")
+    print("                                snoop     Perform cache snooping against all NS servers for a given domain, testing")
+    print("                                          all with file containing the domains, file given with -D option.")
+    print("                                tld       Remove the TLD of given domain and test against all TLDs registered in IANA.")
+    print("                                zonewalk  Perform a DNSSEC zone walk using NSEC records.")
+    print("   -a                           Perform AXFR with standard enumeration.")
+    print("   -s                           Perform a reverse lookup of IPv4 ranges in the SPF record with standard enumeration.")
+    print("   -g                           Perform Google enumeration with standard enumeration.")
+    print("   -b                           Perform Bing enumeration with standard enumeration.")
+    print("   -k                           Perform crt.sh enumeration with standard enumeration.")
+    print("   -w                           Perform deep whois record analysis and reverse lookup of IP ranges found through")
+    print("                                Whois when doing a standard enumeration.")
+    print("   -z                           Performs a DNSSEC zone walk with standard enumeration.")
+    print("   --threads         <number>   Number of threads to use in reverse lookups, forward lookups, brute force and SRV")
+    print("                                record enumeration.")
+    print("   --tcp                        Force using TCP protocol when making DNS queries.")
+    print("   --lifetime        <number>   Time to wait for a server to response to a query.")
+    print("   --db              <file>     SQLite 3 file to save found records.")
+    print("   --xml             <file>     XML file to save found records.")
+    print("   --iw                         Continue brute forcing a domain even if a wildcard records are discovered.")
+    print("   --disable_check_recursion    Disables check for recursion on name servers.")
+    print("   --disable_check_bindversion  Disables check for BIND version on name servers.")
+    print("   -c, --csv         <file>     Comma separated value file.")
+    print("   -j, --json        <file>     JSON file.")
+    print("   -v                           Show attempts in the brute force modes.")
+
+
+# Main
+# -------------------------------------------------------------------------------
+>>>>>>> eddd6a5... Yandex subdomains enumeration module
 def main():
     #
     # Option Variables
@@ -1355,6 +1421,7 @@ def main():
         parser.add_argument("-a", help="Perform AXFR with standard enumeration.", action="store_true")
         parser.add_argument("-s", help="Perform a reverse lookup of IPv4 ranges in the SPF record with standard enumeration.", action="store_true")
         parser.add_argument("-b", help="Perform Bing enumeration with standard enumeration.", action="store_true")
+        parser.add_argument("-y", help="Perform Yandex enumeration with standard enumeration.", action="store_true")
         parser.add_argument("-k", help="Perform crt.sh enumeration with standard enumeration.", action="store_true")
         parser.add_argument("-w", help="Perform deep whois record analysis and reverse lookup of IP ranges found through Whois when doing a standard enumeration.", action="store_true")
         parser.add_argument("-z", help="Performs a DNSSEC zone walk with standard enumeration.", action="store_true")
@@ -1457,6 +1524,7 @@ def main():
 
     xfr = arguments.a
     bing = arguments.b
+    yandex = arguments.y
     do_crt = arguments.k
     do_whois = arguments.w
     zonewalk = arguments.z
@@ -1467,13 +1535,21 @@ def main():
     # Set the resolver
     res = DnsHelper(domain, ns_server, request_timeout, proto)
 
+<<<<<<< HEAD
     domain_req = ["axfr", "std", "srv", "tld", "bing", "crt", "zonewalk"]
+=======
+    domain_req = ["axfr", "std", "srv", "tld", "goo", "bing", "yan", "crt", "zonewalk"]
+>>>>>>> eddd6a5... Yandex subdomains enumeration module
     scan_info = [" ".join(sys.argv), str(datetime.datetime.now())]
 
     if type is not None:
 
         # Check for any illegal enumeration types from the user
+<<<<<<< HEAD
         valid_types = ["axfr", "std", "rvl", "brt", "srv", "tld", "bing", "crt", "snoop", "zonewalk"]
+=======
+        valid_types = ["axfr", "std", "rvl", "brt", "srv", "tld", "goo", "bing", "yan", "crt", "snoop", "zonewalk"]
+>>>>>>> eddd6a5... Yandex subdomains enumeration module
         incorrect_types = [t for t in type.split(',') if t not in valid_types]
         if incorrect_types:
             print_error("This type of scan is not in the list: {0}".format(','.join(incorrect_types)))
@@ -1494,8 +1570,13 @@ def main():
                         print_error("No records were returned in the zone transfer attempt.")
 
                 elif r == "std":
+<<<<<<< HEAD
                     print_status(f"Performing General Enumeration of Domain:{domain}")
                     std_enum_records = general_enum(res, domain, xfr, bing, spf_enum, do_whois, do_crt, zonewalk,
+=======
+                    print_status("Performing General Enumeration of Domain:{0}".format(domain))
+                    std_enum_records = general_enum(res, domain, xfr, goo, bing, yan, spf_enum, do_whois, do_crt, zonewalk,
+>>>>>>> eddd6a5... Yandex subdomains enumeration module
                                                     thread_num=thread_num)
 
                     if (output_file is not None) or (results_db is not None) or (csv_file is not None) or (
@@ -1561,6 +1642,13 @@ def main():
                     if (output_file is not None) or (results_db is not None) or (csv_file is not None) or (
                             json_file is not None):
                         returned_records.extend(bing_enum_records)
+
+                elif r == "yan":
+                    print_status("Performing Yandex Search Enumeration against {0}".format(domain))
+                    yandex_enum_records = se_result_process(res, scrape_yandex(domain))
+                    if (output_file is not None) or (results_db is not None) or (csv_file is not None) or (
+                            json_file is not None):
+                        returned_records.extend(yandex_enum_records)
 
                 elif r == "crt":
                     print_status(f"Performing Crt.sh Search Enumeration against {domain}")
