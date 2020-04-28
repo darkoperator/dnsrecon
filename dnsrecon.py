@@ -400,8 +400,8 @@ def brute_reverse(res, ip_list, verbose=False, thread_num=None):
     for rcd_found in brtdata:
         for rcd in rcd_found:
             returned_records.append([{'type': rcd[0], 'name': rcd[1], 'address': rcd[2]}])
-            print_good({'type': rcd[0], 'name': rcd[1], 'address': rcd[2]})
-
+            print_good(f"{rcd[0]} {rcd[1]} {rcd[2]}")
+ 
     print_good("{0} Records Found".format(len(returned_records)))
 
     return returned_records
