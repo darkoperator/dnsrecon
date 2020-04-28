@@ -65,7 +65,7 @@ def scrape_google(dom):
 
         if re.search('Our systems have detected unusual traffic from your computer network',data) != None:
             print_error("Google has detected the search as \'bot activity, stopping search...")
-            return results
+            return unique(results)
         results.extend(re.findall("([a-zA-Z0-9\-\.]+" + dom + ")\/?", data))
 
         sock.close()

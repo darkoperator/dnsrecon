@@ -41,14 +41,13 @@ def scrape_yandex(dom):
     """
     results = []
     filtered = []
-    searches = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "20", "30", "40"]
+    searches = ["1", "2", "3", "4", "5", "10", "20", "30"]
     data = ""
     urllib._urlopener = AppURLopener()
 
     for n in searches:
         url = "https://yandex.com/search/?text=site%3A" + dom
         try:
-            print("%s" % url)
             sock = urllib.urlopen(url)
             data = sock.read()
         except AttributeError:
