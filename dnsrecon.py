@@ -1488,7 +1488,7 @@ def main():
     if type is not None:
 
         # Check for any illegal enumeration types from the user
-        valid_types = ["axfr", "std", "rvl", "brt", "srv", "tld", "bing", "crt", "snoop", "zonewalk"]
+        valid_types = ["axfr", "std", "rvl", "brt", "srv", "tld", "bing", "yand" , "crt", "snoop", "zonewalk"]
         incorrect_types = [t for t in type.split(',') if t not in valid_types]
         if incorrect_types:
             print_error("This type of scan is not in the list: {0}".format(','.join(incorrect_types)))
