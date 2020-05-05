@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 #    Copyright (C) 2020 Cristiano Maruti (twitter: @cmaruti)
@@ -31,7 +31,7 @@ except AttributeError:
 
 
 class AppURLopener(url_opener):
-    version = """Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 
+    version = """Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36
                      (KHTML, like Gecko) Chrome/42.0.2311.135 Safari/537.36 Edge/12.246"""
 
 
@@ -54,7 +54,7 @@ def scrape_yandex(dom):
             sock = urllib.request.urlopen(url)
             data = sock.read().decode("utf-8")
 
-        if re.search("enter_captcha_value",data) not None:
+        if re.search("enter_captcha_value",data):
             print_error("Yandex has detected the search as \'bot activity, stopping search...")
             return unique(results)
 
