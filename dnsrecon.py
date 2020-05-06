@@ -1482,13 +1482,13 @@ def main():
     # Set the resolver
     res = DnsHelper(domain, ns_server, request_timeout, proto)
 
-    domain_req = ["axfr", "std", "srv", "tld", "bing", "yand" ,"crt", "zonewalk"]
+    domain_req = ["axfr", "std", "srv", "tld", "bing", "yand", "crt", "zonewalk"]
     scan_info = [" ".join(sys.argv), str(datetime.datetime.now())]
 
     if type is not None:
 
         # Check for any illegal enumeration types from the user
-        valid_types = ["axfr", "std", "rvl", "brt", "srv", "tld", "bing", "yand" , "crt", "snoop", "zonewalk"]
+        valid_types = ["axfr", "std", "rvl", "brt", "srv", "tld", "bing", "yand", "crt", "snoop", "zonewalk"]
         incorrect_types = [t for t in type.split(',') if t not in valid_types]
         if incorrect_types:
             print_error("This type of scan is not in the list: {0}".format(','.join(incorrect_types)))
