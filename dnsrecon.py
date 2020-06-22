@@ -36,14 +36,11 @@ import os
 import string
 import sqlite3
 import datetime
-
 import netaddr
-
 from random import Random
 from xml.dom import minidom
 from xml.etree import ElementTree
 from xml.etree.ElementTree import Element
-
 import dns.message
 import dns.query
 import dns.rdatatype
@@ -54,7 +51,6 @@ import dns.rdata
 import dns.flags
 import json
 from dns.dnssec import algorithm_to_text
-
 from lib.crtenum import scrape_crtsh
 from lib.bingenum import *
 from lib.yandexenum import *
@@ -146,7 +142,6 @@ def expand_cidr(cidr_to_expand):
     Function to expand a given CIDR and return an Array of IP Addresses that
     form the range covered by the CIDR.
     """
-    ip_list = []
     c1 = IPNetwork(cidr_to_expand)
     return c1
 
@@ -402,7 +397,7 @@ def brute_reverse(res, ip_list, verbose=False, thread_num=None):
         for rcd in rcd_found:
             returned_records.append([{'type': rcd[0], 'name': rcd[1], 'address': rcd[2]}])
             print_good(f'{rcd[0]} {rcd[1]} {rcd[2]}')
- 
+
     print_good("{0} Records Found".format(len(returned_records)))
 
     return returned_records
@@ -555,7 +550,6 @@ def whois_ips(res, ip_list):
     user with the list of net ranges found and ask the user if he wishes to perform
     a reverse lookup on any of the ranges or all the ranges.
     """
-    answer = ""
     found_records = []
     print_status("Performing Whois lookup against records found.")
     list = get_whois_nets_iplist(unique(ip_list))
@@ -616,14 +610,10 @@ def dns_record_from_dict(record_dict_list, scan_info, domain):
                         v = str(v)
                         elem.attrib[k] = v
                     except Exception:
-                        print_error(
-                            "Could not convert key or value to unicode: '{0} = {1}'".format((repr(k)), (repr(v))))
+                        print_error("Could not convert key or value to unicode: '{0} = {1}'".format((repr(k)), (repr(v))))
                         print_error("In element: {0}".format(repr(elem.attrib)))
                         continue
                 xml_doc.append(elem)
-            except AttributeError:
-                continue
-
             except AttributeError:
                 continue
 
@@ -1125,7 +1115,7 @@ def lookup_next(target, res):
     """
     Try to get the most accurate information for the record found.
     """
-    res_sys = DnsHelper(target)
+    DnsHelper(target)
     returned_records = []
 
     if re.search(r"^_[A-Za-z0-9_-]*._[A-Za-z0-9_-]*.", target, re.I):
@@ -1325,7 +1315,7 @@ def main():
     domain = None
     ns_server = None
     output_file = None
-    dict = None
+    dictionary = None
     type = None
     xfr = None
     bing = False
@@ -1440,7 +1430,7 @@ def main():
     if arguments.dictionary:
         # print(arguments.dictionary)
         if os.path.isfile(arguments.dictionary.strip()):
-            dict = arguments.dictionary.strip()
+            dictionary = arguments.dictionary.strip()
         else:
             print_error(f"File {arguments.dictionary.strip()} does not exist!")
             exit(1)
@@ -1529,9 +1519,10 @@ def main():
                         print_error("Failed CIDR or Range is Required for type rvl")
 
                 elif r == "brt":
-                    if (dict is not None) and (domain is not None):
+                    if (dictionary is not None) and (domain is not None):
                         print_status(f"Performing host and subdomain brute force against {domain}")
-                        brt_enum_records = brute_domain(res, dict, domain, wildcard_filter, verbose, ignore_wildcardrr,
+                        brt_enum_records = brute_domain(res, dictionary, domain, wildcard_filter, verbose,
+                                                        ignore_wildcardrr,
                                                         thread_num=thread_num)
 
                         if (output_file is not None) or (results_db is not None) or (csv_file is not None) or (
@@ -1592,9 +1583,9 @@ def main():
                         returned_records.extend(crt_enum_records)
 
                 elif r == "snoop":
-                    if (dict is not None) and (ns_server is not None):
+                    if (dictionary is not None) and (ns_server is not None):
                         print_status(f"Performing Cache Snooping against NS Server: {ns_server}")
-                        cache_enum_records = in_cache(res, dict, ns_server)
+                        cache_enum_records = in_cache(res, dictionary, ns_server)
                         if (output_file is not None) or (results_db is not None) or (csv_file is not None) or (
                                 json_file is not None):
                             returned_records.extend(cache_enum_records)

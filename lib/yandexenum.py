@@ -20,14 +20,10 @@
 import urllib
 import re
 import time
-
 from lib.msf_print import *
+import urllib.request
 
-try:
-    url_opener = urllib.FancyURLopener
-except AttributeError:
-    import urllib.request
-    url_opener = urllib.request.FancyURLopener
+url_opener = urllib.request.FancyURLopener
 
 
 class AppURLopener(url_opener):
@@ -40,30 +36,29 @@ def scrape_yandex(dom):
     Function for enumerating sub-domains and hosts by scraping Bing.
     """
     results = []
-    filtered = []
     searches = ["1", "2", "3", "4", "5", "10", "20", "30"]
-    data = ""
     urllib._urlopener = AppURLopener()
 
-    for n in searches:
+    for _ in searches:
         url = "https://yandex.com/search/?text=site%3A" + dom
         try:
-            sock = urllib.urlopen(url)
+            sock = urllib.request.urlopen(url)
             data = sock.read()
         except AttributeError:
             sock = urllib.request.urlopen(url)
             data = sock.read().decode("utf-8")
 
-        if re.search("enter_captcha_value",data):
+        if re.search("enter_captcha_value", data):
             print_error("Yandex has detected the search as \'bot activity, stopping search...")
             return unique(results)
 
-        results.extend(re.findall("([a-zA-Z0-9\-\.]+" + dom + ")\/?", data))
+        results.extend(re.findall(r"([a-zA-Z0-9\-\.]+" + dom + ")/?", data))
 
         sock.close()
         time.sleep(10)
 
     return unique(results)
+
 
 def unique(seq, idfun=repr):
     """
