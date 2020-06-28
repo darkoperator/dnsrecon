@@ -1190,8 +1190,8 @@ def get_next(res, target, ns, timeout):
 
 def ds_zone_walk(res, domain):
     """
-    Perform DNSSEC Zone Walk using NSEC records found the the error additional
-    records section of the message to find the next host to query int he zone.
+    Perform DNSSEC Zone Walk using NSEC records found in the error additional
+    records section of the message to find the next host to query in the zone.
     """
     print_status("Performing NSEC Zone Walk for {0}".format(domain))
 
@@ -1274,6 +1274,14 @@ def ds_zone_walk(res, domain):
                     #   2) The subsequent existing hostname that is signed
                     # Add the latter to our list of pending hostnames
                     for r in a:
+
+                        # As an optimization Cloudflare (and perhaps others)
+                        # return '\000.' instead of NODATA when a record doesn't
+                        # exist. Detect this and avoid becoming tarpitted while
+                        # permuting the namespace.
+                        if r.next.to_text()[:5] =='\\000.':
+                            continue
+
                         # Avoid walking outside of the target domain. This
                         # happens with certain misconfigured domains.
                         if r.next.to_text()[-walk_filter_offset:-1] == walk_filter:
