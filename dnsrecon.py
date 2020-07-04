@@ -1279,7 +1279,7 @@ def ds_zone_walk(res, domain):
                         # return '\000.' instead of NODATA when a record doesn't
                         # exist. Detect this and avoid becoming tarpitted while
                         # permuting the namespace.
-                        if r.next.to_text()[:5] =='\\000.':
+                        if r.next.to_text()[:5] == '\\000.':
                             continue
 
                         # Avoid walking outside of the target domain. This
@@ -1338,7 +1338,6 @@ def main():
 
     # https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.as_completed
     request_timeout = 3.0
-    ip_range = None
     ip_list = []
     results_db = None
     zonewalk = False
