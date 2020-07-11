@@ -388,13 +388,14 @@ class DnsHelper:
 
         zone_records = []
         ns_records = []
-        print_status('Checking for Zone Transfer for {0} name servers'.format(self._domain))
+        print_status(f'Checking for Zone Transfer for {self._domain} name servers')
 
         # Find SOA for Domain
         print_status("Resolving SOA Record")
         try:
             soa_srvs = self.get_soa()
             for s in soa_srvs:
+                print(s)
                 print_good("\t {0}".format(" ".join(s)))
                 ns_records.append(s[2])
         except Exception:
@@ -420,9 +421,9 @@ class DnsHelper:
         # Test each NS Server
         for ns_srv in ns_records:
             print_status(" ")
-            print_status('Trying NS server {0}'.format(ns_srv))
+            print_status(f'Trying NS server {ns_srv}')
             if self.check_tcp_dns(ns_srv):
-                print_good('{0} Has port 53 TCP Open'.format(ns_srv))
+                print_good(f'{ns_srvs} Has port 53 TCP Open')
                 try:
                     zone = self.from_wire(dns.query.xfr(ns_srv, self._domain))
                     print_good('Zone Transfer was successful!!')
