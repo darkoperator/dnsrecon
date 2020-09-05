@@ -373,7 +373,10 @@ class DnsHelper:
                                            rrset.covers, True)
                 zrds.update_ttl(rrset.ttl)
                 for rd in rrset:
-                    rd.choose_relativity(z.origin, relativize)
+                    try:
+                        rd.choose_relativity(z.origin, relativize)
+                    except AttributeError:
+                        pass
                     zrds.add(rd)
 
         return z
