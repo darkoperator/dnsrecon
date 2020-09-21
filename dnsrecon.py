@@ -205,7 +205,7 @@ def check_nxdomain_hijack(nameserver):
 
     for record_type in ('A', 'AAAA'):
         try:
-            answers = res.query(test_name, record_type, tcp=True)
+            answers = res.resolve(test_name, record_type, tcp=True)
         except (
                 dns.resolver.NoNameservers, dns.resolver.NXDOMAIN, dns.exception.Timeout, dns.resolver.NoAnswer,
                 socket.error,
@@ -802,7 +802,7 @@ def dns_sec_check(domain, res):
     Check if a zone is configured for DNSSEC and if so if NSEC or NSEC3 is used.
     """
     try:
-        answer = res._res.query(domain, 'DNSKEY')
+        answer = res.resolve(domain, 'DNSKEY')
         print_status("DNSSEC is configured for {0}".format(domain))
         nsectype = get_nsec_type(domain, res)
         print_status("DNSKEYs:")
