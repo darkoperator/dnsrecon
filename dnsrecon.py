@@ -1188,7 +1188,7 @@ def get_next(res, target, ns, timeout):
     return next_host
 
 
-def ds_zone_walk(res, domain):
+def ds_zone_walk(res, domain, lifetime):
     """
     Perform DNSSEC Zone Walk using NSEC records found in the error additional
     records section of the message to find the next host to query in the zone.
@@ -1203,7 +1203,8 @@ def ds_zone_walk(res, domain):
         soa_rcd = res.get_soa()[0][2]
 
         print_status("Name Server {0} will be used".format(soa_rcd))
-        res = DnsHelper(domain, soa_rcd, 3)
+        # Todo fix timeout with lifetime param
+        res = DnsHelper(domain, soa_rcd, lifetime)
         nameserver = soa_rcd
     except Exception:
         print_error("This zone appears to be misconfigured, no SOA record found.")
@@ -1369,7 +1370,7 @@ def main():
         parser.add_argument("-w", help="Perform deep whois record analysis and reverse lookup of IP ranges found through Whois when doing a standard enumeration.", action="store_true")
         parser.add_argument("-z", help="Performs a DNSSEC zone walk with standard enumeration.", action="store_true")
         parser.add_argument("--threads", type=int, dest="threads", help="Number of threads to use in reverse lookups, forward lookups, brute force and SRV record enumeration.")
-        parser.add_argument("--lifetime", type=int, dest="lifetime", help="Time to wait for a server to response to a query.")
+        parser.add_argument("--lifetime", type=int, dest="lifetime", default=3, help="Time to wait for a server to response to a query. default is 3")
         parser.add_argument("--tcp", dest="tcp", help="Use TCP protocol to make queries.", action="store_true")
         parser.add_argument("--db", type=str, dest="db", help="SQLite 3 file to save found records.")
         parser.add_argument("-x", "--xml", type=str, dest="xml", help="XML file to save found records.")
