@@ -11,8 +11,8 @@
 #
 #    This program is distributed in the hope that it will be useful,
 #    but WITHOUT ANY WARRANTY; without even the implied warranty of
-#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#    GNU General Public License for more details.
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+#    See the GNU General Public License for more details.
 #
 #    You should have received a copy of the GNU General Public License
 #    along with this program; if not, write to the Free Software
@@ -552,28 +552,28 @@ def whois_ips(res, ip_list):
     """
     found_records = []
     print_status("Performing Whois lookup against records found.")
-    list = get_whois_nets_iplist(unique(ip_list))
-    if len(list) > 0:
+    list_whois = get_whois_nets_iplist(unique(ip_list))
+    if len(list_whois) > 0:
         print_status("The following IP Ranges were found:")
-        for i in range(len(list)):
+        for i in range(len(list_whois)):
             print_status(
-                "\t {0} {1}-{2} {3}".format(str(i) + ")", list[i]["start"], list[i]["end"], list[i]["orgname"]))
+                "\t {0} {1}-{2} {3}".format(str(i) + ")", list_whois[i]["start"], list_whois[i]["end"], list_whois[i]["orgname"]))
         print_status("What Range do you wish to do a Reverse Lookup for?")
         print_status("number, comma separated list, a for all or n for none")
         val = sys.stdin.readline()[:-1]
         answer = str(val).split(",")
 
         if "a" in answer:
-            for i in range(len(list)):
-                print_status("Performing Reverse Lookup of range {0}-{1}".format(list[i]['start'], list[i]['end']))
-                found_records.append(brute_reverse(res, expand_range(list[i]['start'], list[i]['end'])))
+            for i in range(len(list_whois)):
+                print_status("Performing Reverse Lookup of range {0}-{1}".format(list_whois[i]['start'], list_whois[i]['end']))
+                found_records.append(brute_reverse(res, expand_range(list_whois[i]['start'], list_whois[i]['end'])))
 
         elif "n" in answer:
             print_status("No Reverse Lookups will be performed.")
             pass
         else:
             for a in answer:
-                net_selected = list[int(a)]
+                net_selected = list_whois[int(a)]
                 print_status(net_selected['orgname'])
                 print_status(
                     "Performing Reverse Lookup of range {0}-{1}".format(net_selected['start'], net_selected['end']))
@@ -1688,4 +1688,7 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        print_status('CTRL+C detected, quiting')
