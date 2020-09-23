@@ -1203,7 +1203,6 @@ def ds_zone_walk(res, domain, lifetime):
         soa_rcd = res.get_soa()[0][2]
 
         print_status("Name Server {0} will be used".format(soa_rcd))
-        # Todo fix timeout with lifetime param
         res = DnsHelper(domain, soa_rcd, lifetime)
         nameserver = soa_rcd
     except Exception:
