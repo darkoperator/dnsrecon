@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="dnsrecon",
-    version="1.0.0",
+    version="1.0.2",
     author="Carlos Perez",
     author_email="carlos_perez@darkoperator.com",
     description="DNS Enumeration Script",
@@ -13,6 +13,10 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     url="https://github.com/darkoperator/dnsrecon",
     packages=setuptools.find_packages(),
+    requires=['dnspython',
+              'netaddr',
+              'lxml',
+              'flake8'],
     classifiers=[
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.6",
@@ -24,11 +28,11 @@ setuptools.setup(
     python_requires='>=3.6',
     data_files=[
         ('/etc/dnsrecon', [
-            'snoop.txt',
-            'subdomains-top1mil-20000.txt',
-            'subdomains-top1mil-5000.txt',
-            'subdomains-top1mil.txt',
-        ]
+            './dictionary/snoop.txt',
+            './dictionary/subdomains-top1mil-20000.txt',
+            './dictionary/subdomains-top1mil-5000.txt',
+            './dictionary/subdomains-top1mil.txt',
+            './dictionary/namelist.txt']
         )
     ],
 )
