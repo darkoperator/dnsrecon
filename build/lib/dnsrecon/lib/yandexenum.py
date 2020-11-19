@@ -20,7 +20,7 @@
 import urllib
 import re
 import time
-from .lib.msf_print import *
+from lib.msf_print import *
 import urllib.request
 
 url_opener = urllib.request.FancyURLopener

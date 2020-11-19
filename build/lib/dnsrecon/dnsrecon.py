@@ -57,7 +57,6 @@ from lib.yandexenum import *
 from lib.whois import *
 from lib.dnshelper import DnsHelper
 from lib.msf_print import *
-from tools.parser import *
 
 from concurrent import futures
 

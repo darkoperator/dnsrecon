@@ -27,7 +27,7 @@ import dns.reversename
 from dns.dnssec import algorithm_to_text
 from dns.zone import *
 
-from .lib.msf_print import *
+from lib.msf_print import *
 
 DNS_PORT_NUMBER = 53
 DNS_QUERY_TIMEOUT = 4.0

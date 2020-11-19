@@ -9,4 +9,3 @@ from .lib.yandexenum import *
 from .dnsrecon import *
 from .msf_print import *
 from .whois import *
-from .tools.parser import *
