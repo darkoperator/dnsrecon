@@ -4,10 +4,9 @@
 dnsrecon python module adaptation
 '''
 
-from .bingenum import scrape_bing, unique
-from .crtenum import scrape_crtsh
-from .dnshelper import DnsHelper
+from .lib.crtenum import scrape_crtsh
+from .lib.yandexenum import *
+from .dnsrecon import *
 from .msf_print import *
 from .whois import *
-from .yandexenum import *
-from .dnsrecon import *
+from .tools.parser import *

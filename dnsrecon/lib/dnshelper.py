@@ -17,16 +17,17 @@
 #    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 
+import random
+import socket
+
+import dns.message
 import dns.query
 import dns.resolver
 import dns.reversename
-import dns.message
-import socket
-import random
-from dns.zone import *
 from dns.dnssec import algorithm_to_text
-from .msf_print import *
+from dns.zone import *
 
+from .lib.msf_print import *
 
 DNS_PORT_NUMBER = 53
 DNS_QUERY_TIMEOUT = 4.0

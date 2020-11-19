@@ -1,7 +1,6 @@
-#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-#    Copyright (C) 2020 Cristiano Maruti (twitter: @cmaruti)
+#    Copyright (C) 2017 Cristiano Maruti (twitter: @cmaruti)
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -16,46 +15,33 @@
 #    along with this program; if not, write to the Free Software
 #    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
-
-import urllib
+import urllib.request
 import re
 import time
-from lib.msf_print import *
-import urllib.request
 
 url_opener = urllib.request.FancyURLopener
 
 
 class AppURLopener(url_opener):
-    version = """Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36
-                     (KHTML, like Gecko) Chrome/42.0.2311.135 Safari/537.36 Edge/12.246"""
+    version = "Mozilla/5.0 (compatible; bingbot/2.0; +http://www.bing.com/bingbot.htm)"
 
 
-def scrape_yandex(dom):
+def scrape_bing(dom):
     """
     Function for enumerating sub-domains and hosts by scraping Bing.
     """
     results = []
-    searches = ["1", "2", "3", "4", "5", "10", "20", "30"]
+    searches = ["10", "20", "30", "40", "50", "60", "70", "80", "90", "100", "110", "120", "130",
+                "140", "150"]
     urllib._urlopener = AppURLopener()
 
-    for _ in searches:
-        url = "https://yandex.com/search/?text=site%3A" + dom
-        try:
-            sock = urllib.request.urlopen(url)
-            data = sock.read()
-        except AttributeError:
-            sock = urllib.request.urlopen(url)
-            data = sock.read().decode("utf-8")
-
-        if re.search("enter_captcha_value", data):
-            print_error("Yandex has detected the search as \'bot activity, stopping search...")
-            return unique(results)
-
-        results.extend(re.findall(r"([a-zA-Z0-9\-\.]+" + dom + ")/?", data))
-
+    for n in searches:
+        url = "http://www.bing.com/search?q=domain%3A" + dom + "&qs=n&first=" + n
+        sock = urllib.request.urlopen(url)
+        data = sock.read().decode("utf-8")
+        results.extend(re.findall(r"([a-zA-Z0-9\-.]+" + dom + ")/?", data))
         sock.close()
-        time.sleep(10)
+        time.sleep(5)
 
     return unique(results)
 
