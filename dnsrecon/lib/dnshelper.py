@@ -411,9 +411,7 @@ class DnsHelper:
         try:
             ns_srvs = []
             ns_srvs = self.get_ns()
-            print_status("NS Servers found:")
             for ns in ns_srvs:
-                print_status("\t{0}".format(" ".join(ns)))
                 ns_ip = ''.join(ns[2])
                 ns_records.append(ns_ip)
         except Exception as e:
@@ -436,7 +434,6 @@ class DnsHelper:
                         for rdata in rdataset:
                             for mn_ip in self.get_ip(rdata.mname.to_text()):
                                 if re.search(r'^A', mn_ip[0]):
-                                    print_status('\t SOA {0} {1}'.format(rdata.mname.to_text()[:-1], mn_ip[2]))
                                     zone_records.append({'zone_server': ns_srv, 'type': 'SOA',
                                                          'mname': rdata.mname.to_text()[:-1], 'address': mn_ip[2]})
 
@@ -457,7 +454,6 @@ class DnsHelper:
                                 if re.search(r'^A', n_ip[0]):
 
                                     if appended:
-                                        print_status('\t NS {0} {1}'.format(target, n_ip[2]))
                                         zone_records.append({'zone_server': ns_srv, 'type': 'NS',
                                                              'target': target, 'address': n_ip[2]})
                                     else:
@@ -466,20 +462,18 @@ class DnsHelper:
                                         else:
                                             target = rdata.target.to_text()
 
-                                        print_status('\t NS {0} {1}'.format(target, n_ip[2]))
                                         zone_records.append({'zone_server': ns_srv, 'type': 'NS',
                                                              'target': target, 'address': n_ip[2]})
 
                     for (name, rdataset) in zone.iterate_rdatasets(dns.rdatatype.TXT):
                         for rdata in rdataset:
                             rdata = [string.decode() for string in rdata.strings]
-                            print_status('\t TXT {0}'.format(''.join(rdata)))
                             zone_records.append({'zone_server': ns_srv, 'type': 'TXT',
                                                 'strings': ''.join(rdata)})
 
                     for (name, rdataset) in zone.iterate_rdatasets(dns.rdatatype.SPF):
                         for rdata in rdataset:
-                            print_status('\t SPF {0}'.format(''.join(rdata.strings)))
+                            #print_status('\t SPF {0}'.format(''.join(rdata.strings)))
                             zone_records.append({'zone_server': ns_srv, 'type': 'SPF',
                                                  'strings': ''.join(rdata.strings)})
 
@@ -487,7 +481,6 @@ class DnsHelper:
                         for rdata in rdataset:
                             for n_ip in self.get_ip(rdata.target.to_text() + "." + self._domain):
                                 if re.search(r'^A', n_ip[0]):
-                                    print_status('\t PTR {0} {1}'.format(rdata.target.to_text() + "." + self._domain, n_ip[2]))
                                     zone_records.append({'zone_server': ns_srv, 'type': 'PTR',
                                                          'name': rdata.target.to_text() + "." + self._domain, 'address': n_ip[2]})
 
@@ -508,16 +501,12 @@ class DnsHelper:
 
                     for (name, rdataset) in zone.iterate_rdatasets(dns.rdatatype.AAAA):
                         for rdata in rdataset:
-                            print_status('\t AAAA {0} {1}'.format(str(name) + '.' + self._domain,
-                                         rdata.address))
                             zone_records.append({'zone_server': ns_srv, 'type': 'AAAA',
                                                 'name': str(name) + '.' + self._domain,
                                                  'address': rdata.address})
 
                     for (name, rdataset) in zone.iterate_rdatasets(dns.rdatatype.A):
                         for rdata in rdataset:
-                            print_status('\t A {0} {1}'.format(str(name) + '.' + self._domain,
-                                         rdata.address))
                             zone_records.append({'zone_server': ns_srv, 'type': 'A',
                                                 'name': str(name) + '.' + self._domain,
                                                  'address': rdata.address})
@@ -530,8 +519,6 @@ class DnsHelper:
                                         ctarget = rdata.target.to_text()[:-1]
                                     else:
                                         ctarget = rdata.target.to_text()
-                                    print_status('\t CNAME {0} {1} {2}'.format(str(name) + '.' + self._domain,
-                                                                               rdata.target.to_text(), t_ip[2]))
                                     zone_records.append({'zone_server': ns_srv, 'type': 'CNAME',
                                                          'name': str(name) + '.' + self._domain,
                                                          'target': str(ctarget),
@@ -543,8 +530,6 @@ class DnsHelper:
                             if ip_list:
                                 for t_ip in self.get_ip(rdata.target.to_text()):
                                     if re.search(r'^A', t_ip[0]):
-                                        print_status('\t SRV {0} {1} {2} {3} {4}'.format(str(name) + '.' + self._domain, rdata.target,
-                                                     str(rdata.port), str(rdata.weight), t_ip[2]))
                                         zone_records.append({'zone_server': ns_srv, 'type': 'SRV',
                                                             'name': str(name) + '.' + self._domain,
                                                              'target': rdata.target.to_text()[:-1],
@@ -552,8 +537,6 @@ class DnsHelper:
                                                              'port': str(rdata.port),
                                                              'weight': str(rdata.weight)})
                             else:
-                                print_status('\t SRV {0} {1} {2} {3} {4}'.format(str(name) + '.' + self._domain, rdata.target,
-                                             str(rdata.port), str(rdata.weight), 'no_ip'))
                                 zone_records.append({'zone_server': ns_srv, 'type': 'SRV',
                                                     'name': str(name) + '.' + self._domain,
                                                      'target': rdata.target.to_text()[:-1],
@@ -563,67 +546,52 @@ class DnsHelper:
 
                     for (name, rdataset) in zone.iterate_rdatasets(dns.rdatatype.HINFO):
                         for rdata in rdataset:
-                            print_status('\t HINFO {0} {1}'.format(rdata.cpu.decode(), rdata.os.decode()))
                             zone_records.append({'zone_server': ns_srv, 'type': 'HINFO',
                                                 'cpu': rdata.cpu.decode(), 'os': rdata.os.decode()})
 
                     for (name, rdataset) in zone.iterate_rdatasets(dns.rdatatype.WKS):
                         for rdata in rdataset:
-                            print_status('\t WKS {0} {1} {2}'.format(rdata.address, rdata.bitmap, rdata.protocol))
                             zone_records.append({'zone_server': ns_srv, 'type': 'WKS',
                                                 'address': rdata.address, 'bitmap': rdata.bitmap,
                                                  'protocol': rdata.protocol})
 
                     for (name, rdataset) in zone.iterate_rdatasets(dns.rdatatype.RP):
                         for rdata in rdataset:
-                            print_status('\t RP {0} {1}'.format(rdata.mbox, rdata.txt))
                             zone_records.append({'zone_server': ns_srv, 'type': 'RP',
                                                 'mbox': rdata.mbox.to_text(), 'txt': rdata.txt.to_text()})
 
                     for (name, rdataset) in zone.iterate_rdatasets(dns.rdatatype.AFSDB):
                         for rdata in rdataset:
-                            print_status('\t AFSDB {0} {1}'.format(str(rdata.subtype), rdata.hostname))
                             zone_records.append({'zone_server': ns_srv, 'type': 'AFSDB',
                                                 'subtype': str(rdata.subtype), 'hostname': rdata.hostname.to_text()})
 
                     for (name, rdataset) in zone.iterate_rdatasets(dns.rdatatype.LOC):
                         for rdata in rdataset:
-                            print_status('\t LOC {0}'.format(rdata.to_text()))
                             zone_records.append({'zone_server': ns_srv, 'type': 'LOC',
                                                 'coordinates': rdata.to_text()})
 
                     for (name, rdataset) in zone.iterate_rdatasets(dns.rdatatype.X25):
                         for rdata in rdataset:
-                            print_status('\tX25 {0}'.format(rdata.address))
                             zone_records.append({'zone_server': ns_srv, 'type': 'X25',
                                                 'address': rdata.address})
 
                     for (name, rdataset) in zone.iterate_rdatasets(dns.rdatatype.ISDN):
                         for rdata in rdataset:
-                            print_status('\t ISDN {0}'.format(rdata.address))
                             zone_records.append({'zone_server': ns_srv, 'type': 'ISDN',
                                                  'address': rdata.address})
 
                     for (name, rdataset) in zone.iterate_rdatasets(dns.rdatatype.RT):
                         for rdata in rdataset:
-                            print_status('\t RT {0} {1}'.format(str(rdata.exchange), rdata.preference))
                             zone_records.append({'zone_server': ns_srv, 'type': 'X25',
                                                  'address': rdata.address})
 
                     for (name, rdataset) in zone.iterate_rdatasets(dns.rdatatype.NSAP):
                         for rdata in rdataset:
-                            print_status('\t NSAP {0}'.format(rdata.address))
                             zone_records.append({'zone_server': ns_srv, 'type': 'NSAP',
                                                  'address': rdata.address})
 
                     for (name, rdataset) in zone.iterate_rdatasets(dns.rdatatype.NAPTR):
                         for rdata in rdataset:
-                            print_status('\t NAPTR {0} {1} {2} {3} {4} {5}'.format(rdata.flags.decode(),
-                                                                                   rdata.order,
-                                                                                   rdata.preference,
-                                                                                   rdata.regexp.decode(),
-                                                                                   rdata.replacement.to_text(),
-                                                                                   rdata.service.decode()))
                             zone_records.append({'zone_server': ns_srv, 'type': 'NAPTR',
                                                  'order': str(rdata.order),
                                                  'preference': str(rdata.preference),
@@ -633,7 +601,6 @@ class DnsHelper:
 
                     for (name, rdataset) in zone.iterate_rdatasets(dns.rdatatype.CERT):
                         for rdata in rdataset:
-                            print_status('\t CERT {0}'.format(rdata.to_text()))
                             zone_records.append({'zone_server': ns_srv, 'type': 'CERT',
                                                  'algorithm': rdata.algorithm,
                                                  'certificate': rdata.certificate,
@@ -642,10 +609,6 @@ class DnsHelper:
 
                     for (name, rdataset) in zone.iterate_rdatasets(dns.rdatatype.SIG):
                         for rdata in rdataset:
-                            print_status('\t SIG {0} {1} {2} {3} {4} {5} {6} {7} {8}'.format(
-                                algorithm_to_text(rdata.algorithm), rdata.expiration,
-                                rdata.inception, rdata.key_tag, rdata.labels, rdata.original_ttl,
-                                rdata.signature, str(rdata.signer), rdata.type_covered))
                             zone_records.append({'zone_server': ns_srv, 'type': 'SIG',
                                                 'algorithm': algorithm_to_text(rdata.algorithm),
                                                  'expiration': rdata.expiration,
@@ -659,10 +622,6 @@ class DnsHelper:
 
                     for (name, rdataset) in zone.iterate_rdatasets(dns.rdatatype.RRSIG):
                         for rdata in rdataset:
-                            print_status('\t RRSIG {0} {1} {2} {3} {4} {5} {6} {7} {8}'.format(
-                                algorithm_to_text(rdata.algorithm), rdata.expiration,
-                                rdata.inception, rdata.key_tag, rdata.labels, rdata.original_ttl,
-                                rdata.signature, str(rdata.signer), rdata.type_covered))
                             zone_records.append({'zone_server': ns_srv, 'type': 'RRSIG',
                                                  'algorithm': algorithm_to_text(rdata.algorithm),
                                                  'expiration': rdata.expiration,
@@ -676,9 +635,6 @@ class DnsHelper:
 
                     for (name, rdataset) in zone.iterate_rdatasets(dns.rdatatype.DNSKEY):
                         for rdata in rdataset:
-                            print_status('\t DNSKEY {0} {1} {2} {3}'.format(
-                                algorithm_to_text(rdata.algorithm), rdata.flags, dns.rdata._hexify(rdata.key),
-                                rdata.protocol))
                             zone_records.append({'zone_server': ns_srv, 'type': 'DNSKEY',
                                                  'algorithm': algorithm_to_text(rdata.algorithm),
                                                  'flags': rdata.flags,
@@ -687,8 +643,6 @@ class DnsHelper:
 
                     for (name, rdataset) in zone.iterate_rdatasets(dns.rdatatype.DS):
                         for rdata in rdataset:
-                            print_status('\t DS {0} {1} {2} {3}'.format(algorithm_to_text(rdata.algorithm), dns.rdata._hexify(rdata.digest),
-                                         rdata.digest_type, rdata.key_tag))
                             zone_records.append({'zone_server': ns_srv, 'type': 'DS',
                                                 'algorithm': algorithm_to_text(rdata.algorithm),
                                                  'digest': dns.rdata._hexify(rdata.digest),
@@ -697,14 +651,11 @@ class DnsHelper:
 
                     for (name, rdataset) in zone.iterate_rdatasets(dns.rdatatype.NSEC):
                         for rdata in rdataset:
-                            print_status('\t NSEC {0}'.format(rdata.next))
                             zone_records.append({'zone_server': ns_srv, 'type': 'NSEC',
                                                  'next': rdata.next.to_text()})
 
                     for (name, rdataset) in zone.iterate_rdatasets(dns.rdatatype.NSEC3):
                         for rdata in rdataset:
-                            print_status('\t NSEC3 {0} {1} {2} {3}'.format(algorithm_to_text(rdata.algorithm), rdata.flags,
-                                         rdata.iterations, rdata.salt))
                             zone_records.append({'zone_server': ns_srv, 'type': 'NSEC3',
                                                  'algorithm': algorithm_to_text(rdata.algorithm),
                                                  'flags': rdata.flags,
@@ -713,8 +664,6 @@ class DnsHelper:
 
                     for (name, rdataset) in zone.iterate_rdatasets(dns.rdatatype.NSEC3PARAM):
                         for rdata in rdataset:
-                            print_status('\t NSEC3PARAM {0} {1} {2} {3}'.format(algorithm_to_text(rdata.algorithm), rdata.flags,
-                                         rdata.iterations, rdata.salt))
                             zone_records.append({'zone_server': ns_srv, 'type': 'NSEC3PARAM',
                                                  'algorithm': algorithm_to_text(rdata.algorithm),
                                                  'flags': rdata.flags,
@@ -723,8 +672,6 @@ class DnsHelper:
 
                     for (name, rdataset) in zone.iterate_rdatasets(dns.rdatatype.IPSECKEY):
                         for rdata in rdataset:
-                            print_status('\t PSECKEY {0} {1} {2} {3} {4}'.format(algorithm_to_text(rdata.algorithm), rdata.gateway,
-                                         rdata.gateway_type, dns.rdata._hexify(rdata.key), rdata.precedence))
                             zone_records.append({'zone_server': ns_srv, 'type': 'IPSECKEY',
                                                  'algorithm': algorithm_to_text(rdata.algorithm),
                                                  'gateway': rdata.gateway,
