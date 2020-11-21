@@ -296,9 +296,9 @@ def brute_tlds(res, domain, verbose=False, thread_num=None):
     for rcd_found in brtdata:
         for rcd in rcd_found:
             if re.search(r"^A", rcd[0]):
-                print_good({"type": rcd[0], "name": rcd[1], "address": rcd[2]})
+                #print_good({"type": rcd[0], "name": rcd[1], "address": rcd[2]})
                 found_tlds.append([{"type": rcd[0], "name": rcd[1], "address": rcd[2]}])
-    print_good(f"{len(found_tlds)} Records Found")
+    #print_good(f"{len(found_tlds)} Records Found")
     return found_tlds
 
 
@@ -348,7 +348,6 @@ def brute_srv(res, domain, verbose=False, thread_num=None):
                                          "target": rcd[2],
                                          "address": rcd[3],
                                          "port": rcd[4]})
-                print_good(f'     {rcd[0]} {rcd[1]} {rcd[2]} {rcd[3]} {rcd[4]}')
     else:
         print_error(f"No SRV Records Found for {domain}")
 
@@ -389,7 +388,6 @@ def brute_reverse(res, ip_list, verbose=False, thread_num=None):
     for rcd_found in brtdata:
         for rcd in rcd_found:
             returned_records.append([{'type': rcd[0], 'name': rcd[1], 'address': rcd[2]}])
-            print_good(f'{rcd[0]} {rcd[1]} {rcd[2]}')
 
     print_good("{0} Records Found".format(len(returned_records)))
 
@@ -430,13 +428,10 @@ def brute_domain(res, dict, dom, filter=None, verbose=False, ignore_wildcard=Fal
                     # Filter Records if filtering was enabled
                     if filter:
                         if not wildcard_ip == rcd[2]:
-                            print_good(f'{rcd[1]}: {rcd[0]} : {rcd[2]}')
                             found_hosts.extend([{"type": rcd[0], "name": rcd[1], "address": rcd[2]}])
                     else:
                         found_hosts.extend([{"type": rcd[0], "name": rcd[1], "address": rcd[2]}])
-                        print_good(f'{rcd[1]}: {rcd[0]} : {rcd[2]}')
                 elif re.search(r"^CNAME", rcd[0]):
-                    print_good(f'{rcd[1]}: {rcd[0]} : {rcd[2]}')
                     found_hosts.extend([{"type": rcd[0], "name": rcd[1], "target": rcd[2]}])
 
         # Clear Global variable
@@ -489,7 +484,6 @@ def se_result_process(res, found_hosts):
     for sd in found_hosts:
         for sdip in res.get_ip(sd):
             if re.search(r"^A|CNAME", sdip[0]):
-                print_status("\t {0} {1} {2}".format(sdip[0], sdip[1], sdip[2]))
                 if re.search(r"^A", sdip[0]):
                     returned_records.extend([{"type": sdip[0], "name": sdip[1],
                                               "address": sdip[2]}])
@@ -748,8 +742,6 @@ def silent_enum(res, domain, do_axfr, do_bing, do_yandex, do_spf, do_whois, do_c
         try:
             found_soa_records = res.get_soa()
             for found_soa_record in found_soa_records:
-                print_status("\t {0} {1} {2}".format(found_soa_record[0], found_soa_record[1], found_soa_record[2]))
-
                 # Save dictionary of returned record
                 returned_records.extend([{"type": found_soa_record[0],
                                           "mname": found_soa_record[1], "address": found_soa_record[2]}])
@@ -762,6 +754,10 @@ def silent_enum(res, domain, do_axfr, do_bing, do_yandex, do_spf, do_whois, do_c
         # Enumerate Name Servers
         try:
             for ns_rcrd in res.get_ns():
+<<<<<<< HEAD
+
+=======
+>>>>>>> 6ae36ed0cb0f62f42ebf188d5d79976d1f16f88a
                 # Save dictionary of returned record
                 recursive = check_recursive(res, ns_rcrd[2], res._res.timeout)
                 bind_ver = check_bindversion(res, ns_rcrd[2], res._res.timeout)
@@ -790,7 +786,6 @@ def silent_enum(res, domain, do_axfr, do_bing, do_yandex, do_spf, do_whois, do_c
 
         # Enumerate A Record for the targeted Domain
         for a_rcrd in res.get_ip(domain):
-            print_status("\t {0} {1} {2}".format(a_rcrd[0], a_rcrd[1], a_rcrd[2]))
 
             # Save dictionary of returned record
             returned_records.extend([{"type": a_rcrd[0], "name": a_rcrd[1], "address": a_rcrd[2]}])
@@ -949,7 +944,7 @@ def lookup_next(target, res):
         srv_answer = res.get_srv(target)
         if len(srv_answer) > 0:
             for r in srv_answer:
-                print_status("\t {0}".format(" ".join(r)))
+                #print_status("\t {0}".format(" ".join(r)))
                 returned_records.append({"type": r[0],
                                          "name": r[1],
                                          "target": r[2],
@@ -960,25 +955,25 @@ def lookup_next(target, res):
         txt_answer = res.get_txt(target)
         if len(txt_answer) > 0:
             for r in txt_answer:
-                print_status("\t {0}".format(" ".join(r)))
+                #print_status("\t {0}".format(" ".join(r)))
                 returned_records.append({'type': r[0],
                                          'name': r[1], 'strings': r[2]})
         else:
             txt_answer = res.get_txt(target)
             if len(txt_answer) > 0:
                 for r in txt_answer:
-                    print_status("\t {0}".format(" ".join(r)))
+                    #print_status("\t {0}".format(" ".join(r)))
                     returned_records.append({'type': r[0],
                                              'name': r[1], 'strings': r[2]})
             else:
-                print_status("\t A {0} no_ip".format(target))
+                #print_status("\t A {0} no_ip".format(target))
                 returned_records.append({"type": "A", "name": target, "address": "no_ip"})
 
     else:
         a_answer = res.get_ip(target)
         if len(a_answer) > 0:
             for r in a_answer:
-                print_status("\t {0} {1} {2}".format(r[0], r[1], r[2]))
+                #print_status("\t {0} {1} {2}".format(r[0], r[1], r[2]))
                 if r[0] == "CNAME":
                     returned_records.append({"type": r[0], "name": r[1], "target": r[2]})
                 else:
@@ -987,10 +982,10 @@ def lookup_next(target, res):
             a_answer = socket_resolv(target)
             if len(a_answer) > 0:
                 for r in a_answer:
-                    print_status("\t {0} {1} {2}".format(r[0], r[1], r[2]))
+                    #print_status("\t {0} {1} {2}".format(r[0], r[1], r[2]))
                     returned_records.append({"type": r[0], "name": r[1], "address": r[2]})
             else:
-                print_status("\t A {0} no_ip".format(target))
+                #print_status("\t A {0} no_ip".format(target))
                 returned_records.append({"type": "A", "name": target, "address": "no_ip"})
 
     return returned_records
