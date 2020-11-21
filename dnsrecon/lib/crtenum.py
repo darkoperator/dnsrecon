@@ -54,7 +54,6 @@ def scrape_crtsh(dom):
         if not sub_dom.endswith('.' + dom):
             continue
         if sub_dom.startswith('*.'):
-            print_status(f"\t {sub_dom} wildcard")
             continue
         if sub_dom not in results:
             results.append(sub_dom)
