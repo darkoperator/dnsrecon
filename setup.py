@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="reconDNS",
-    version="0.0.2",
+    version="0.0.3",
     author="@SecurityShrimp",
     description="DNS Enumeration Script",
     long_description=long_description,

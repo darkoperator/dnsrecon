@@ -20,7 +20,7 @@
 #    along with this program; if not, write to the Free Software
 #    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
-__version__ = '0.0.2'
+__version__ = '0.0.3'
 __author__ = 'securityshrimp, https://twitter.com/securityshrimp'
 
 __doc__ = """
@@ -270,13 +270,6 @@ def brute_tlds(res, domain, verbose=False, thread_num=None):
 
     total_tlds = list(set(itld + gtld + grtld + stld))
 
-    if verbose:
-        for tld in total_tlds:
-            #print_status(f'Trying: {domain_main}.{tld}')
-        for cc in cctld:
-            #print_status(f'Trying: {domain_main}.{cc}')
-        for cc, tld in zip(cctld, total_tlds):
-            #print_status(f'Trying: {domain_main}.{cc}.{tld}')
     try:
         with futures.ThreadPoolExecutor(max_workers=thread_num) as executor:
             future_results = {**{executor.submit(res.get_ip, f'{domain_main}.{tld}'): tld for tld in total_tlds},
@@ -297,6 +290,60 @@ def brute_tlds(res, domain, verbose=False, thread_num=None):
                 found_tlds.append([{"type": rcd[0], "name": rcd[1], "address": rcd[2]}])
     #print_good(f"{len(found_tlds)} Records Found")
     return found_tlds
+
+def brute_srv(res, domain, verbose=False, thread_num=None):
+    """
+    Brute-force most common SRV records for a given Domain. Returns an Array with
+    records found.
+    """
+    global brtdata
+    brtdata = []
+    returned_records = []
+    srvrcd = [
+        '_gc._tcp.', '_kerberos._tcp.', '_kerberos._udp.', '_ldap._tcp.',
+        '_test._tcp.', '_sips._tcp.', '_sip._udp.', '_sip._tcp.', '_aix._tcp.',
+        '_aix._tcp.', '_finger._tcp.', '_ftp._tcp.', '_http._tcp.', '_nntp._tcp.',
+        '_telnet._tcp.', '_whois._tcp.', '_h323cs._tcp.', '_h323cs._udp.',
+        '_h323be._tcp.', '_h323be._udp.', '_h323ls._tcp.', '_https._tcp.',
+        '_h323ls._udp.', '_sipinternal._tcp.', '_sipinternaltls._tcp.',
+        '_sip._tls.', '_sipfederationtls._tcp.', '_jabber._tcp.',
+        '_xmpp-server._tcp.', '_xmpp-client._tcp.', '_imap.tcp.',
+        '_certificates._tcp.', '_crls._tcp.', '_pgpkeys._tcp.',
+        '_pgprevokations._tcp.', '_cmp._tcp.', '_svcp._tcp.', '_crl._tcp.',
+        '_ocsp._tcp.', '_PKIXREP._tcp.', '_smtp._tcp.', '_hkp._tcp.',
+        '_hkps._tcp.', '_jabber._udp.', '_xmpp-server._udp.', '_xmpp-client._udp.',
+        '_jabber-client._tcp.', '_jabber-client._udp.', '_kerberos.tcp.dc._msdcs.',
+        '_ldap._tcp.ForestDNSZones.', '_ldap._tcp.dc._msdcs.', '_ldap._tcp.pdc._msdcs.',
+        '_ldap._tcp.gc._msdcs.', '_kerberos._tcp.dc._msdcs.', '_kpasswd._tcp.', '_kpasswd._udp.',
+        '_imap._tcp.', '_imaps._tcp.', '_submission._tcp.', '_pop3._tcp.', '_pop3s._tcp.',
+        '_caldav._tcp.', '_caldavs._tcp.', '_carddav._tcp.', '_carddavs._tcp.',
+        '_x-puppet._tcp.', '_x-puppet-ca._tcp.', '_autodiscover._tcp.']
+
+    try:
+        with futures.ThreadPoolExecutor(max_workers=thread_num) as executor:
+            future_results = {executor.submit(res.get_srv, srvtype + domain): srvtype for srvtype in srvrcd}
+            brtdata = [future.result() for future in futures.as_completed(future_results)]
+            if verbose:
+                for srvtype in srvrcd:
+                    print_status("Trying {0}".format(srvtype + domain))
+    except Exception as ex:
+        print_error(ex)
+
+    if len(brtdata) > 0:
+        for rcd_found in brtdata:
+            for rcd in rcd_found:
+                returned_records.append({"type": rcd[0],
+                                         "name": rcd[1],
+                                         "target": rcd[2],
+                                         "address": rcd[3],
+                                         "port": rcd[4]})
+    else:
+        print_error(f"No SRV Records Found for {domain}")
+
+    print_good("{0} Records Found".format(len(returned_records)))
+
+    return returned_records
+
 
 
 def brute_reverse(res, ip_list, verbose=False, thread_num=None):
@@ -357,9 +404,6 @@ def brute_domain(res, dict, dom, filter=None, verbose=False, ignore_wildcard=Fal
         if os.path.isfile(dict):
             with open(dict) as file:
                 targets = [f'{line.strip()}.{dom.strip()}' for line in file]
-                if verbose:
-                    for target in targets:
-                        #print_status(f'Trying: {target}')
             with futures.ThreadPoolExecutor(max_workers=thread_num) as executor:
                 future_results = {executor.submit(res.get_ip, target): target for target in targets}
                 brtdata = [future.result() for future in futures.as_completed(future_results)]
@@ -401,7 +445,6 @@ def in_cache(res, dict_file, ns):
                     for rcd in an:
                         if rcd.rdtype == 1:
                             #print_status(f"\tName: {an.name} TTL: {an.ttl} Address: {rcd.address} Type: A")
-
                             found_records.extend([{"type": "A", "name": an.name,
                                                    "address": rcd.address, "ttl": an.ttl}])
 
@@ -411,7 +454,7 @@ def in_cache(res, dict_file, ns):
                                                    "target": rcd.target, "ttl": an.ttl}])
 
                         else:
-                            #print_status()
+                            print_status()
     return found_records
 
 
@@ -472,44 +515,6 @@ def get_whois_nets_iplist(ip_list):
                                 found_nets.append({"start": network[0], "end": network[1], "orgname": "".join(org)})
     # Remove Duplicates
     return [seen.setdefault(idfun(e), e) for e in found_nets if idfun(e) not in seen]
-
-
-def whois_ips(res, ip_list):
-    """
-    This function will process the results of the whois lookups and present the
-    user with the list of net ranges found and ask the user if he wishes to perform
-    a reverse lookup on any of the ranges or all the ranges.
-    """
-    found_records = []
-    #print_status("Performing Whois lookup against records found.")
-    list = get_whois_nets_iplist(unique(ip_list))
-    if len(list) > 0:
-        #print_status("The following IP Ranges were found:")
-        for i in range(len(list)):
-            #print_status(
-                "\t {0} {1}-{2} {3}".format(str(i) + ")", list[i]["start"], list[i]["end"], list[i]["orgname"]))
-        #print_status("What Range do you wish to do a Reverse Lookup for?")
-        #print_status("number, comma separated list, a for all or n for none")
-        val = sys.stdin.readline()[:-1]
-        answer = str(val).split(",")
-
-        if "a" in answer:
-            for i in range(len(list)):
-                #print_status("Performing Reverse Lookup of range {0}-{1}".format(list[i]['start'], list[i]['end']))
-                found_records.append(brute_reverse(res, expand_range(list[i]['start'], list[i]['end'])))
-
-        elif "n" in answer:
-            #print_status("No Reverse Lookups will be performed.")
-            pass
-        else:
-            for a in answer:
-                net_selected = list[int(a)]
-                #print_status(net_selected['orgname'])
-                found_records.append(brute_reverse(res, expand_range(net_selected['start'], net_selected['end'])))
-    else:
-        print_error("No IP Ranges were found in the Whois query results")
-
-    return found_records
 
 
 def prettify(elem):
@@ -767,7 +772,7 @@ def general_enum(res, domain, do_axfr, do_bing, do_yandex, do_spf, do_whois, do_
                 #print_status("Performing Reverse Look-up of SPF Ranges")
                 returned_records.extend(brute_reverse(res, unique(found_spf_ranges)))
             else:
-                #print_status("No IP Ranges were found in SPF and TXT Records")
+                print_status("No IP Ranges were found in SPF and TXT Records")
 
         # Enumerate SRV Records for the targeted Domain
         #print_status("Enumerating SRV Records")
@@ -1068,5 +1073,54 @@ def ds_zone_walk(res, domain):
         print_good("{0} records found".format(len(records)))
     else:
         print_error("Zone could not be walked")
-
     return records
+
+
+def make_csv(data):
+    csv_data = "Type,Name,Address,Target,Port,String\n"
+    for n in data:
+        # make sure that we are working with a dictionary.
+        if isinstance(n, dict):
+            # print(n)
+            if n['type'] in ['PTR', 'A', 'AAAA']:
+                csv_data += n["type"] + "," + n["name"] + "," + n["address"] + "\n"
+
+            elif re.search(r"NS$", n["type"]):
+                csv_data += n["type"] + "," + n["target"] + "," + n["address"] + "\n"
+
+            elif re.search(r"SOA", n["type"]):
+                csv_data += n["type"] + "," + n["mname"] + "," + n["address"] + "\n"
+
+            elif re.search(r"MX", n["type"]):
+                csv_data += n["type"] + "," + n["exchange"] + "," + n["address"] + "\n"
+
+            elif re.search(r"SPF", n["type"]):
+                if "zone_server" in n:
+                    csv_data += n["type"] + ",,,,,\'" + n["strings"] + "\'\n"
+                else:
+                    csv_data += n["type"] + ",,,,,\'" + n["strings"] + "\'\n"
+
+            elif re.search(r"TXT", n["type"]):
+                if "zone_server" in n:
+                    csv_data += n["type"] + ",,,,,\'" + n["strings"] + "\'\n"
+                else:
+                    csv_data += n["type"] + "," + n["name"] + ",,,,\'" + n["strings"] + "\'\n"
+
+            elif re.search(r"SRV", n["type"]):
+                csv_data += n["type"] + "," + n["name"] + "," + n["address"] + "," + n["target"] + "," + n[
+                    "port"] + "\n"
+
+            elif re.search(r"CNAME", n["type"]):
+                if "target" not in n.keys():
+                    n["target"] = ""
+                csv_data += n["type"] + "," + n["name"] + ",," + n["target"] + ",\n"
+
+            else:
+                # Handle not common records
+                t = n["type"]
+                del n["type"]
+                record_data = "".join(["%s =%s," % (key, value) for key, value in n.items()])
+                records = [t, record_data]
+                csv_data + records[0] + ",,,,," + records[1] + "\n"
+
+    return csv_data
