@@ -846,7 +846,7 @@ def check_bindversion(res, ns_server, timeout):
             if len(response.answer) > 0 and 'items' in response.answer[0]:
                 version = response.answer[0].items[0].strings[0]
                 print_status(f"\t Bind Version for {ns_server} {version}")
-                
+
         except (dns.resolver.NXDOMAIN, dns.exception.Timeout, dns.resolver.NoAnswer, socket.error,
                 dns.query.BadResponse):
             pass
