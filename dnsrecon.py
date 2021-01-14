@@ -11,8 +11,8 @@
 #
 #    This program is distributed in the hope that it will be useful,
 #    but WITHOUT ANY WARRANTY; without even the implied warranty of
-#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#    GNU General Public License for more details.
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+#    See the GNU General Public License for more details.
 #
 #    You should have received a copy of the GNU General Public License
 #    along with this program; if not, write to the Free Software
@@ -552,28 +552,28 @@ def whois_ips(res, ip_list):
     """
     found_records = []
     print_status("Performing Whois lookup against records found.")
-    list = get_whois_nets_iplist(unique(ip_list))
-    if len(list) > 0:
+    list_whois = get_whois_nets_iplist(unique(ip_list))
+    if len(list_whois) > 0:
         print_status("The following IP Ranges were found:")
-        for i in range(len(list)):
+        for i in range(len(list_whois)):
             print_status(
-                "\t {0} {1}-{2} {3}".format(str(i) + ")", list[i]["start"], list[i]["end"], list[i]["orgname"]))
+                "\t {0} {1}-{2} {3}".format(str(i) + ")", list_whois[i]["start"], list_whois[i]["end"], list_whois[i]["orgname"]))
         print_status("What Range do you wish to do a Reverse Lookup for?")
         print_status("number, comma separated list, a for all or n for none")
         val = sys.stdin.readline()[:-1]
         answer = str(val).split(",")
 
         if "a" in answer:
-            for i in range(len(list)):
-                print_status("Performing Reverse Lookup of range {0}-{1}".format(list[i]['start'], list[i]['end']))
-                found_records.append(brute_reverse(res, expand_range(list[i]['start'], list[i]['end'])))
+            for i in range(len(list_whois)):
+                print_status("Performing Reverse Lookup of range {0}-{1}".format(list_whois[i]['start'], list_whois[i]['end']))
+                found_records.append(brute_reverse(res, expand_range(list_whois[i]['start'], list_whois[i]['end'])))
 
         elif "n" in answer:
             print_status("No Reverse Lookups will be performed.")
             pass
         else:
             for a in answer:
-                net_selected = list[int(a)]
+                net_selected = list_whois[int(a)]
                 print_status(net_selected['orgname'])
                 print_status(
                     "Performing Reverse Lookup of range {0}-{1}".format(net_selected['start'], net_selected['end']))
@@ -1189,7 +1189,7 @@ def get_next(res, target, ns, timeout):
     return next_host
 
 
-def ds_zone_walk(res, domain):
+def ds_zone_walk(res, domain, lifetime):
     """
     Perform DNSSEC Zone Walk using NSEC records found in the error additional
     records section of the message to find the next host to query in the zone.
@@ -1204,7 +1204,7 @@ def ds_zone_walk(res, domain):
         soa_rcd = res.get_soa()[0][2]
 
         print_status("Name Server {0} will be used".format(soa_rcd))
-        res = DnsHelper(domain, soa_rcd, 3)
+        res = DnsHelper(domain, soa_rcd, lifetime)
         nameserver = soa_rcd
     except Exception:
         print_error("This zone appears to be misconfigured, no SOA record found.")
@@ -1370,7 +1370,7 @@ def main():
         parser.add_argument("-w", help="Perform deep whois record analysis and reverse lookup of IP ranges found through Whois when doing a standard enumeration.", action="store_true")
         parser.add_argument("-z", help="Performs a DNSSEC zone walk with standard enumeration.", action="store_true")
         parser.add_argument("--threads", type=int, dest="threads", help="Number of threads to use in reverse lookups, forward lookups, brute force and SRV record enumeration.")
-        parser.add_argument("--lifetime", type=int, dest="lifetime", help="Time to wait for a server to response to a query.")
+        parser.add_argument("--lifetime", type=int, dest="lifetime", default=3, help="Time to wait for a server to response to a query. default is 3")
         parser.add_argument("--tcp", dest="tcp", help="Use TCP protocol to make queries.", action="store_true")
         parser.add_argument("--db", type=str, dest="db", help="SQLite 3 file to save found records.")
         parser.add_argument("-x", "--xml", type=str, dest="xml", help="XML file to save found records.")
@@ -1689,4 +1689,7 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        print_status('CTRL+C detected, quiting')
