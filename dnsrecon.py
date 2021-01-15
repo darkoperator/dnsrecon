@@ -443,10 +443,11 @@ def brute_domain(res, dict, dom, filter=None, verbose=False, ignore_wildcard=Fal
                         print_and_extend = True
                 elif re.search(r"^CNAME", rcd[0]):
                     print_and_extend = True
-                
+
                 if print_and_extend:
                     print_good(f'{rcd[1]}: {rcd[0]} : {rcd[2]}')
-                    found_hosts.extend([{"type": rcd[0], "name": rcd[1], "target": rcd[2]}])
+                    found_hosts.extend(
+                        [{"type": rcd[0], "name": rcd[1], "target": rcd[2]}])
 
         # Clear Global variable
         brtdata = []
