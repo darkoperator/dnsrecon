@@ -432,22 +432,25 @@ def brute_domain(res, dict, dom, filter=None, verbose=False, ignore_wildcard=Fal
 
         # Process the output of the threads.
         for rcd_found in brtdata:
-            for type_, name_, target_ in rcd_found:
+            for type_, name_, address_or_target_ in rcd_found:
                 print_and_append = False
-                if re.search(r"^A", type_):
+                found_dict = {"type": type_, "name": name_}
+                if type_.startswith("A"):
                     # Filter Records if filtering was enabled
                     if filter:
-                        if not wildcard_ip == target_:
+                        if not wildcard_ip == address_or_target_:
                             print_and_append = True
+                            found_dict["address"] = address_or_target_
                     else:
                         print_and_append = True
-                elif re.search(r"^CNAME", type_):
+                        found_dict["address"] = address_or_target_
+                elif type_.startswith("CNAME"):
                     print_and_append = True
+                    found_dict["target"] = address_or_target_
 
                 if print_and_append:
-                    print_good(f'{name_}: {type_} : {target_}')
-                    found_hosts.append(
-                        {"type": type_, "name": name_, "target": target_})
+                    print_good(f"{name_}: {type_} : {address_or_target_}")
+                    found_hosts.append(found_dict)
 
         # Clear Global variable
         brtdata = []
