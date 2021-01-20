@@ -142,8 +142,7 @@ def expand_cidr(cidr_to_expand):
     Function to expand a given CIDR and return an Array of IP Addresses that
     form the range covered by the CIDR.
     """
-    c1 = IPNetwork(cidr_to_expand)
-    return c1
+    return IPNetwork(cidr_to_expand)
 
 
 def expand_range(startip, endip):
@@ -166,26 +165,24 @@ def write_to_file(data, target_file):
     """
     Function for writing returned data to a file
     """
-    f = open(target_file, "w")
-    f.write(data)
-    f.close()
+    with open(target_file, "w") as fd:
+        fd.write(data)
 
 
 def check_wildcard(res, domain_trg):
     """
     Function for checking if Wildcard resolution is configured for a Domain
     """
-    wildcard = None
     test_name = ''.join(Random().sample(string.hexdigits + string.digits,
                                         12)) + "." + domain_trg
     ips = res.get_a(test_name)
+    if not ips:
+        return None
 
-    if len(ips) > 0:
-        print_debug("Wildcard resolution is enabled on this domain")
-        print_debug("It is resolving to {0}".format("".join(ips[0][2])))
-        print_debug("All queries will resolve to this address!!")
-        wildcard = "".join(ips[0][2])
-
+    wildcard = "".join(ips[0][2])
+    print_debug("Wildcard resolution is enabled on this domain")
+    print_debug(f"It is resolving to {wildcard}")
+    print_debug("All queries will resolve to this address!!")
     return wildcard
 
 
@@ -206,30 +203,30 @@ def check_nxdomain_hijack(nameserver):
     for record_type in ('A', 'AAAA'):
         try:
             answers = res.resolve(test_name, record_type, tcp=True)
-        except (
-                dns.resolver.NoNameservers, dns.resolver.NXDOMAIN, dns.exception.Timeout, dns.resolver.NoAnswer,
-                socket.error,
-                dns.query.BadResponse):
+        except (dns.resolver.NoNameservers, dns.resolver.NXDOMAIN,
+                dns.exception.Timeout, dns.resolver.NoAnswer,
+                socket.error, dns.query.BadResponse):
             continue
 
         if answers:
             for ardata in answers.response.answer:
                 for rdata in ardata:
                     if rdata.rdtype == 5:
-                        if rdata.target.to_text().endswith('.'):
-                            address.append(rdata.target.to_text()[:-1])
-                        else:
-                            address.append(rdata.target.to_text())
+                        target_ = rdata.target.to_text()
+                        if target_.endswith('.'):
+                            target_ = target_[:-1]
+                        address.append(target_)
                     else:
                         address.append(rdata.address)
 
-    if len(address) > 0:
-        print_error("Nameserver {} performs NXDOMAIN hijacking".format(nameserver))
-        print_error("It resolves nonexistent domains to {}".format(", ".join(address)))
-        print_error("This server has been removed from the name server list!")
-        return True
+    if not address:
+        return False
 
-    return False
+    addresses = ", ".join(address)
+    print_error(f"Nameserver {nameserver} performs NXDOMAIN hijacking")
+    print_error(f"It resolves nonexistent domains to {addresses}")
+    print_error("This server has been removed from the name server list!")
+    return True
 
 
 def brute_tlds(res, domain, verbose=False, thread_num=None):
