@@ -33,11 +33,11 @@ requires netaddr https://github.com/drkjam/netaddr/
 
 import argparse
 import os
-import string
+from string import ascii_letters, digits
 import sqlite3
 import datetime
 import netaddr
-from random import Random
+from random import SystemRandom
 from xml.dom import minidom
 from xml.etree import ElementTree
 from xml.etree.ElementTree import Element
@@ -169,13 +169,24 @@ def write_to_file(data, target_file):
         fd.write(data)
 
 
+def generate_testname(name_len, name_suffix):
+    """
+    This function easily allows to generate a testname
+    to be used within the wildcard resolution and
+    the NXDOMAIN hijacking checks
+    """
+    testname = SystemRandom().sample(
+        ascii_letters + digits, name_len)
+    return "".join(testname) + "." + name_suffix
+
+
 def check_wildcard(res, domain_trg):
     """
     Function for checking if Wildcard resolution is configured for a Domain
     """
-    test_name = ''.join(Random().sample(string.hexdigits + string.digits,
-                                        12)) + "." + domain_trg
-    ips = res.get_a(test_name)
+    testname = generate_testname(12, domain_trg)
+
+    ips = res.get_a(testname)
     if not ips:
         return None
 
@@ -190,9 +201,7 @@ def check_nxdomain_hijack(nameserver):
     """
     Function for checking if a name server performs NXDOMAIN hijacking
     """
-
-    test_name = ''.join(Random().sample(string.hexdigits + string.digits,
-                                        20)) + ".com"
+    testname = generate_testname(20, "com")
 
     res = dns.resolver.Resolver(configure=False)
     res.nameservers = [nameserver]
@@ -202,7 +211,7 @@ def check_nxdomain_hijack(nameserver):
 
     for record_type in ('A', 'AAAA'):
         try:
-            answers = res.resolve(test_name, record_type, tcp=True)
+            answers = res.resolve(testname, record_type, tcp=True)
         except (dns.resolver.NoNameservers, dns.resolver.NXDOMAIN,
                 dns.exception.Timeout, dns.resolver.NoAnswer,
                 socket.error, dns.query.BadResponse):
