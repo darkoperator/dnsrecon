@@ -573,7 +573,6 @@ def whois_ips(res, ip_list):
 
         elif "n" in answer:
             print_status("No Reverse Lookups will be performed.")
-            pass
         else:
             for a in answer:
                 net_selected = list_whois[int(a)]
@@ -1055,7 +1054,7 @@ def general_enum(res, domain, do_axfr, do_bing, do_yandex, do_spf, do_whois, do_
                     returned_records.extend(r)
 
         if zw:
-            zone_info = ds_zone_walk(res, domain)
+            zone_info = ds_zone_walk(res, domain, request_timeout)
             if zone_info:
                 returned_records.extend(zone_info)
 
@@ -1197,16 +1196,15 @@ def ds_zone_walk(res, domain, lifetime):
     Perform DNSSEC Zone Walk using NSEC records found in the error additional
     records section of the message to find the next host to query in the zone.
     """
-    print_status("Performing NSEC Zone Walk for {0}".format(domain))
-
-    print_status("Getting SOA record for {0}".format(domain))
+    print_status(f"Performing NSEC Zone Walk for {domain}")
+    print_status(f"Getting SOA record for {domain}")
 
     nameserver = ''
 
     try:
         soa_rcd = res.get_soa()[0][2]
 
-        print_status("Name Server {0} will be used".format(soa_rcd))
+        print_status(f"Name Server {soa_rcd} will be used")
         res = DnsHelper(domain, soa_rcd, lifetime)
         nameserver = soa_rcd
     except Exception:
@@ -1459,8 +1457,7 @@ def main():
     if arguments.threads:
         thread_num = int(arguments.threads)
 
-    if arguments.lifetime:
-        request_timeout = float(arguments.lifetime)
+    request_timeout = float(arguments.lifetime)
 
     results_db = arguments.db
     csv_file = arguments.csv
@@ -1608,9 +1605,9 @@ def main():
                 elif r == "zonewalk":
                     if (output_file is not None) or (results_db is not None) or (csv_file is not None) or (
                             json_file is not None):
-                        returned_records.extend(ds_zone_walk(res, domain))
+                        returned_records.extend(ds_zone_walk(res, domain, request_timeout))
                     else:
-                        ds_zone_walk(res, domain)
+                        ds_zone_walk(res, domain, request_timeout)
 
                 else:
                     print_error(f"This type of scan is not in the list: {r}")
