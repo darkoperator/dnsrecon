@@ -703,11 +703,9 @@ def make_csv(data):
             csv_data += ("," * 4) + "'{}'\n".format(record['strings'])
 
         elif type_ == 'SRV':
-            l = [
-                    record["name"], record["address"],
-                    record["target"], record["port"]
-                ]
-            csv_data += ",".join(l) + ",\n"
+            items = [record["name"], record["address"],
+                     record["target"], record["port"]]
+            csv_data += ",".join(items) + ",\n"
 
         elif type_ == 'CNAME':
             csv_data += record['name'] + ("," * 2)
@@ -719,8 +717,8 @@ def make_csv(data):
         else:
             # Handle not common records
             del record["type"]
-            l = [f"{k}={v}" for k, v in record.items()]
-            csv_data += ("," * 4) + "'{}'\n".format("; ".join(l))
+            s = "; ".join([f"{k}={v}" for k, v in record.items()])
+            csv_data += ("," * 4) + f"'{s}'\n"
 
     return csv_data
 
