@@ -281,8 +281,9 @@ def brute_tlds(res, domain, verbose=False, thread_num=None):
     domain_main = domain.split(".")[0]
 
     # Let the user know how long it could take
-    print_status("The operation could take up to: {0}".format(
-        time.strftime('%H:%M:%S', time.gmtime((len(itld) + len(gtld) + len(grtld) + len(stld) + len(cctld)) / 3))))
+    all_tlds_len = len(itld) + len(gtld) + len(grtld) + len(stld) + len(cctld)
+    duration = time.strftime('%H:%M:%S', time.gmtime(all_tlds_len / 3))
+    print_status(f"The operation could take up to: {duration}")
 
     total_tlds = list(set(itld + gtld + grtld + stld))
 
@@ -305,12 +306,13 @@ def brute_tlds(res, domain, verbose=False, thread_num=None):
 
     except Exception as e:
         print_error(e)
+
     found_tlds = []
     for rcd_found in brtdata:
-        for rcd in rcd_found:
-            if re.search(r"^A", rcd[0]):
-                print_good({"type": rcd[0], "name": rcd[1], "address": rcd[2]})
-                found_tlds.append([{"type": rcd[0], "name": rcd[1], "address": rcd[2]}])
+        for type_, name_, addr_ in rcd_found:
+            if type_ in ['A', 'AAAA']:
+                print_good(f"\t {type_} {name_} {addr_}")
+                found_tlds.append([{"type": type_, "name": name_, "address": addr_}])
     print_good(f"{len(found_tlds)} Records Found")
     return found_tlds
 
