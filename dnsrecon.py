@@ -1357,7 +1357,7 @@ def main():
     #
     parser = argparse.ArgumentParser()
     try:
-        parser.add_argument("-d", "--domain", type=str, dest="domain", help="Target domain.", required=True)
+        parser.add_argument("-d", "--domain", type=str, dest="domain", help="Target domain.")
         parser.add_argument("-n", "--name_server", type=str, dest="ns_server", help="Domain server to use. If none is given, the SOA of the target will be used. Multiple servers can be specified using a comma separated list.")
         parser.add_argument("-r", "--range", type=str, dest="range", help="IP range for reverse lookup brute force in formats   (first-last) or in (range/bitmask).")
         parser.add_argument("-D", "--dictionary", type=str, dest="dictionary", help="Dictionary file of subdomain and hostnames to use for brute force. Filter out of brute force domain lookup, records that resolve to the wildcard defined IP address when saving records.")
