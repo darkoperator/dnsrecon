@@ -351,23 +351,24 @@ def brute_srv(res, domain, verbose=False, thread_num=None):
             brtdata = [future.result() for future in futures.as_completed(future_results)]
             if verbose:
                 for srvtype in srvrcd:
-                    print_status("Trying {0}".format(srvtype + domain))
-    except Exception as ex:
-        print_error(ex)
+                    srvtype_domain = srvtype + domain
+                    print_status(f"Trying {srvtype_domain}...")
+    except Exception as e:
+        print_error(e)
 
-    if len(brtdata) > 0:
+    if brtdata:
         for rcd_found in brtdata:
-            for rcd in rcd_found:
-                returned_records.append({"type": rcd[0],
-                                         "name": rcd[1],
-                                         "target": rcd[2],
-                                         "address": rcd[3],
-                                         "port": rcd[4]})
-                print_good(f'     {rcd[0]} {rcd[1]} {rcd[2]} {rcd[3]} {rcd[4]}')
+            for type_, name_, target_, addr_, port_, priority_ in rcd_found:
+                returned_records.append({"type": type_,
+                                         "name": name_,
+                                         "target": target_,
+                                         "address": addr_,
+                                         "port": port_})
+                print_good(f"\t {type_} {name_} {target_} {addr_} {port_}")
     else:
         print_error(f"No SRV Records Found for {domain}")
 
-    print_good("{0} Records Found".format(len(returned_records)))
+    print_good(f"{len(returned_records)} Records Found")
 
     return returned_records
 
@@ -391,22 +392,24 @@ def brute_reverse(res, ip_list, verbose=False, thread_num=None):
         with futures.ThreadPoolExecutor(max_workers=thread_num) as executor:
             future_results = {executor.submit(res.get_ptr, str(ip_list[x])): x for x in ip_range}
             brtdata = [future.result() for future in futures.as_completed(future_results)]
-            brtdata = [result for result in brtdata if result]
             # Filter out results that are None
+            brtdata = [result for result in brtdata if result]
+
         if verbose:
             for x in ip_range:
                 ipaddress = str(ip_list[x])
-                print_status("Trying {0}".format(ipaddress))
-    except Exception as ex:
-        print_error(ex)
+                print_status(f"Trying {ipaddress}")
+
+    except Exception as e:
+        print_error(e)
 
     returned_records = []
     for rcd_found in brtdata:
-        for rcd in rcd_found:
-            returned_records.append([{'type': rcd[0], 'name': rcd[1], 'address': rcd[2]}])
-            print_good(f'{rcd[0]} {rcd[1]} {rcd[2]}')
+        for type_, name_, addr_ in rcd_found:
+            returned_records.append([{'type': type_, 'name': name_, 'address': addr_}])
+            print_good(f"\t {type_} {name_} {addr_}")
 
-    print_good("{0} Records Found".format(len(returned_records)))
+    print_good(f"{len(returned_records)} Records Found")
 
     return returned_records
 
