@@ -289,6 +289,10 @@ class DnsHelper:
             for rdata in answers:
                 string = bytes.join(b'', rdata.strings).decode('utf-8')
                 txt_record.append(['TXT', target, string])
+            answers = self._res.query("_dmarc." + target, 'TXT', tcp=tcp)
+            for rdata in answers:
+                string = bytes.join(b'', rdata.strings).decode('utf-8')
+                txt_record.append(['TXT', target, string])
         except Exception:
             return []
 

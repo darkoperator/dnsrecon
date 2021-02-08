@@ -36,11 +36,11 @@ def scrape_crtsh(dom):
     try:
         resp = urlopen(req)
         data = resp.read()
-    except URLError as e:
-        print_error(f'Connection with crt.sh failed. Reason: "{e.reason}"')
-        return results
     except HTTPError as e:
         print_error(f'Bad http status from crt.sh: "{e.code}"')
+        return results
+    except URLError as e:
+        print_error(f'Connection with crt.sh failed. Reason: "{e.reason}"')
         return results
 
     root = etree.HTML(data)

@@ -33,11 +33,11 @@ requires netaddr https://github.com/drkjam/netaddr/
 
 import argparse
 import os
-import string
+from string import ascii_letters, digits
 import sqlite3
 import datetime
 import netaddr
-from random import Random
+from random import SystemRandom
 from xml.dom import minidom
 from xml.etree import ElementTree
 from xml.etree.ElementTree import Element
@@ -142,8 +142,7 @@ def expand_cidr(cidr_to_expand):
     Function to expand a given CIDR and return an Array of IP Addresses that
     form the range covered by the CIDR.
     """
-    c1 = IPNetwork(cidr_to_expand)
-    return c1
+    return IPNetwork(cidr_to_expand)
 
 
 def expand_range(startip, endip):
@@ -166,26 +165,35 @@ def write_to_file(data, target_file):
     """
     Function for writing returned data to a file
     """
-    f = open(target_file, "w")
-    f.write(data)
-    f.close()
+    with open(target_file, "w") as fd:
+        fd.write(data)
+
+
+def generate_testname(name_len, name_suffix):
+    """
+    This function easily allows to generate a testname
+    to be used within the wildcard resolution and
+    the NXDOMAIN hijacking checks
+    """
+    testname = SystemRandom().sample(
+        ascii_letters + digits, name_len)
+    return "".join(testname) + "." + name_suffix
 
 
 def check_wildcard(res, domain_trg):
     """
     Function for checking if Wildcard resolution is configured for a Domain
     """
-    wildcard = None
-    test_name = ''.join(Random().sample(string.hexdigits + string.digits,
-                                        12)) + "." + domain_trg
-    ips = res.get_a(test_name)
+    testname = generate_testname(12, domain_trg)
 
-    if len(ips) > 0:
-        print_debug("Wildcard resolution is enabled on this domain")
-        print_debug("It is resolving to {0}".format("".join(ips[0][2])))
-        print_debug("All queries will resolve to this address!!")
-        wildcard = "".join(ips[0][2])
+    ips = res.get_a(testname)
+    if not ips:
+        return None
 
+    wildcard = "".join(ips[0][2])
+    print_debug("Wildcard resolution is enabled on this domain")
+    print_debug(f"It is resolving to {wildcard}")
+    print_debug("All queries will resolve to this address!!")
     return wildcard
 
 
@@ -193,9 +201,7 @@ def check_nxdomain_hijack(nameserver):
     """
     Function for checking if a name server performs NXDOMAIN hijacking
     """
-
-    test_name = ''.join(Random().sample(string.hexdigits + string.digits,
-                                        20)) + ".com"
+    testname = generate_testname(20, "com")
 
     res = dns.resolver.Resolver(configure=False)
     res.nameservers = [nameserver]
@@ -205,31 +211,31 @@ def check_nxdomain_hijack(nameserver):
 
     for record_type in ('A', 'AAAA'):
         try:
-            answers = res.resolve(test_name, record_type, tcp=True)
-        except (
-                dns.resolver.NoNameservers, dns.resolver.NXDOMAIN, dns.exception.Timeout, dns.resolver.NoAnswer,
-                socket.error,
-                dns.query.BadResponse):
+            answers = res.resolve(testname, record_type, tcp=True)
+        except (dns.resolver.NoNameservers, dns.resolver.NXDOMAIN,
+                dns.exception.Timeout, dns.resolver.NoAnswer,
+                socket.error, dns.query.BadResponse):
             continue
 
         if answers:
             for ardata in answers.response.answer:
                 for rdata in ardata:
                     if rdata.rdtype == 5:
-                        if rdata.target.to_text().endswith('.'):
-                            address.append(rdata.target.to_text()[:-1])
-                        else:
-                            address.append(rdata.target.to_text())
+                        target_ = rdata.target.to_text()
+                        if target_.endswith('.'):
+                            target_ = target_[:-1]
+                        address.append(target_)
                     else:
                         address.append(rdata.address)
 
-    if len(address) > 0:
-        print_error("Nameserver {} performs NXDOMAIN hijacking".format(nameserver))
-        print_error("It resolves nonexistent domains to {}".format(", ".join(address)))
-        print_error("This server has been removed from the name server list!")
-        return True
+    if not address:
+        return False
 
-    return False
+    addresses = ", ".join(address)
+    print_error(f"Nameserver {nameserver} performs NXDOMAIN hijacking")
+    print_error(f"It resolves nonexistent domains to {addresses}")
+    print_error("This server has been removed from the name server list!")
+    return True
 
 
 def brute_tlds(res, domain, verbose=False, thread_num=None):
@@ -275,8 +281,9 @@ def brute_tlds(res, domain, verbose=False, thread_num=None):
     domain_main = domain.split(".")[0]
 
     # Let the user know how long it could take
-    print_status("The operation could take up to: {0}".format(
-        time.strftime('%H:%M:%S', time.gmtime((len(itld) + len(gtld) + len(grtld) + len(stld) + len(cctld)) / 3))))
+    all_tlds_len = len(itld) + len(gtld) + len(grtld) + len(stld) + len(cctld)
+    duration = time.strftime('%H:%M:%S', time.gmtime(all_tlds_len / 3))
+    print_status(f"The operation could take up to: {duration}")
 
     total_tlds = list(set(itld + gtld + grtld + stld))
 
@@ -299,12 +306,13 @@ def brute_tlds(res, domain, verbose=False, thread_num=None):
 
     except Exception as e:
         print_error(e)
+
     found_tlds = []
     for rcd_found in brtdata:
-        for rcd in rcd_found:
-            if re.search(r"^A", rcd[0]):
-                print_good({"type": rcd[0], "name": rcd[1], "address": rcd[2]})
-                found_tlds.append([{"type": rcd[0], "name": rcd[1], "address": rcd[2]}])
+        for type_, name_, addr_ in rcd_found:
+            if type_ in ['A', 'AAAA']:
+                print_good(f"\t {type_} {name_} {addr_}")
+                found_tlds.append([{"type": type_, "name": name_, "address": addr_}])
     print_good(f"{len(found_tlds)} Records Found")
     return found_tlds
 
@@ -432,19 +440,25 @@ def brute_domain(res, dict, dom, filter=None, verbose=False, ignore_wildcard=Fal
 
         # Process the output of the threads.
         for rcd_found in brtdata:
-            for rcd in rcd_found:
-                if re.search(r"^A", rcd[0]):
+            for type_, name_, address_or_target_ in rcd_found:
+                print_and_append = False
+                found_dict = {"type": type_, "name": name_}
+                if type_.startswith("A"):
                     # Filter Records if filtering was enabled
                     if filter:
-                        if not wildcard_ip == rcd[2]:
-                            print_good(f'{rcd[1]}: {rcd[0]} : {rcd[2]}')
-                            found_hosts.extend([{"type": rcd[0], "name": rcd[1], "address": rcd[2]}])
+                        if not wildcard_ip == address_or_target_:
+                            print_and_append = True
+                            found_dict["address"] = address_or_target_
                     else:
-                        found_hosts.extend([{"type": rcd[0], "name": rcd[1], "address": rcd[2]}])
-                        print_good(f'{rcd[1]}: {rcd[0]} : {rcd[2]}')
-                elif re.search(r"^CNAME", rcd[0]):
-                    print_good(f'{rcd[1]}: {rcd[0]} : {rcd[2]}')
-                    found_hosts.extend([{"type": rcd[0], "name": rcd[1], "target": rcd[2]}])
+                        print_and_append = True
+                        found_dict["address"] = address_or_target_
+                elif type_.startswith("CNAME"):
+                    print_and_append = True
+                    found_dict["target"] = address_or_target_
+
+                if print_and_append:
+                    print_good(f"{name_}: {type_} : {address_or_target_}")
+                    found_hosts.append(found_dict)
 
         # Clear Global variable
         brtdata = []
@@ -570,7 +584,6 @@ def whois_ips(res, ip_list):
 
         elif "n" in answer:
             print_status("No Reverse Lookups will be performed.")
-            pass
         else:
             for a in answer:
                 net_selected = list_whois[int(a)]
@@ -664,49 +677,50 @@ def create_db(db):
 
 def make_csv(data):
     csv_data = "Type,Name,Address,Target,Port,String\n"
-    for n in data:
+    for record in data:
         # make sure that we are working with a dictionary.
-        if isinstance(n, dict):
-            print(n)
-            if n['type'] in ['PTR', 'A', 'AAAA']:
-                csv_data += n["type"] + "," + n["name"] + "," + n["address"] + "\n"
+        if not isinstance(record, dict):
+            continue
 
-            elif re.search(r"NS$", n["type"]):
-                csv_data += n["type"] + "," + n["target"] + "," + n["address"] + "\n"
+        type_ = record['type'].upper()
+        csv_data += type_ + ","
 
-            elif re.search(r"SOA", n["type"]):
-                csv_data += n["type"] + "," + n["mname"] + "," + n["address"] + "\n"
+        if type_ in ['PTR', 'A', 'AAAA', 'NS', 'SOA', 'MX']:
 
-            elif re.search(r"MX", n["type"]):
-                csv_data += n["type"] + "," + n["exchange"] + "," + n["address"] + "\n"
+            if type_ in ['PTR', 'A', 'AAAA']:
+                csv_data += record["name"]
+            elif type_ == 'NS':
+                csv_data += record["target"]
+            elif type_ == 'SOA':
+                csv_data += record["mname"]
+            elif type_ == 'MX':
+                csv_data += record["exchange"]
 
-            elif re.search(r"SPF", n["type"]):
-                if "zone_server" in n:
-                    csv_data += n["type"] + ",,,,,\'" + n["strings"] + "\'\n"
-                else:
-                    csv_data += n["type"] + ",,,,,\'" + n["strings"] + "\'\n"
+            csv_data += "," + record['address'] + ("," * 3) + "\n"
 
-            elif re.search(r"TXT", n["type"]):
-                if "zone_server" in n:
-                    csv_data += n["type"] + ",,,,,\'" + n["strings"] + "\'\n"
-                else:
-                    csv_data += n["type"] + "," + n["name"] + ",,,,\'" + n["strings"] + "\'\n"
+        elif type_ in ['TXT', 'SPF']:
+            if 'zone_server' not in record:
+                csv_data += record['name']
 
-            elif re.search(r"SRV", n["type"]):
-                csv_data += n["type"] + "," + n["name"] + "," + n["address"] + "," + n["target"] + "," + n["port"] + "\n"
+            csv_data += ("," * 4) + "'{}'\n".format(record['strings'])
 
-            elif re.search(r"CNAME", n["type"]):
-                if "target" not in n.keys():
-                    n["target"] = ""
-                csv_data += n["type"] + "," + n["name"] + ",," + n["target"] + ",\n"
+        elif type_ == 'SRV':
+            items = [record["name"], record["address"],
+                     record["target"], record["port"]]
+            csv_data += ",".join(items) + ",\n"
 
-            else:
-                # Handle not common records
-                t = n["type"]
-                del n["type"]
-                record_data = "".join(["%s =%s," % (key, value) for key, value in n.items()])
-                records = [t, record_data]
-                csv_data + records[0] + ",,,,," + records[1] + "\n"
+        elif type_ == 'CNAME':
+            csv_data += record['name'] + ("," * 2)
+            if 'target' in record:
+                csv_data += record['target']
+
+            csv_data += ("," * 2) + "\n"
+
+        else:
+            # Handle not common records
+            del record["type"]
+            s = "; ".join([f"{k}={v}" for k, v in record.items()])
+            csv_data += ("," * 4) + f"'{s}'\n"
 
     return csv_data
 
@@ -1052,7 +1066,7 @@ def general_enum(res, domain, do_axfr, do_bing, do_yandex, do_spf, do_whois, do_
                     returned_records.extend(r)
 
         if zw:
-            zone_info = ds_zone_walk(res, domain)
+            zone_info = ds_zone_walk(res, domain, request_timeout)
             if zone_info:
                 returned_records.extend(zone_info)
 
@@ -1194,16 +1208,15 @@ def ds_zone_walk(res, domain, lifetime):
     Perform DNSSEC Zone Walk using NSEC records found in the error additional
     records section of the message to find the next host to query in the zone.
     """
-    print_status("Performing NSEC Zone Walk for {0}".format(domain))
-
-    print_status("Getting SOA record for {0}".format(domain))
+    print_status(f"Performing NSEC Zone Walk for {domain}")
+    print_status(f"Getting SOA record for {domain}")
 
     nameserver = ''
 
     try:
         soa_rcd = res.get_soa()[0][2]
 
-        print_status("Name Server {0} will be used".format(soa_rcd))
+        print_status(f"Name Server {soa_rcd} will be used")
         res = DnsHelper(domain, soa_rcd, lifetime)
         nameserver = soa_rcd
     except Exception:
@@ -1461,8 +1474,7 @@ def main():
     if arguments.threads:
         thread_num = int(arguments.threads)
 
-    if arguments.lifetime:
-        request_timeout = float(arguments.lifetime)
+    request_timeout = float(arguments.lifetime)
 
     results_db = arguments.db
     csv_file = arguments.csv
@@ -1610,9 +1622,9 @@ def main():
                 elif r == "zonewalk":
                     if (output_file is not None) or (results_db is not None) or (csv_file is not None) or (
                             json_file is not None):
-                        returned_records.extend(ds_zone_walk(res, domain))
+                        returned_records.extend(ds_zone_walk(res, domain, request_timeout))
                     else:
-                        ds_zone_walk(res, domain)
+                        ds_zone_walk(res, domain, request_timeout)
 
                 else:
                     print_error(f"This type of scan is not in the list: {r}")
