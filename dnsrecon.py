@@ -414,59 +414,61 @@ def brute_reverse(res, ip_list, verbose=False, thread_num=None):
     return returned_records
 
 
-def brute_domain(res, dict, dom, filter=None, verbose=False, ignore_wildcard=False, thread_num=None):
+def brute_domain(res, dictfile, dom, filter_=None, verbose=False, ignore_wildcard=False, thread_num=None):
     """
     Main Function for domain brute forcing
     """
     global brtdata
     brtdata = []
-    wildcard_ip = None
-    found_hosts = []
-    continue_brt = "y"
 
     # Check if wildcard resolution is enabled
     wildcard_ip = check_wildcard(res, dom)
     if wildcard_ip and not ignore_wildcard:
-        print_status("Do you wish to continue? y/n")
-        continue_brt = str(sys.stdin.readline()[:-1])
-    if re.search(r"y", continue_brt, re.I):
-        # Check if Dictionary file exists
-        if os.path.isfile(dict):
-            with open(dict) as file:
-                targets = [f'{line.strip()}.{dom.strip()}' for line in file]
-                if verbose:
-                    for target in targets:
-                        print_status(f'Trying: {target}')
-            with futures.ThreadPoolExecutor(max_workers=thread_num) as executor:
-                future_results = {executor.submit(res.get_ip, target): target for target in targets}
-                brtdata = [future.result() for future in futures.as_completed(future_results)]
+        print_status("Do you wish to continue? [Y/n]")
+        i = input().lower().strip()
+        if i not in ['y', 'yes']:
+            print_error("Domain bruteforcing aborted.")
+            return None
 
-        # Process the output of the threads.
-        for rcd_found in brtdata:
-            for type_, name_, address_or_target_ in rcd_found:
-                print_and_append = False
-                found_dict = {"type": type_, "name": name_}
-                if type_.startswith("A"):
-                    # Filter Records if filtering was enabled
-                    if filter:
-                        if not wildcard_ip == address_or_target_:
-                            print_and_append = True
-                            found_dict["address"] = address_or_target_
-                    else:
+    found_hosts = []
+
+    # Check if Dictionary file exists
+    if os.path.isfile(dictfile):
+        with open(dictfile) as fd:
+            targets = [f"{line.strip()}.{dom.strip()}" for line in fd]
+            if verbose:
+                for target in targets:
+                    print_status(f"Trying {target}")
+        with futures.ThreadPoolExecutor(max_workers=thread_num) as executor:
+            future_results = {executor.submit(res.get_ip, target): target for target in targets}
+            brtdata = [future.result() for future in futures.as_completed(future_results)]
+
+    # Process the output of the threads.
+    for rcd_found in brtdata:
+        for type_, name_, address_or_target_ in rcd_found:
+            print_and_append = False
+            found_dict = {"type": type_, "name": name_}
+            if type_ in ['A', 'AAAA']:
+                # Filter Records if filtering was enabled
+                if filter_:
+                    if not wildcard_ip == address_or_target_:
                         print_and_append = True
                         found_dict["address"] = address_or_target_
-                elif type_.startswith("CNAME"):
+                else:
                     print_and_append = True
-                    found_dict["target"] = address_or_target_
+                    found_dict["address"] = address_or_target_
+            elif type_ == 'CNAME':
+                print_and_append = True
+                found_dict["target"] = address_or_target_
 
-                if print_and_append:
-                    print_good(f"{name_}: {type_} : {address_or_target_}")
-                    found_hosts.append(found_dict)
+            if print_and_append:
+                print_good(f"\t {type_} {name_} {address_or_target_}")
+                found_hosts.append(found_dict)
 
-        # Clear Global variable
-        brtdata = []
+    # Clear Global variable
+    brtdata = []
 
-    print_good("{0} Records Found".format(len(found_hosts)))
+    print_good(f"{len(found_hosts)} Records Found")
     return found_hosts
 
 
