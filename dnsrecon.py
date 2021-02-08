@@ -1379,6 +1379,7 @@ def main():
         parser.add_argument("--iw", help="Continue brute forcing a domain even if a wildcard records are discovered.", action="store_true")
         parser.add_argument("--disable_check_recursion", help="Disables check for recursion on name servers", action="store_true")
         parser.add_argument("--disable_check_bindversion", help="Disables check for BIND version on name servers", action="store_true")
+        parser.add_argument("-V", help="Show DNSrecon version", action="store_true")
         parser.add_argument("-v", help="Enable verbose", action="store_true")
         parser.add_argument("-t", "--type", type=str, dest="type", help="""Type of enumeration to perform.
                                std:       SOA, NS, A, AAAA, MX and SRV.
@@ -1408,6 +1409,10 @@ def main():
     #
     type = arguments.type
     domain = arguments.domain
+    app_version = arguments.V
+
+    if app_version:
+        print(f"{__version__}")
 
     if arguments.ns_server:
         ns_server = []
