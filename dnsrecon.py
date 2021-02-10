@@ -653,6 +653,7 @@ def create_db(db):
     # Create SQL Queries to be used in the script
     make_table = """CREATE TABLE data (
     serial integer  Primary Key Autoincrement,
+    domain TEXT(256),
     type TEXT(8),
     name TEXT(32),
     address TEXT(32),
@@ -751,40 +752,36 @@ def write_db(db, data):
     for n in data:
 
         if re.match(r'PTR|^[A]$|AAAA', n['type']):
-            query = 'insert into data( type, name, address ) ' + \
-                    'values( "%(type)s", "%(name)s","%(address)s" )' % n
+            query = 'insert into data( domain, type, name, address ) ' + \
+                    'values( "%(domain)s", "%(type)s", "%(name)s","%(address)s" )' % n
 
         elif re.match(r'NS$', n['type']):
-            query = 'insert into data( type, name, address ) ' + \
-                    'values( "%(type)s", "%(target)s", "%(address)s" )' % n
+            query = 'insert into data( domain, type, name, address ) ' + \
+                    'values( "%(domain)s", "%(type)s", "%(target)s", "%(address)s" )' % n
 
         elif re.match(r'SOA', n['type']):
-            query = 'insert into data( type, name, address ) ' + \
-                    'values( "%(type)s", "%(mname)s", "%(address)s" )' % n
+            query = 'insert into data( domain, type, name, address ) ' + \
+                    'values( "%(domain)s", "%(type)s", "%(mname)s", "%(address)s" )' % n
 
         elif re.match(r'MX', n['type']):
-            query = 'insert into data( type, name, address ) ' + \
-                    'values( "%(type)s", "%(exchange)s", "%(address)s" )' % n
+            query = 'insert into data( domain, type, name, address ) ' + \
+                    'values( "%(domain)s", "%(type)s", "%(exchange)s", "%(address)s" )' % n
 
         elif re.match(r'TXT', n['type']):
-            query = 'insert into data( type, text) ' + \
-                    'values( "%(type)s","%(strings)s" )' % n
+            query = 'insert into data( domain, type, text) ' + \
+                    'values( "%(domain)s", "%(type)s","%(strings)s" )' % n
 
         elif re.match(r'SPF', n['type']):
-            query = 'insert into data( type, text) ' + \
-                    'values( "%(type)s","%(text)s" )' % n
-
-        elif re.match(r'SPF', n['type']):
-            query = 'insert into data( type, text) ' + \
-                    'values( "%(type)s","%(text)s" )' % n
+            query = 'insert into data( domain, type, text) ' + \
+                    'values( "%(domain)s", "%(type)s","%(strings)s" )' % n
 
         elif re.match(r'SRV', n['type']):
-            query = 'insert into data( type, name, target, address, port ) ' + \
-                    'values( "%(type)s", "%(name)s" , "%(target)s", "%(address)s" ,"%(port)s" )' % n
+            query = 'insert into data( domain, type, name, target, address, port ) ' + \
+                    'values( "%(domain)s", "%(type)s", "%(name)s" , "%(target)s", "%(address)s" ,"%(port)s" )' % n
 
         elif re.match(r'CNAME', n['type']):
-            query = 'insert into data( type, name, target ) ' + \
-                    'values( "%(type)s", "%(name)s" , "%(target)s" )' % n
+            query = 'insert into data( domain, type, name, target ) ' + \
+                    'values( "%(domain)s", "%(type)s", "%(name)s" , "%(target)s" )' % n
 
         else:
             # Handle not common records
@@ -792,7 +789,7 @@ def write_db(db, data):
             del n['type']
             record_data = "".join(['%s=%s,' % (key, value) for key, value in n.items()])
             records = [t, record_data]
-            query = "insert into data(type,text) values ('" + \
+            query = "insert into data(domain,type,text) values (\"%(domain)\", '" + \
                     records[0] + "','" + records[1] + "')"
 
         # Execute Query and commit
@@ -931,7 +928,8 @@ def general_enum(res, domain, do_axfr, do_bing, do_yandex, do_spf, do_whois, do_
                 print_status("\t {0} {1} {2}".format(found_soa_record[0], found_soa_record[1], found_soa_record[2]))
 
                 # Save dictionary of returned record
-                returned_records.extend([{"type": found_soa_record[0],
+                returned_records.extend([{"domain": domain,
+                                          "type": found_soa_record[0],
                                           "mname": found_soa_record[1], "address": found_soa_record[2]}])
 
                 ip_for_whois.append(found_soa_record[2])
@@ -948,8 +946,8 @@ def general_enum(res, domain, do_axfr, do_bing, do_yandex, do_spf, do_whois, do_
                 recursive = check_recursive(res, ns_rcrd[2], res._res.timeout)
                 bind_ver = check_bindversion(res, ns_rcrd[2], res._res.timeout)
                 returned_records.extend([
-                    {"type": ns_rcrd[0], "target": ns_rcrd[1], "address": ns_rcrd[2], "recursive": str(recursive),
-                     "Version": bind_ver}])
+                    {"domain": domain, "type": ns_rcrd[0], "target": ns_rcrd[1], "address": ns_rcrd[2],
+                     "recursive": str(recursive), "Version": bind_ver}])
                 ip_for_whois.append(ns_rcrd[2])
 
         except dns.resolver.NoAnswer:
@@ -964,7 +962,7 @@ def general_enum(res, domain, do_axfr, do_bing, do_yandex, do_spf, do_whois, do_
                 print_status("\t {0} {1} {2}".format(mx_rcrd[0], mx_rcrd[1], mx_rcrd[2]))
 
                 # Save dictionary of returned record
-                returned_records.extend([{"type": mx_rcrd[0], "exchange": mx_rcrd[1], 'address': mx_rcrd[2]}])
+                returned_records.extend([{"domain": domain, "type": mx_rcrd[0], "exchange": mx_rcrd[1], 'address': mx_rcrd[2]}])
 
                 ip_for_whois.append(mx_rcrd[2])
 
@@ -978,7 +976,7 @@ def general_enum(res, domain, do_axfr, do_bing, do_yandex, do_spf, do_whois, do_
             print_status("\t {0} {1} {2}".format(a_rcrd[0], a_rcrd[1], a_rcrd[2]))
 
             # Save dictionary of returned record
-            returned_records.extend([{"type": a_rcrd[0], "name": a_rcrd[1], "address": a_rcrd[2]}])
+            returned_records.extend([{"domain": domain, "type": a_rcrd[0], "name": a_rcrd[1], "address": a_rcrd[2]}])
 
             ip_for_whois.append(a_rcrd[2])
 
@@ -991,7 +989,7 @@ def general_enum(res, domain, do_axfr, do_bing, do_yandex, do_spf, do_whois, do_
             for s in spf_text_data:
                 print_status("\t {0} {1}".format(s[0], s[1]))
                 text_data = s[1]
-                returned_records.extend([{"type": s[0], "strings": s[1]}])
+                returned_records.extend([{"domain": domain, "type": s[0], "strings": s[1]}])
 
         txt_text_data = res.get_txt()
 
@@ -1000,7 +998,7 @@ def general_enum(res, domain, do_axfr, do_bing, do_yandex, do_spf, do_whois, do_
             for t in txt_text_data:
                 print_status("\t {0} {1} {2}".format(t[0], t[1], t[2]))
                 text_data += t[2]
-                returned_records.extend([{"type": t[0], "name": t[1], "strings": t[2]}])
+                returned_records.extend([{"domain": domain, "type": t[0], "name": t[1], "strings": t[2]}])
 
         domainkey_text_data = res.get_txt("_domainkey." + domain)
 
@@ -1009,7 +1007,7 @@ def general_enum(res, domain, do_axfr, do_bing, do_yandex, do_spf, do_whois, do_
             for t in domainkey_text_data:
                 print_status("\t {0} {1} {2}".format(t[0], t[1], t[2]))
                 text_data += t[2]
-                returned_records.extend([{"type": t[0], "name": t[1], "strings": t[2]}])
+                returned_records.extend([{"domain": domain, "type": t[0], "name": t[1], "strings": t[2]}])
 
         # Process SPF records if selected
         if do_spf and len(text_data) > 0:
@@ -1029,7 +1027,8 @@ def general_enum(res, domain, do_axfr, do_bing, do_yandex, do_spf, do_whois, do_
         if srv_rcd:
             for r in srv_rcd:
                 ip_for_whois.append(r["address"])
-                returned_records.append(r)
+                returned_records.extend([{"domain": domain, "type": r['type'], "name": r['name'],
+                                          "target": r['target'], 'address': r['address'], 'port': r['port']}])
 
         # Do Bing Search enumeration if selected
         if do_bing:
