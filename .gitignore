@@ -2,3 +2,4 @@
 *.orig
 *.pyc
 *.pyo
+venv/
