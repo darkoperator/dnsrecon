@@ -1708,4 +1708,4 @@ if __name__ == "__main__":
     try:
         main()
     except KeyboardInterrupt:
-        print_status('CTRL+C detected, quiting')
+        print_status('CTRL+C detected, quitting')
