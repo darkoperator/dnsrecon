@@ -351,23 +351,24 @@ def brute_srv(res, domain, verbose=False, thread_num=None):
             brtdata = [future.result() for future in futures.as_completed(future_results)]
             if verbose:
                 for srvtype in srvrcd:
-                    print_status("Trying {0}".format(srvtype + domain))
-    except Exception as ex:
-        print_error(ex)
+                    srvtype_domain = srvtype + domain
+                    print_status(f"Trying {srvtype_domain}...")
+    except Exception as e:
+        print_error(e)
 
-    if len(brtdata) > 0:
+    if brtdata:
         for rcd_found in brtdata:
-            for rcd in rcd_found:
-                returned_records.append({"type": rcd[0],
-                                         "name": rcd[1],
-                                         "target": rcd[2],
-                                         "address": rcd[3],
-                                         "port": rcd[4]})
-                print_good(f'     {rcd[0]} {rcd[1]} {rcd[2]} {rcd[3]} {rcd[4]}')
+            for type_, name_, target_, addr_, port_, priority_ in rcd_found:
+                returned_records.append({"type": type_,
+                                         "name": name_,
+                                         "target": target_,
+                                         "address": addr_,
+                                         "port": port_})
+                print_good(f"\t {type_} {name_} {target_} {addr_} {port_}")
     else:
         print_error(f"No SRV Records Found for {domain}")
 
-    print_good("{0} Records Found".format(len(returned_records)))
+    print_good(f"{len(returned_records)} Records Found")
 
     return returned_records
 
@@ -391,79 +392,83 @@ def brute_reverse(res, ip_list, verbose=False, thread_num=None):
         with futures.ThreadPoolExecutor(max_workers=thread_num) as executor:
             future_results = {executor.submit(res.get_ptr, str(ip_list[x])): x for x in ip_range}
             brtdata = [future.result() for future in futures.as_completed(future_results)]
-            brtdata = [result for result in brtdata if result]
             # Filter out results that are None
+            brtdata = [result for result in brtdata if result]
+
         if verbose:
             for x in ip_range:
                 ipaddress = str(ip_list[x])
-                print_status("Trying {0}".format(ipaddress))
-    except Exception as ex:
-        print_error(ex)
+                print_status(f"Trying {ipaddress}")
+
+    except Exception as e:
+        print_error(e)
 
     returned_records = []
     for rcd_found in brtdata:
-        for rcd in rcd_found:
-            returned_records.append([{'type': rcd[0], 'name': rcd[1], 'address': rcd[2]}])
-            print_good(f'{rcd[0]} {rcd[1]} {rcd[2]}')
+        for type_, name_, addr_ in rcd_found:
+            returned_records.append([{'type': type_, 'name': name_, 'address': addr_}])
+            print_good(f"\t {type_} {name_} {addr_}")
 
-    print_good("{0} Records Found".format(len(returned_records)))
+    print_good(f"{len(returned_records)} Records Found")
 
     return returned_records
 
 
-def brute_domain(res, dict, dom, filter=None, verbose=False, ignore_wildcard=False, thread_num=None):
+def brute_domain(res, dictfile, dom, filter_=None, verbose=False, ignore_wildcard=False, thread_num=None):
     """
     Main Function for domain brute forcing
     """
     global brtdata
     brtdata = []
-    wildcard_ip = None
-    found_hosts = []
-    continue_brt = "y"
 
     # Check if wildcard resolution is enabled
     wildcard_ip = check_wildcard(res, dom)
     if wildcard_ip and not ignore_wildcard:
-        print_status("Do you wish to continue? y/n")
-        continue_brt = str(sys.stdin.readline()[:-1])
-    if re.search(r"y", continue_brt, re.I):
-        # Check if Dictionary file exists
-        if os.path.isfile(dict):
-            with open(dict) as file:
-                targets = [f'{line.strip()}.{dom.strip()}' for line in file]
-                if verbose:
-                    for target in targets:
-                        print_status(f'Trying: {target}')
-            with futures.ThreadPoolExecutor(max_workers=thread_num) as executor:
-                future_results = {executor.submit(res.get_ip, target): target for target in targets}
-                brtdata = [future.result() for future in futures.as_completed(future_results)]
+        print_status("Do you wish to continue? [Y/n]")
+        i = input().lower().strip()
+        if i not in ['y', 'yes']:
+            print_error("Domain bruteforcing aborted.")
+            return None
 
-        # Process the output of the threads.
-        for rcd_found in brtdata:
-            for type_, name_, address_or_target_ in rcd_found:
-                print_and_append = False
-                found_dict = {"type": type_, "name": name_}
-                if type_.startswith("A"):
-                    # Filter Records if filtering was enabled
-                    if filter:
-                        if not wildcard_ip == address_or_target_:
-                            print_and_append = True
-                            found_dict["address"] = address_or_target_
-                    else:
+    found_hosts = []
+
+    # Check if Dictionary file exists
+    if os.path.isfile(dictfile):
+        with open(dictfile) as fd:
+            targets = [f"{line.strip()}.{dom.strip()}" for line in fd]
+            if verbose:
+                for target in targets:
+                    print_status(f"Trying {target}")
+        with futures.ThreadPoolExecutor(max_workers=thread_num) as executor:
+            future_results = {executor.submit(res.get_ip, target): target for target in targets}
+            brtdata = [future.result() for future in futures.as_completed(future_results)]
+
+    # Process the output of the threads.
+    for rcd_found in brtdata:
+        for type_, name_, address_or_target_ in rcd_found:
+            print_and_append = False
+            found_dict = {"type": type_, "name": name_}
+            if type_ in ['A', 'AAAA']:
+                # Filter Records if filtering was enabled
+                if filter_:
+                    if not wildcard_ip == address_or_target_:
                         print_and_append = True
                         found_dict["address"] = address_or_target_
-                elif type_.startswith("CNAME"):
+                else:
                     print_and_append = True
-                    found_dict["target"] = address_or_target_
+                    found_dict["address"] = address_or_target_
+            elif type_ == 'CNAME':
+                print_and_append = True
+                found_dict["target"] = address_or_target_
 
-                if print_and_append:
-                    print_good(f"{name_}: {type_} : {address_or_target_}")
-                    found_hosts.append(found_dict)
+            if print_and_append:
+                print_good(f"\t {type_} {name_} {address_or_target_}")
+                found_hosts.append(found_dict)
 
-        # Clear Global variable
-        brtdata = []
+    # Clear Global variable
+    brtdata = []
 
-    print_good("{0} Records Found".format(len(found_hosts)))
+    print_good(f"{len(found_hosts)} Records Found")
     return found_hosts
 
 
