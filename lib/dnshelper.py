@@ -98,7 +98,7 @@ class DnsHelper:
         address = []
         tcp = True if self._proto == "tcp" else False
         try:
-            ipv4_answers = self._res.query(host_trg, 'A', tcp=tcp)
+            ipv4_answers = self._res.resolve(host_trg, 'A', tcp=tcp)
             for ardata in ipv4_answers.response.answer:
                 for rdata in ardata:
                     if rdata.rdtype == 5:
@@ -122,7 +122,7 @@ class DnsHelper:
         address = []
         tcp = True if self._proto == "tcp" else False
         try:
-            ipv6_answers = self._res.query(host_trg, 'AAAA', tcp=tcp)
+            ipv6_answers = self._res.resolve(host_trg, 'AAAA', tcp=tcp)
             for ardata in ipv6_answers.response.answer:
                 for rdata in ardata:
                     if rdata.rdtype == 5:
@@ -156,11 +156,11 @@ class DnsHelper:
         """
         mx_records = []
         tcp = True if self._proto == "tcp" else False
-        answers = self._res.query(self._domain, 'MX', tcp=tcp)
+        answers = self._res.resolve(self._domain, 'MX', tcp=tcp)
         for rdata in answers:
             try:
                 name = rdata.exchange.to_text()
-                ipv4_answers = self._res.query(name, 'A', tcp=tcp)
+                ipv4_answers = self._res.resolve(name, 'A', tcp=tcp)
                 for ardata in ipv4_answers:
                     if name.endswith('.'):
                         mx_records.append(['MX', name[:-1], ardata.address,
@@ -173,7 +173,7 @@ class DnsHelper:
         try:
             for rdata in answers:
                 name = rdata.exchange.to_text()
-                ipv6_answers = self._res.query(name, 'AAAA', tcp=tcp)
+                ipv6_answers = self._res.resolve(name, 'AAAA', tcp=tcp)
                 for ardata in ipv6_answers:
                     if name.endswith('.'):
                         mx_records.append(['MX', name[:-1], ardata.address,
@@ -192,7 +192,7 @@ class DnsHelper:
         """
         name_servers = []
         tcp = True if self._proto == "tcp" else False
-        answer = self._res.query(self._domain, 'NS', tcp=tcp)
+        answer = self._res.resolve(self._domain, 'NS', tcp=tcp)
         if answer is not None:
             for aa in answer:
                 name = aa.target.to_text()[:-1]
@@ -231,7 +231,7 @@ class DnsHelper:
                     continue
 
                 if name:
-                    ipv4_answers = self._res.query(name, 'A', tcp=tcp)
+                    ipv4_answers = self._res.resolve(name, 'A', tcp=tcp)
                     for ardata in ipv4_answers:
                         if name.endswith('.'):
                             soa_records.append(['SOA', name[:-1], ardata.address])
@@ -248,7 +248,7 @@ class DnsHelper:
                     name = rdata.mname.to_text()
 
                 if name:
-                    ipv6_answers = self._res.query(name, 'AAAA', tcp=tcp)
+                    ipv6_answers = self._res.resolve(name, 'AAAA', tcp=tcp)
                     for ardata in ipv6_answers:
                         if name.endswith('.'):
                             soa_records.append(['SOA', name[:-1], ardata.address])
@@ -267,12 +267,12 @@ class DnsHelper:
         spf_record = []
         tcp = True if self._proto == "tcp" else False
         try:
-            answers = self._res.query(self._domain, 'SPF', tcp=tcp)
+            answers = self._res.resolve(self._domain, 'SPF', tcp=tcp)
             for rdata in answers:
                 name = bytes.join(b'', rdata.strings).decode('utf-8')
                 spf_record.append(['SPF', name])
         except Exception:
-            return None
+            return []
 
         return spf_record
 
@@ -285,15 +285,16 @@ class DnsHelper:
         if target is None:
             target = self._domain
         try:
-            answers = self._res.query(target, 'TXT', tcp=tcp)
+            answers = self._res.resolve(target, 'TXT', tcp=tcp)
             for rdata in answers:
                 string = bytes.join(b'', rdata.strings).decode('utf-8')
                 txt_record.append(['TXT', target, string])
-            answers = self._res.query("_dmarc." + target, 'TXT', tcp=tcp)
+            answers = self._res.resolve("_dmarc." + target, 'TXT', tcp=tcp)
             for rdata in answers:
                 string = bytes.join(b'', rdata.strings).decode('utf-8')
                 txt_record.append(['TXT', target, string])
-        except Exception:
+        except Exception as e:
+            print_error(e)
             return []
 
         return txt_record
@@ -306,7 +307,7 @@ class DnsHelper:
         tcp = True if self._proto == "tcp" else False
         n = dns.reversename.from_address(ipaddress)
         try:
-            answers = self._res.query(n, 'PTR', tcp=tcp)
+            answers = self._res.resolve(n, 'PTR', tcp=tcp)
             for a in answers:
                 if a.target.to_text().endswith('.'):
                     found_ptr.append(['PTR', a.target.to_text()[:-1], ipaddress])
@@ -314,7 +315,7 @@ class DnsHelper:
                     found_ptr.append(['PTR', a.target.to_text(), ipaddress])
             return found_ptr
         except Exception:
-            return None
+            return []
 
     def get_srv(self, host):
         """
@@ -323,7 +324,7 @@ class DnsHelper:
         record = []
         tcp = True if self._proto == "tcp" else False
         try:
-            answers = self._res.query(host, 'SRV', tcp=tcp)
+            answers = self._res.resolve(host, 'SRV', tcp=tcp)
             for a in answers:
                 if a.target.to_text().endswith('.'):
                     target = a.target.to_text()[:-1]
@@ -351,7 +352,7 @@ class DnsHelper:
         This function is used mostly for performing a Zone Walk against a zone.
         """
         tcp = True if self._proto == "tcp" else False
-        answer = self._res.query(host, 'NSEC', tcp=tcp)
+        answer = self._res.resolve(host, 'NSEC', tcp=tcp)
         return answer
 
     def from_wire(self, xfr, zone_factory=Zone, relativize=True):
@@ -480,7 +481,7 @@ class DnsHelper:
 
                 for (name, rdataset) in zone.iterate_rdatasets(dns.rdatatype.SPF):
                     for rdata in rdataset:
-                        s = "; ".join(rdata.strings)
+                        s = "; ".join([string.decode() for string in rdata.strings])
                         print_status(f"\t SPF {s}")
                         zone_records.append({'zone_server': ns_srv, 'type': 'SPF',
                                              'strings': s})
@@ -802,17 +803,18 @@ class DnsHelper:
 
 def main():
     resolver = DnsHelper('google.com')
-    print(resolver.get_a("www.yahoo.com"))
-    print(resolver.get_aaaa('baddata-cname-to-baddata-aaaa.test.dnssec-tools.org'))
-    print(resolver.get_mx())
-    print(resolver.get_ip('www.google.com'))
-    print(resolver.get_txt("3rdparty1._spf.paypal.com"))
-    print(resolver.get_ns())
-    print(resolver.get_soa())
-    print(resolver.get_txt())
-    print(resolver.get_spf())
-    tresolver = DnsHelper('google.com')
-    print(tresolver.zone_transfer())
+    print(resolver)
+    # ~ print(resolver.get_a("www.yahoo.com"))
+    # ~ print(resolver.get_aaaa('baddata-cname-to-baddata-aaaa.test.dnssec-tools.org'))
+    # ~ print(resolver.get_mx())
+    # ~ print(resolver.get_ip('www.google.com'))
+    # ~ print(resolver.get_txt("3rdparty1._spf.paypal.com"))
+    # ~ print(resolver.get_ns())
+    # ~ print(resolver.get_soa())
+    # ~ print(resolver.get_txt())
+    # ~ print(resolver.get_spf())
+    # ~ tresolver = DnsHelper('google.com')
+    # ~ print(tresolver.zone_transfer())
 
 
 if __name__ == "__main__":
