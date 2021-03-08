@@ -89,7 +89,7 @@ class DnsHelper:
         """
         Function for performing general resolution types returning the RDATA
         """
-        configure = not ns_server
+        configure = not ns
         res = dns.resolver.Resolver(configure=configure)
         if ns:
             res.nameservers = [ns]
