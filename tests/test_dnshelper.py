@@ -66,7 +66,7 @@ class Test_Lib_dnshelper():
         helper = DnsHelper('megacorpone.com')
         records = helper.get_soa()
         for record in records:
-            print(record)
+            assert record[0] == 'SOA'
 
     def test_get_srv(self):
         helper = DnsHelper('nsztm1.digi.ninja')
@@ -78,3 +78,8 @@ class Test_Lib_dnshelper():
         helper = DnsHelper('zonetransfer.me')
         records = helper.zone_transfer()
         assert len(records) == 135
+
+    def test_get_ptr(self):
+        helper = DnsHelper('megacorpone.com')
+        records = helper.get_ptr('51.79.37.18')
+        assert len(records) == 1 and 'megacorpone.com' in records[0][1]
