@@ -23,7 +23,6 @@ import dns.reversename
 import dns.message
 import socket
 import random
-import re
 from dns.zone import *
 from dns.dnssec import algorithm_to_text
 from .msf_print import *
