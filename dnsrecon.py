@@ -190,11 +190,13 @@ def check_wildcard(res, domain_trg):
     if not ips:
         return None
 
-    wildcard = "".join(ips[0][2])
+    wildcard_set = set()
     print_debug("Wildcard resolution is enabled on this domain")
-    print_debug(f"It is resolving to {wildcard}")
-    print_debug("All queries will resolve to this address!!")
-    return wildcard
+    for ip in ips:
+        print_debug(f"It is resolving to {ip[2]}")
+        wildcard_set.add(ip[2])
+    print_debug("All queries will resolve to this list of addresses!!")
+    return wildcard_set
 
 
 def check_nxdomain_hijack(nameserver):
@@ -422,8 +424,8 @@ def brute_domain(res, dictfile, dom, filter_=None, verbose=False, ignore_wildcar
     brtdata = []
 
     # Check if wildcard resolution is enabled
-    wildcard_ip = check_wildcard(res, dom)
-    if wildcard_ip and not ignore_wildcard:
+    wildcard_set = check_wildcard(res, dom)
+    if wildcard_set and not ignore_wildcard:
         print_status("Do you wish to continue? [Y/n]")
         i = input().lower().strip()
         if i not in ['y', 'yes']:
@@ -451,7 +453,7 @@ def brute_domain(res, dictfile, dom, filter_=None, verbose=False, ignore_wildcar
             if type_ in ['A', 'AAAA']:
                 # Filter Records if filtering was enabled
                 if filter_:
-                    if not wildcard_ip == address_or_target_:
+                    if address_or_target_ not in wildcard_set:
                         print_and_append = True
                         found_dict["address"] = address_or_target_
                 else:
