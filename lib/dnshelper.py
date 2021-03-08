@@ -23,7 +23,6 @@ import dns.reversename
 import dns.message
 import socket
 import random
-import re
 from dns.zone import *
 from dns.dnssec import algorithm_to_text
 from .msf_print import *
@@ -90,7 +89,7 @@ class DnsHelper:
         """
         Function for performing general resolution types returning the RDATA
         """
-        configure = not ns_server
+        configure = not ns
         res = dns.resolver.Resolver(configure=configure)
         if ns:
             res.nameservers = [ns]
