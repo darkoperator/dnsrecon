@@ -2,3 +2,5 @@ dnspython>=2.0.0
 netaddr
 lxml
 flake8
+pytest
+
