@@ -13,17 +13,20 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     url="https://github.com/darkoperator/dnsrecon",
     packages=setuptools.find_packages(),
+    python_requires='>=3.6',
+    scripts=['bin/dnsrecon'],
     classifiers=[
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
         "License :: OSI Approved :: GNU General Public License v2 (GPLv2)",
         "Operating System :: OS Independent",
     ],
-    python_requires='>=3.6',
     data_files=[
         ('/etc/dnsrecon', [
+            'namelist.txt',
             'snoop.txt',
             'subdomains-top1mil-20000.txt',
             'subdomains-top1mil-5000.txt',
