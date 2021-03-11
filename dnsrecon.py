@@ -685,7 +685,10 @@ def create_db(db):
 
 def make_csv(data):
     csv_data = "Type,Name,Address,Target,Port,String\n"
-    for record in data:
+    for record_tmp in data:
+        # the representation of data[i] is a list of one dictionary
+        # we want to exploit this dictionary
+        record = record_tmp[0]
         # make sure that we are working with a dictionary.
         if not isinstance(record, dict):
             continue
