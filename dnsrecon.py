@@ -482,26 +482,31 @@ def in_cache(res, dict_file, ns):
     found_records = []
     with open(dict_file) as f:
         for zone in f:
-            dom_to_query = str.strip(zone)
+            dom_to_query = zone.strip()
             query = dns.message.make_query(dom_to_query, dns.rdatatype.A, dns.rdataclass.IN)
             query.flags ^= dns.flags.RD
             answer = res.query(query, ns)
-            if len(answer.answer) > 0:
-                for an in answer.answer:
-                    for rcd in an:
-                        if rcd.rdtype == 1:
-                            print_status(f"\tName: {an.name} TTL: {an.ttl} Address: {rcd.address} Type: A")
 
-                            found_records.extend([{"type": "A", "name": an.name,
-                                                   "address": rcd.address, "ttl": an.ttl}])
+            for an in answer.answer:
+                for rcd in an:
+                    if rcd.rdtype not in [1, 5]:
+                        continue
 
-                        elif rcd.rdtype == 5:
-                            print_status(f"\tName: {an.name} TTL: {an.ttl} Target: {rcd.target} Type: CNAME")
-                            found_records.extend([{"type": "CNAME", "name": an.name,
-                                                   "target": rcd.target, "ttl": an.ttl}])
+                    found_record = {"name": an.name, "ttl": an.ttl}
+                    status = f"\tName: {an.name} TTL: {an.ttl} "
 
-                        else:
-                            print_status()
+                    if rcd.rdtype == 1:
+                        found_record["type"] = "A"
+                        found_record["address"] = rcd.address
+                        status += f"Address: {rcd.address} Type: A"
+                    elif rcd.rdtype == 5:
+                        found_record["type"] = "CNAME"
+                        found_record["target"] = rcd.target
+                        status += f"Target: {rcd.target} Type: CNAME"
+
+                    print_status(status)
+                    found_records.append(found_record)
+
     return found_records
 
 
@@ -1617,16 +1622,14 @@ def main():
                         returned_records.extend(crt_enum_records)
 
                 elif r == "snoop":
-                    if (dictionary is not None) and (ns_server is not None):
-                        print_status(f"Performing Cache Snooping against NS Server: {ns_server}")
-                        cache_enum_records = in_cache(res, dictionary, ns_server)
-                        if (output_file is not None) or (results_db is not None) or (csv_file is not None) or (
-                                json_file is not None):
-                            returned_records.extend(cache_enum_records)
-
-                    else:
+                    if not (dictionary or ns_server):
                         print_error('No Domain or Name Server to target specified!')
                         sys.exit(1)
+
+                    if (output_file or results_db or csv_file or json_file):
+                        print_status(f"Performing Cache Snooping against NS Server: {ns_server}")
+                        cache_enum_records = in_cache(res, dictionary, ns_server)
+                        returned_records.extend(cache_enum_records)
 
                 elif r == "zonewalk":
                     if (output_file is not None) or (results_db is not None) or (csv_file is not None) or (
