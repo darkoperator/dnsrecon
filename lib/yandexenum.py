@@ -43,10 +43,11 @@ def scrape_yandex(dom):
         url = "https://yandex.com/search/?text=site%3A" + dom
         try:
             sock = urllib.request.urlopen(url)
-            data = sock.read()
-        except AttributeError:
-            sock = urllib.request.urlopen(url)
             data = sock.read().decode("utf-8")
+            sock.close()
+        except Exception as e:
+            print_error(e)
+            return []
 
         if re.search("enter_captcha_value", data):
             print_error("Yandex has detected the search as \'bot activity, stopping search...")
@@ -54,7 +55,6 @@ def scrape_yandex(dom):
 
         results.extend(re.findall(r"([a-zA-Z0-9\-\.]+" + dom + ")/?", data))
 
-        sock.close()
         time.sleep(10)
 
     return unique(results)

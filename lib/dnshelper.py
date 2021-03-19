@@ -225,29 +225,32 @@ class DnsHelper:
             print_error('Error while resolving SOA record.')
             return []
 
+        # ~ we consider both response sections
+        sections = []
         if len(response.authority) > 0:
-            answers = response.authority
-        elif len(response.answer) > 0:
-            answers = response.answer
+            sections.append(response.authority)
+        if len(response.answer) > 0:
+            sections.append(response.answer)
         else:
             return []
 
         result = []
-        answer_types = ['A', 'AAAA']
-        for answer_type in answer_types:
-
-            for answer in answers:
-                if not isinstance(answer[0], dns.rdtypes.ANY.SOA.SOA):
+        record_types = ['A', 'AAAA']
+        for section in sections:
+            for record in section:
+                if not isinstance(record[0], dns.rdtypes.ANY.SOA.SOA):
                     continue
 
-                mname_ = strip_last_dot(answer[0].mname.to_text())
+                mname_ = strip_last_dot(record[0].mname.to_text())
 
-                a_or_aaaa_answers = self.get_answers(answer_type, mname_)
-                if not a_or_aaaa_answers:
-                    continue
+                for record_type in record_types:
+                    a_or_aaaa_answers = self.get_answers(record_type, mname_)
 
-                for a_or_aaaa_answer in a_or_aaaa_answers:
-                    result.append(['SOA', mname_, a_or_aaaa_answer.address])
+                    if not a_or_aaaa_answers:
+                        continue
+
+                    for a_or_aaaa_answer in a_or_aaaa_answers:
+                        result.append(['SOA', mname_, a_or_aaaa_answer.address])
 
         return result
 
