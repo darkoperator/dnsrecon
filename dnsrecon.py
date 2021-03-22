@@ -510,33 +510,33 @@ def in_cache(res, dict_file, ns):
     return found_records
 
 
-def se_result_process(res, found_hosts):
+def se_result_process(res, se_entries):
     """
     This function processes the results returned from a Search Engine and does
     an A and AAAA query for the IP of the found host. Prints and returns a dictionary
     with all the results found.
     """
-    if not found_hosts:
+    if not se_entries:
         return None
 
-    returned_records = []
-    for sd in found_hosts:
-        for type_, name_, address_or_target_ in res.get_ip(sd):
+    resolved_se_entries = []
+    for se_entry in se_entries:
+        for type_, name_, address_or_target_ in res.get_ip(se_entry):
             if type_ not in ['A', 'CNAME']:
                 continue
 
             print_status(f"\t {type_} {name_} {address_or_target_}")
-            returned_record = {"type": type_, "name": name_}
+            resolved_se_entry = {"type": type_, "name": name_}
 
             if type_ == 'A':
-                returned_record["address"] = address_or_target_
+                resolved_se_entry["address"] = address_or_target_
             elif type_ == 'CNAME':
-                returned_record["target"] = address_or_target_
+                resolved_se_entry["target"] = address_or_target_
 
-            returned_records.append(returned_record)
+            resolved_se_entries.append(resolved_se_entry)
 
-    print_good(f"{len(returned_records)} Records Found")
-    return returned_records
+    print_good(f"{len(resolved_se_entries)} Records Found")
+    return resolved_se_entries
 
 
 def get_whois_nets_iplist(ip_list):
@@ -1433,14 +1433,14 @@ Possible types:
         parser.print_help()
         sys.exit(1)
 
-    # ~ if no arguments have been provided,
-    # ~ we exit and print program usage
+    # if no arguments have been provided,
+    # we exit and print program usage
     if not len(sys.argv) > 1:
         parser.print_usage()
         sys.exit(0)
 
-    # ~ a "map" that specifies if a type of scan needs
-    # ~ the domain and the dictionary
+    # a "map" that specifies if a type of scan needs
+    # the domain and the dictionary
     type_map = {
         'axfr': {'domain': True, 'dictionary': False},
         'std': {'domain': True, 'dictionary': False},
@@ -1456,76 +1456,77 @@ Possible types:
     }
 
     #
-    # ~ Parse options
+    # Parse options
     #
 
-    # ~ if user requests tool version, we print it and exit
+    # if user requests tool version, we print it and exit
     if arguments.version:
         print(f"DNSRecon version {__version__} ( http://www.darkoperator.com )")
         sys.exit(0)
 
-    # ~ validating type param which is in the form: type1,type2,...,typeN
-    # ~ if the pattern is not correct or if there is an unknown type we exit
-    type = arguments.type
+    # validating type param which is in the form: type1,type2,...,typeN
+    # if the pattern is not correct or if there is an unknown type we exit
+    type_arg = arguments.type
     types = []
-    if type:
-        type = type.lower().strip()
-        m = re.match(r'^([a-z]+,?)+$', type)
-        if not m:
+    if type_arg:
+        type_arg = type_arg.lower().strip()
+        type_match = re.match(r'^([a-z]+,?)+$', type_arg)
+        if not type_match:
             print_error("This type of scan is not valid")
             sys.exit(1)
 
         valid_types = type_map.keys()
-        incorrect_types = [t for t in type.split(',') if t not in valid_types]
+        incorrect_types = [t for t in type_arg.split(',') if t not in valid_types]
         if incorrect_types:
-            print_error("This type of scan is not in the list: {0}".format(','.join(incorrect_types)))
+            incorrect_types_str = ','.join(incorrect_types)
+            print_error(f"This type of scan is not in the list: {incorrect_types_str}")
             sys.exit(1)
 
-        types = list(set(type.split(",")))
+        types = list(set(type_arg.split(',')))
 
-    # ~ validating range
+    # validating range
     rvl_ip_list = []
     if arguments.range:
         rvl_ip_list = process_range(arguments.range)
-        # ~ if the provided range is not valid, we exit
+        # if the provided range is not valid, we exit
         if not rvl_ip_list:
             print_error("Invalid Address/CIDR or Address Range provided.")
             sys.exit(1)
 
-        # ~ otherwise, we update type list
+        # otherwise, we update type list
         if 'rvl' not in types:
             types.append('rvl')
 
-    # ~ validating domain
-    # ~ we check if the domain param is required
+    # validating domain
+    # we check if the domain param is required
     domain_required = []
     if types:
-        # ~ combining the types and the type_map, we obtain domain_required
-        # ~ which is a list of bool where True means domain required
+        # combining the types and the type_map, we obtain domain_required
+        # which is a list of bool where True means domain required
         domain_required = [type_map[t]['domain'] for t in types]
     else:
-        # ~ if types in empty, we will perform a general_enum
-        # ~ which needs the domain parameter. For this reason,
-        # ~ we manually add True to the domain_required
+        # if types in empty, we will perform a general_enum
+        # which needs the domain parameter. For this reason,
+        # we manually add True to the domain_required
         domain_required = [True]
 
-    # ~ any() returns True if there's any truth value
-    # ~ in the domain_required list, i.e. if domain in required
+    # any() returns True if there's any truth value
+    # in the domain_required list, i.e. if domain in required
     if any(domain_required) and not arguments.domain:
         print_error("A domain name is required")
         sys.exit(1)
 
-    # ~ here domain can be assigned. If it is not required
-    # ~ domain will be None
+    # here domain can be assigned. If it is not required
+    # domain will be None
     domain = arguments.domain
 
-    # ~ if we don't have any types, but we have a domain
-    # ~ we will perform a general DNS enumeration (type: std),
-    # ~ so we add it to the types!
+    # if we don't have any types, but we have a domain
+    # we will perform a general DNS enumeration (type: std),
+    # so we add it to the types!
     if not types and domain:
         types = ['std']
 
-    # ~ validate user provided name server(s)
+    # validate user provided name server(s)
     ns_server = []
     if arguments.ns_server:
         ns_raw_list = list(set(arguments.ns_server.strip().split(",")))
@@ -1552,48 +1553,45 @@ Possible types:
             print_error('Please specify valid name servers.')
             sys.exit(1)
 
-        # ~ remove duplicated
+        # remove duplicated
         ns_server = list(set(ns_server))
 
-    # ~ validating dictionary parameter
+    # validating dictionary parameter
     dictionary_required = []
     if types:
-        # ~ combining the types and the type_map, we obtain
-        # ~ dictionary_required which is a list of bool
-        # ~ where True means that a dictionary file is required
+        # combining the types and the type_map, we obtain
+        # dictionary_required which is a list of bool
+        # where True means that a dictionary file is required
         dictionary_required = [type_map[t]['dictionary'] for t in types]
 
-    # ~ if a dictionary file is required,
-    # ~ we check that user has provided a valid one
+    dictionary = ""
     if any(dictionary_required):
+        # we generate a list of possible dictionary files
+        script_dir = os.path.dirname(os.path.realpath(__file__)) + os.sep
+        dictionaries = ['/etc/dnsrecon/namelist.txt', script_dir + 'namelist.txt']
+
+        # if the user has provided a custom dictionary file,
+        # we insert it as first entry of the list
         if arguments.dictionary:
-            d = arguments.dictionary.strip()
-            # ~ if the dictionary file provided by the user is valid,
-            # ~ we use it
-            if os.path.isfile(d):
-                dictionary = d
-            else:
-                print_error('The provided dictionary file does not exist!')
-                sys.exit(1)
+            arguments.dictionary = arguments.dictionary.strip()
+            dictionaries.insert(0, arguments.dictionary)
         else:
-            # ~ otherwise we try to load a default dictionary file
             print_status('No dictionary file has been specified.')
-            script_dir = os.path.dirname(os.path.realpath(__file__)) + os.sep
-            dictionaries = ['/etc/dnsrecon/namelist.txt', script_dir + 'namelist.txt']
 
-            dictionary = ""
-            for d in dictionaries:
-                if os.path.isfile(d):
-                    dictionary = d
-                    break
+        # we individuate the first valid dictionary file,
+        # among those in the list
+        for dict_ in dictionaries:
+            if os.path.isfile(dict_):
+                dictionary = dict_
+                break
 
-            if not dictionary:
-                # ~ if we cannot find a valid dictionary file,
-                # ~ we exit
-                print_error("Cannot find the dictionary file provided with the tool.")
-                sys.exit(1)
+        # if we don't have a valid dictionary file, we exit
+        if not dictionary:
+            print_error("No valid dictionary files have been specified or found within the tool")
+            sys.exit(1)
 
-        print_status(f"Using the dictionary file: {dictionary}")
+        dict_type = "user" if arguments.dictionary == dictionary else "tool"
+        print_status(f"Using the dictionary file: {dictionary} (provided by {dict_type})")
 
     if arguments.threads:
         thread_num = int(arguments.threads)
@@ -1605,7 +1603,7 @@ Possible types:
     csv_file = arguments.csv
     json_file = arguments.json
 
-    # ~ this flag summarises if the program has to output
+    # this flag summarises if the program has to output
     do_output = bool(output_file or results_db or csv_file or json_file)
 
     verbose = arguments.verbose
@@ -1628,114 +1626,112 @@ Possible types:
 
     scan_info = [" ".join(sys.argv), str(datetime.datetime.now())]
 
-    # ~ we have finished to validate params,
-    # ~ we can start the execution
-    for t in types:
+    # we have finished to validate params,
+    # we can start the execution
+    for type_ in types:
 
-        # ~ we check if this type of scan requires the domain
-        if type_map[t]['domain'] and not domain:
-            print_error(f"{t}: No Domain to target specified!")
+        # we check if this type of scan requires the domain
+        if type_map[type_]['domain'] and not domain:
+            print_error(f"{type_}: No Domain to target specified!")
             sys.exit(1)
 
         try:
-            # ~ here we start checking for the different types
-            if t == 'axfr':
-                # ~ print_status(f"{t}: Testing NS Server(s) for Zone Transfer...")
+            # here we start checking for the different types
+            if type_ == 'axfr':
                 zonercds = res.zone_transfer()
                 if not zonercds:
-                    print_error(f"{t}: No records were returned.")
+                    print_error(f"{type_}: No records were returned.")
                     continue
 
                 returned_records.extend(zonercds)
 
-            elif t == 'std':
-                print_status(f"{t}: Performing General Enumeration against: {domain}...")
+            elif type_ == 'std':
+                print_status(f"{type_}: Performing General Enumeration against: {domain}...")
                 std_enum_records = general_enum(res, domain, xfr, bing, yandex,
                                                 spf_enum, do_whois, do_crt, zonewalk,
                                                 thread_num=thread_num)
                 if do_output:
                     returned_records.extend(std_enum_records)
 
-            elif t == 'rvl':
+            elif type_ == 'rvl':
                 if not rvl_ip_list:
-                    print_error(f"{t}: Invalid Address/CIDR or Address Range provided.")
+                    print_error(f"{type_}: Invalid Address/CIDR or Address Range provided.")
                     continue
 
-                # ~ print_status(f"{t}: Performing Reverse Look-up for {rvl_ip_list}...")
                 rvl_enum_records = brute_reverse(res, rvl_ip_list, verbose,
                                                  thread_num=thread_num)
                 if do_output:
                     returned_records.extend(rvl_enum_records)
 
-            elif t == 'brt':
-                # ~ here we are ready to perform the bruteforce
-                print_status(f"{t}: Performing host and subdomain brute force against {domain}...")
+            elif type_ == 'brt':
+                # here we are ready to perform the bruteforce
+                print_status(f"{type_}: Performing host and subdomain brute force against {domain}...")
                 brt_enum_records = brute_domain(res, dictionary, domain,
                                                 wildcard_filter, verbose, ignore_wildcardrr,
                                                 thread_num=thread_num)
                 if do_output:
                     returned_records.extend(brt_enum_records)
 
-            elif t == 'srv':
-                print_status(f"{t}: Enumerating Common SRV Records against {domain}...")
+            elif type_ == 'srv':
+                print_status(f"{type_}: Enumerating Common SRV Records against {domain}...")
                 srv_enum_records = brute_srv(res, domain, verbose, thread_num=thread_num)
                 if do_output:
                     returned_records.extend(srv_enum_records)
 
-            elif t == "tld":
-                print_status(f"{t}: Performing TLD Brute force Enumeration against {domain}...")
+            elif type_ == "tld":
+                print_status(f"{type_}: Performing TLD Brute force Enumeration against {domain}...")
                 tld_enum_records = brute_tlds(res, domain, verbose, thread_num=thread_num)
                 if do_output:
                     returned_records.extend(tld_enum_records)
 
-            elif t == "bing":
-                print_status(f"{t}: Performing Bing Search Enumeration against {domain}...")
+            elif type_ == "bing":
+                print_status(f"{type_}: Performing Bing Search Enumeration against {domain}...")
                 bing_enum_records = se_result_process(res, scrape_bing(domain))
                 if do_output:
                     returned_records.extend(bing_enum_records)
 
-            elif t == "yand":
-                print_status(f"{t}: Performing Yandex Search Enumeration against {domain}...")
+            elif type_ == "yand":
+                print_status(f"{type_}: Performing Yandex Search Enumeration against {domain}...")
                 yandex_enum_records = se_result_process(res, scrape_yandex(domain))
                 if do_output:
                     returned_records.extend(yandex_enum_records)
 
-            elif t == "crt":
-                print_status(f"{t}: Performing Crt.sh Search Enumeration against {domain}...")
+            elif type_ == "crt":
+                print_status(f"{type_}: Performing Crt.sh Search Enumeration against {domain}...")
                 crt_enum_records = se_result_process(res, scrape_crtsh(domain))
                 if do_output:
                     returned_records.extend(crt_enum_records)
 
-            elif t == "snoop":
+            elif type_ == "snoop":
                 if not (dictionary and ns_server):
-                    print_error(f"{t}: A dictionary file and at least one Name Server have to be specified!")
+                    print_error(f"{type_}: A dictionary file and at least one Name Server have to be specified!")
                     continue
 
-                print_status(f"{t}: Performing Cache Snooping against NS Server: {ns_server[0]}...")
+                print_status(f"{type_}: Performing Cache Snooping against NS Server: {ns_server[0]}...")
                 cache_enum_records = in_cache(res, dictionary, ns_server[0])
                 if do_output:
                     returned_records.extend(cache_enum_records)
 
-            elif t == "zonewalk":
+            elif type_ == "zonewalk":
                 zonewalk_result = ds_zone_walk(res, domain, request_timeout)
                 if do_output:
                     returned_records.extend(zonewalk_result)
 
             else:
-                print_error(f"{t}: This type of scan is not in the list.")
+                print_error(f"{type_}: This type of scan is not in the list.")
 
         except dns.resolver.NXDOMAIN:
             print_error(f"Could not resolve domain: {domain}")
             sys.exit(1)
 
         except dns.exception.Timeout:
-            print_error("A timeout error occurred please make sure you can reach the target DNS Servers")
-            print_error(f"directly and requests are not being filtered. Increase the timeout from {request_timeout} seconds")
-            print_error("to a higher number with --lifetime <time> option.")
+            print_error(f"""A timeout error occurred.
+Please make sure you can reach the target DNS Servers directly and requests are not being filtered.
+Increase the timeout from {request_timeout} seconds to a higher number with --lifetime <time> option.""")
             sys.exit(1)
 
-    # ~ if the program has not exited,
-    # ~ we can check if output is needed
+    # if the program has not exited,
+    # we can check if output is needed
 
     # if an output xml file is specified it will write returned results.
     if output_file:
