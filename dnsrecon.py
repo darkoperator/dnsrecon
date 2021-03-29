@@ -3,7 +3,7 @@
 
 #    DNSRecon
 #
-#    Copyright (C) 2020  Carlos Perez
+#    Copyright (C) 2021  Carlos Perez
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
