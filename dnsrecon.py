@@ -31,7 +31,7 @@ requires netaddr https://github.com/drkjam/netaddr/
 
 """
 
-import argparse
+from argparse import ArgumentParser, RawTextHelpFormatter
 import os
 from string import ascii_letters, digits
 import sqlite3
@@ -510,28 +510,33 @@ def in_cache(res, dict_file, ns):
     return found_records
 
 
-def se_result_process(res, found_hosts):
+def se_result_process(res, se_entries):
     """
     This function processes the results returned from a Search Engine and does
     an A and AAAA query for the IP of the found host. Prints and returns a dictionary
     with all the results found.
     """
-    returned_records = []
-    if found_hosts is None:
+    if not se_entries:
         return None
-    for sd in found_hosts:
-        for sdip in res.get_ip(sd):
-            if re.search(r"^A|CNAME", sdip[0]):
-                print_status("\t {0} {1} {2}".format(sdip[0], sdip[1], sdip[2]))
-                if re.search(r"^A", sdip[0]):
-                    returned_records.extend([{"type": sdip[0], "name": sdip[1],
-                                              "address": sdip[2]}])
-                else:
-                    returned_records.extend([{"type": sdip[0], "name": sdip[1],
-                                              "target": sdip[2]}])
 
-    print_good("{0} Records Found".format(len(returned_records)))
-    return returned_records
+    resolved_se_entries = []
+    for se_entry in se_entries:
+        for type_, name_, address_or_target_ in res.get_ip(se_entry):
+            if type_ not in ['A', 'CNAME']:
+                continue
+
+            print_status(f"\t {type_} {name_} {address_or_target_}")
+            resolved_se_entry = {"type": type_, "name": name_}
+
+            if type_ == 'A':
+                resolved_se_entry["address"] = address_or_target_
+            elif type_ == 'CNAME':
+                resolved_se_entry["target"] = address_or_target_
+
+            resolved_se_entries.append(resolved_se_entry)
+
+    print_good(f"{len(resolved_se_entries)} Records Found")
+    return resolved_se_entries
 
 
 def get_whois_nets_iplist(ip_list):
@@ -1348,11 +1353,7 @@ def main():
     #
 
     returned_records = []
-    domain = None
-    ns_server = None
     output_file = None
-    dictionary = None
-    type = None
     xfr = None
     bing = False
     yandex = False
@@ -1366,7 +1367,6 @@ def main():
 
     # https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.as_completed
     request_timeout = 3.0
-    ip_list = []
     results_db = None
     zonewalk = False
     csv_file = None
@@ -1382,7 +1382,7 @@ def main():
     #
     # Define options
     #
-    parser = argparse.ArgumentParser()
+    parser = ArgumentParser(formatter_class=RawTextHelpFormatter)
     try:
         parser.add_argument("-d", "--domain", type=str, dest="domain", help="Target domain.")
         parser.add_argument("-n", "--name_server", type=str, dest="ns_server", help="Domain server to use. If none is given, the SOA of the target will be used. Multiple servers can be specified using a comma separated list.")
@@ -1406,22 +1406,23 @@ def main():
         parser.add_argument("--iw", help="Continue brute forcing a domain even if a wildcard record is discovered.", action="store_true")
         parser.add_argument("--disable_check_recursion", help="Disables check for recursion on name servers", action="store_true")
         parser.add_argument("--disable_check_bindversion", help="Disables check for BIND version on name servers", action="store_true")
-        parser.add_argument("-V", help="Show DNSrecon version", action="store_true")
-        parser.add_argument("-v", help="Enable verbose", action="store_true")
+        parser.add_argument("-V", "--version", help="Show DNSrecon version", action="store_true")
+        parser.add_argument("-v", "--verbose", help="Enable verbose", action="store_true")
         parser.add_argument("-t", "--type", type=str, dest="type", help="""Type of enumeration to perform.
-                               std:       SOA, NS, A, AAAA, MX and SRV.
-                               rvl:       Reverse lookup of a given CIDR or IP range.
-                               brt:       Brute force domains and hosts using a given dictionary.
-                               srv:       SRV records.
-                               axfr:      Test all NS servers for a zone transfer.
-                               bing:      Perform Bing search for subdomains and hosts.
-                               yand:      Perform Yandex search for subdomains and hosts.
-                               crt:       Perform crt.sh search for subdomains and hosts.
-                               snoop:     Perform cache snooping against all NS servers for a given domain, testing
-                                          all with file containing the domains, file given with -D option.
+Possible types:
+    std:      SOA, NS, A, AAAA, MX and SRV.
+    rvl:      Reverse lookup of a given CIDR or IP range.
+    brt:      Brute force domains and hosts using a given dictionary.
+    srv:      SRV records.
+    axfr:     Test all NS servers for a zone transfer.
+    bing:     Perform Bing search for subdomains and hosts.
+    yand:     Perform Yandex search for subdomains and hosts.
+    crt:      Perform crt.sh search for subdomains and hosts.
+    snoop:    Perform cache snooping against all NS servers for a given domain, testing
+              all with file containing the domains, file given with -D option.
 
-                              tld:       Remove the TLD of given domain and test against all TLDs registered in IANA.
-                              zonewalk:  Perform a DNSSEC zone walk using NSEC records.""")
+    tld:      Remove the TLD of given domain and test against all TLDs registered in IANA.
+    zonewalk: Perform a DNSSEC zone walk using NSEC records.""")
         arguments = parser.parse_args()
 
     except SystemExit:
@@ -1431,69 +1432,181 @@ def main():
         print_error("Wrong Option Provided!")
         parser.print_help()
         sys.exit(1)
+
+    # if no arguments have been provided,
+    # we exit and print program usage
+    if not len(sys.argv) > 1:
+        parser.print_usage()
+        sys.exit(0)
+
+    # a "map" that specifies if a type of scan needs
+    # the domain and the dictionary
+    type_map = {
+        'axfr': {'domain': True, 'dictionary': False},
+        'std': {'domain': True, 'dictionary': False},
+        'srv': {'domain': True, 'dictionary': False},
+        'tld': {'domain': True, 'dictionary': False},
+        'bing': {'domain': True, 'dictionary': False},
+        'yand': {'domain': True, 'dictionary': False},
+        'crt': {'domain': True, 'dictionary': False},
+        'rvl': {'domain': False, 'dictionary': False},
+        'zonewalk': {'domain': True, 'dictionary': False},
+        'brt': {'domain': True, 'dictionary': True},
+        'snoop': {'domain': False, 'dictionary': True},
+    }
+
     #
     # Parse options
     #
-    type = arguments.type
+
+    # if user requests tool version, we print it and exit
+    if arguments.version:
+        print(f"DNSRecon version {__version__} ( http://www.darkoperator.com )")
+        sys.exit(0)
+
+    # validating type param which is in the form: type1,type2,...,typeN
+    # if the pattern is not correct or if there is an unknown type we exit
+    type_arg = arguments.type
+    types = []
+    if type_arg:
+        type_arg = type_arg.lower().strip()
+        type_match = re.match(r'^([a-z]+,?)+$', type_arg)
+        if not type_match:
+            print_error("This type of scan is not valid")
+            sys.exit(1)
+
+        valid_types = type_map.keys()
+        incorrect_types = [t for t in type_arg.split(',') if t not in valid_types]
+        if incorrect_types:
+            incorrect_types_str = ','.join(incorrect_types)
+            print_error(f"This type of scan is not in the list: {incorrect_types_str}")
+            sys.exit(1)
+
+        types = list(set(type_arg.split(',')))
+
+    # validating range
+    rvl_ip_list = []
+    if arguments.range:
+        rvl_ip_list = process_range(arguments.range)
+        # if the provided range is not valid, we exit
+        if not rvl_ip_list:
+            print_error("Invalid Address/CIDR or Address Range provided.")
+            sys.exit(1)
+
+        # otherwise, we update type list
+        if 'rvl' not in types:
+            types.append('rvl')
+
+    # validating domain
+    # we check if the domain param is required
+    domain_required = []
+    if types:
+        # combining the types and the type_map, we obtain domain_required
+        # which is a list of bool where True means domain required
+        domain_required = [type_map[t]['domain'] for t in types]
+    else:
+        # if types in empty, we will perform a general_enum
+        # which needs the domain parameter. For this reason,
+        # we manually add True to the domain_required
+        domain_required = [True]
+
+    # any() returns True if there's any truth value
+    # in the domain_required list, i.e. if domain in required
+    if any(domain_required) and not arguments.domain:
+        print_error("A domain name is required")
+        sys.exit(1)
+
+    # here domain can be assigned. If it is not required
+    # domain will be None
     domain = arguments.domain
-    app_version = arguments.V
 
-    if app_version:
-        print(f'{__version__}')
+    # if we don't have any types, but we have a domain
+    # we will perform a general DNS enumeration (type: std),
+    # so we add it to the types!
+    if not types and domain:
+        types = ['std']
 
+    # validate user provided name server(s)
+    ns_server = []
     if arguments.ns_server:
-        ns_server = []
-        ns_raw_list = list(set(arguments.ns_server.split(",")))
+        ns_raw_list = list(set(arguments.ns_server.strip().split(",")))
         for entry in ns_raw_list:
             if check_nxdomain_hijack(entry):
                 continue
+
             if netaddr.valid_glob(entry):
                 ns_server.append(entry)
+                continue
+
+            # Resolve in the case if FQDN
+            answer = socket_resolv(entry)
+            # Check we actually got a list
+            if len(answer) > 0:
+                # We will use the first IP found as the NS
+                ns_server.append(answer[0][2])
             else:
-                # Resolve in the case if FQDN
-                answer = socket_resolv(entry)
-                # Check we actually got a list
-                if len(answer) > 0:
-                    # We will use the first IP found as the NS
-                    ns_server.append(answer[0][2])
-                else:
-                    # Exit if we cannot resolve it
-                    print_error(f"Could not resolve NS server provided and server doesn't appear to be an IP: {entry}")
+                # Exit if we cannot resolve it
+                print_error(f"Could not resolve NS server provided and server doesn't appear to be an IP: {entry}")
 
         # User specified name servers but none of them validated
-        if len(ns_server) == 0:
+        if not ns_server:
             print_error('Please specify valid name servers.')
             sys.exit(1)
 
-    output_file = arguments.xml
+        # remove duplicated
+        ns_server = list(set(ns_server))
 
-    if arguments.dictionary:
-        # print(arguments.dictionary)
-        if os.path.isfile(arguments.dictionary.strip()):
-            dictionary = arguments.dictionary.strip()
-        else:
-            print_error(f'File {arguments.dictionary.strip()} does not exist!')
-            exit(1)
+    # validating dictionary parameter
+    dictionary_required = []
+    if types:
+        # combining the types and the type_map, we obtain
+        # dictionary_required which is a list of bool
+        # where True means that a dictionary file is required
+        dictionary_required = [type_map[t]['dictionary'] for t in types]
 
-    if arguments.range:
-        ip_list = process_range(arguments.range)
-        if len(ip_list) > 0:
-            if type is None:
-                type = "rvl"
-            elif not re.search(r"rvl", type):
-                type = "rvl," + type
+    dictionary = ""
+    if any(dictionary_required):
+        # we generate a list of possible dictionary files
+        script_dir = os.path.dirname(os.path.realpath(__file__)) + os.sep
+        dictionaries = ['/etc/dnsrecon/namelist.txt', script_dir + 'namelist.txt']
+
+        # if the user has provided a custom dictionary file,
+        # we insert it as first entry of the list
+        if arguments.dictionary:
+            arguments.dictionary = arguments.dictionary.strip()
+            dictionaries.insert(0, arguments.dictionary)
         else:
-            print_error('Failed CIDR or Range is Required for type rvl')
+            print_status('No dictionary file has been specified.')
+
+        # we individuate the first valid dictionary file,
+        # among those in the list
+        for dict_ in dictionaries:
+            if os.path.isfile(dict_):
+                dictionary = dict_
+                break
+
+        # if we don't have a valid dictionary file, we exit
+        if not dictionary:
+            print_error("No valid dictionary files have been specified or found within the tool")
+            sys.exit(1)
+
+        dict_type = "user" if arguments.dictionary == dictionary else "tool"
+        print_status(f"Using the dictionary file: {dictionary} (provided by {dict_type})")
 
     if arguments.threads:
         thread_num = int(arguments.threads)
 
     request_timeout = float(arguments.lifetime)
 
+    output_file = arguments.xml
     results_db = arguments.db
     csv_file = arguments.csv
     json_file = arguments.json
-    verbose = arguments.v
+
+    # this flag summarises if the program has to output
+    do_output = bool(output_file or results_db or csv_file or json_file)
+
+    verbose = arguments.verbose
     ignore_wildcardrr = arguments.iw
     CONFIG['disable_check_recursion'] = arguments.disable_check_recursion
     CONFIG['disable_check_bindversion'] = arguments.disable_check_bindversion
@@ -1507,214 +1620,142 @@ def main():
     spf_enum = arguments.s
     wildcard_filter = arguments.f
     proto = "tcp" if arguments.tcp else "udp"
-    # Setting the number of threads to 10
+
     # Set the resolver
     res = DnsHelper(domain, ns_server, request_timeout, proto)
 
-    domain_req = ['axfr', 'std', 'srv', 'tld', 'bing', 'yand', 'crt', 'zonewalk']
     scan_info = [" ".join(sys.argv), str(datetime.datetime.now())]
 
-    if type is not None:
+    # we have finished to validate params,
+    # we can start the execution
+    for type_ in types:
 
-        # Check for any illegal enumeration types from the user
-        valid_types = ['axfr', 'std', 'rvl', 'brt', 'srv', 'tld', 'bing', 'yand', 'crt', 'snoop', 'zonewalk']
-        incorrect_types = [t for t in type.split(',') if t not in valid_types]
-        if incorrect_types:
-            print_error("This type of scan is not in the list: {0}".format(','.join(incorrect_types)))
+        # we check if this type of scan requires the domain
+        if type_map[type_]['domain'] and not domain:
+            print_error(f"{type_}: No Domain to target specified!")
             sys.exit(1)
 
-        for r in type.split(','):
-            if r in domain_req and domain is None:
-                print_error('No Domain to target specified!')
-                sys.exit(1)
-
-            try:
-                if r == 'axfr':
-                    print_status('Testing NS Servers for Zone Transfer')
-                    zonercds = res.zone_transfer()
-                    if zonercds:
-                        returned_records.extend(zonercds)
-                    else:
-                        print_error('No records were returned in the zone transfer attempt.')
-
-                elif r == 'std':
-                    print_status(f'Performing General Enumeration of Domain: {domain}')
-                    std_enum_records = general_enum(res, domain, xfr, bing, yandex, spf_enum, do_whois, do_crt, zonewalk,
-                                                    thread_num=thread_num)
-
-                    if (output_file is not None) or (results_db is not None) or (csv_file is not None) or (
-                            json_file is not None):
-                        returned_records.extend(std_enum_records)
-
-                elif r == 'rvl':
-                    if len(ip_list) > 0:
-                        print_status('Reverse Look-up of a Range')
-                        rvl_enum_records = brute_reverse(res, ip_list, verbose, thread_num=thread_num)
-
-                        if (output_file is not None) or (results_db is not None) or (csv_file is not None) or (
-                                json_file is not None):
-                            returned_records.extend(rvl_enum_records)
-                    else:
-                        print_error('Failed CIDR or Range is Required for type rvl')
-
-                elif r == 'brt':
-                    if (dictionary is not None) and (domain is not None):
-                        print_status(f"Performing host and subdomain brute force against {domain}")
-                        brt_enum_records = brute_domain(res, dictionary, domain, wildcard_filter, verbose,
-                                                        ignore_wildcardrr,
-                                                        thread_num=thread_num)
-
-                        if (output_file is not None) or (results_db is not None) or (csv_file is not None) or (
-                                json_file is not None):
-                            returned_records.extend(brt_enum_records)
-                    elif domain is not None:
-                        script_dir = os.path.dirname(os.path.realpath(__file__)) + os.sep
-                        print_status('No file was specified with domains to check.')
-                        name_list_dic = '/etc/dnsrecon/namelist.txt'
-                        if os.path.isfile(name_list_dic) or os.path.isfile(script_dir + 'namelist.txt'):
-                            print_status(f'Using file provided with tool: {name_list_dic}')
-                            brt_enum_records = brute_domain(res, name_list_dic, domain, wildcard_filter, verbose,
-                                                            ignore_wildcardrr, thread_num=thread_num)
-                            if (output_file is not None) or (results_db is not None) or (csv_file is not None) or (
-                                    json_file is not None):
-                                returned_records.extend(brt_enum_records)
-                        else:
-                            print_error(f'File {name_list_dic} does not exist!')
-                            exit(1)
-                    else:
-                        print_error('Could not execute a brute force enumeration. A domain was not given.')
-                        sys.exit(1)
-
-                elif r == 'srv':
-                    print_status(f'Enumerating Common SRV Records against {domain}')
-                    srv_enum_records = brute_srv(res, domain, verbose, thread_num=thread_num)
-
-                    if (output_file is not None) or (results_db is not None) or (csv_file is not None) or (
-                            json_file is not None):
-                        returned_records.extend(srv_enum_records)
-
-                elif r == "tld":
-                    print_status(f"Performing TLD Brute force Enumeration against {domain}")
-                    tld_enum_records = brute_tlds(res, domain, verbose, thread_num=thread_num)
-                    if (output_file is not None) or (results_db is not None) or (csv_file is not None) or (
-                            json_file is not None):
-                        returned_records.extend(tld_enum_records)
-
-                elif r == "bing":
-                    print_status(f"Performing Bing Search Enumeration against {domain}")
-                    bing_enum_records = se_result_process(res, scrape_bing(domain))
-                    if (output_file is not None) or (results_db is not None) or (csv_file is not None) or (
-                            json_file is not None):
-                        returned_records.extend(bing_enum_records)
-
-                elif r == "yand":
-                    print_status(f"Performing Yandex Search Enumeration against {domain}")
-                    yandex_enum_records = se_result_process(res, scrape_yandex(domain))
-                    if (output_file is not None) or (results_db is not None) or (csv_file is not None) or (
-                            json_file is not None):
-                        returned_records.extend(yandex_enum_records)
-
-                elif r == "crt":
-                    print_status(f"Performing Crt.sh Search Enumeration against {domain}")
-                    crt_enum_records = se_result_process(res, scrape_crtsh(domain))
-                    if (output_file is not None) or (results_db is not None) or (csv_file is not None) or (
-                            json_file is not None):
-                        returned_records.extend(crt_enum_records)
-
-                elif r == "snoop":
-                    if not (dictionary or ns_server):
-                        print_error('No Domain or Name Server to target specified!')
-                        sys.exit(1)
-
-                    if (output_file or results_db or csv_file or json_file):
-                        print_status(f"Performing Cache Snooping against NS Server: {ns_server}")
-                        cache_enum_records = in_cache(res, dictionary, ns_server)
-                        returned_records.extend(cache_enum_records)
-
-                elif r == "zonewalk":
-                    if (output_file is not None) or (results_db is not None) or (csv_file is not None) or (
-                            json_file is not None):
-                        returned_records.extend(ds_zone_walk(res, domain, request_timeout))
-                    else:
-                        ds_zone_walk(res, domain, request_timeout)
-
-                else:
-                    print_error(f"This type of scan is not in the list: {r}")
-
-            except dns.resolver.NXDOMAIN:
-                print_error(f"Could not resolve domain: {domain}")
-                sys.exit(1)
-
-            except dns.exception.Timeout:
-                print_error("A timeout error occurred please make sure you can reach the target DNS Servers")
-                print_error(f"directly and requests are not being filtered. Increase the timeout from {request_timeout} seconds")
-                print_error("to a higher number with --lifetime <time> option.")
-                sys.exit(1)
-
-        # if an output xml file is specified it will write returned results.
-        if output_file is not None:
-            print_status(f"Saving records to XML file: {output_file}")
-            xml_enum_doc = dns_record_from_dict(returned_records, scan_info, domain)
-            write_to_file(xml_enum_doc, output_file)
-
-        # if an output db file is specified it will write returned results.
-        elif results_db is not None:
-            print_status(f"Saving records to SQLite3 file: {results_db}")
-            create_db(results_db)
-            write_db(results_db, returned_records)
-
-        # if an output csv file is specified it will write returned results.
-        elif csv_file is not None:
-            print_status(f"Saving records to CSV file: {csv_file}")
-            write_to_file(make_csv(returned_records), csv_file)
-
-        # if an output json file is specified it will write returned results.
-        elif json_file is not None:
-            print_status(f"Saving records to JSON file: {json_file}")
-            write_json(json_file, returned_records, scan_info)
-
-        sys.exit(0)
-
-    elif domain is not None:
         try:
-            print_status(f"Performing General Enumeration of Domain: {domain}")
-            std_enum_records = general_enum(res, domain, xfr, bing, yandex, spf_enum, do_whois, do_crt, zonewalk)
+            # here we start checking for the different types
+            if type_ == 'axfr':
+                zonercds = res.zone_transfer()
+                if not zonercds:
+                    print_error(f"{type_}: No records were returned.")
+                    continue
 
-            returned_records.extend(std_enum_records)
+                returned_records.extend(zonercds)
 
-            # if an output xml file is specified it will write returned results.
-            if output_file is not None:
-                print_status(f"Saving records to XML file: {output_file}")
-                xml_enum_doc = dns_record_from_dict(returned_records, scan_info, domain)
-                write_to_file(xml_enum_doc, output_file)
+            elif type_ == 'std':
+                print_status(f"{type_}: Performing General Enumeration against: {domain}...")
+                std_enum_records = general_enum(res, domain, xfr, bing, yandex,
+                                                spf_enum, do_whois, do_crt, zonewalk,
+                                                thread_num=thread_num)
+                if do_output:
+                    returned_records.extend(std_enum_records)
 
-            # if an output db file is specified it will write returned results.
-            elif results_db is not None:
-                print_status(f"Saving records to SQLite3 file: {results_db}")
-                create_db(results_db)
-                write_db(results_db, returned_records)
+            elif type_ == 'rvl':
+                if not rvl_ip_list:
+                    print_error(f"{type_}: Invalid Address/CIDR or Address Range provided.")
+                    continue
 
-            # if an output csv file is specified it will write returned results.
-            elif csv_file is not None:
-                print_status(f"Saving records to CSV file: {csv_file}")
-                write_to_file(make_csv(returned_records), csv_file)
+                rvl_enum_records = brute_reverse(res, rvl_ip_list, verbose,
+                                                 thread_num=thread_num)
+                if do_output:
+                    returned_records.extend(rvl_enum_records)
 
-                # if an output json file is specified it will write returned results.
-            elif json_file is not None:
-                print_status(f"Saving records to JSON file: {json_file}")
-                write_json(json_file, returned_records, scan_info)
-            sys.exit(0)
+            elif type_ == 'brt':
+                # here we are ready to perform the bruteforce
+                print_status(f"{type_}: Performing host and subdomain brute force against {domain}...")
+                brt_enum_records = brute_domain(res, dictionary, domain,
+                                                wildcard_filter, verbose, ignore_wildcardrr,
+                                                thread_num=thread_num)
+                if do_output:
+                    returned_records.extend(brt_enum_records)
+
+            elif type_ == 'srv':
+                print_status(f"{type_}: Enumerating Common SRV Records against {domain}...")
+                srv_enum_records = brute_srv(res, domain, verbose, thread_num=thread_num)
+                if do_output:
+                    returned_records.extend(srv_enum_records)
+
+            elif type_ == "tld":
+                print_status(f"{type_}: Performing TLD Brute force Enumeration against {domain}...")
+                tld_enum_records = brute_tlds(res, domain, verbose, thread_num=thread_num)
+                if do_output:
+                    returned_records.extend(tld_enum_records)
+
+            elif type_ == "bing":
+                print_status(f"{type_}: Performing Bing Search Enumeration against {domain}...")
+                bing_enum_records = se_result_process(res, scrape_bing(domain))
+                if do_output:
+                    returned_records.extend(bing_enum_records)
+
+            elif type_ == "yand":
+                print_status(f"{type_}: Performing Yandex Search Enumeration against {domain}...")
+                yandex_enum_records = se_result_process(res, scrape_yandex(domain))
+                if do_output:
+                    returned_records.extend(yandex_enum_records)
+
+            elif type_ == "crt":
+                print_status(f"{type_}: Performing Crt.sh Search Enumeration against {domain}...")
+                crt_enum_records = se_result_process(res, scrape_crtsh(domain))
+                if do_output:
+                    returned_records.extend(crt_enum_records)
+
+            elif type_ == "snoop":
+                if not (dictionary and ns_server):
+                    print_error(f"{type_}: A dictionary file and at least one Name Server have to be specified!")
+                    continue
+
+                print_status(f"{type_}: Performing Cache Snooping against NS Server: {ns_server[0]}...")
+                cache_enum_records = in_cache(res, dictionary, ns_server[0])
+                if do_output:
+                    returned_records.extend(cache_enum_records)
+
+            elif type_ == "zonewalk":
+                zonewalk_result = ds_zone_walk(res, domain, request_timeout)
+                if do_output:
+                    returned_records.extend(zonewalk_result)
+
+            else:
+                print_error(f"{type_}: This type of scan is not in the list.")
+
         except dns.resolver.NXDOMAIN:
             print_error(f"Could not resolve domain: {domain}")
             sys.exit(1)
 
         except dns.exception.Timeout:
-            print_error("A timeout error occurred please make sure you can reach the target DNS Servers")
-            print_error("directly and requests are not being filtered. Increase the timeout")
-            print_error("to a higher number with --lifetime <time> option.")
+            print_error(f"""A timeout error occurred.
+Please make sure you can reach the target DNS Servers directly and requests are not being filtered.
+Increase the timeout from {request_timeout} seconds to a higher number with --lifetime <time> option.""")
             sys.exit(1)
-    else:
-        sys.exit(1)
+
+    # if the program has not exited,
+    # we can check if output is needed
+
+    # if an output xml file is specified it will write returned results.
+    if output_file:
+        print_status(f"Saving records to XML file: {output_file}")
+        xml_enum_doc = dns_record_from_dict(returned_records, scan_info, domain)
+        write_to_file(xml_enum_doc, output_file)
+
+    # if an output db file is specified it will write returned results.
+    if results_db:
+        print_status(f"Saving records to SQLite3 file: {results_db}")
+        create_db(results_db)
+        write_db(results_db, returned_records)
+
+    # if an output csv file is specified it will write returned results.
+    if csv_file:
+        print_status(f"Saving records to CSV file: {csv_file}")
+        write_to_file(make_csv(returned_records), csv_file)
+
+    # if an output json file is specified it will write returned results.
+    if json_file:
+        print_status(f"Saving records to JSON file: {json_file}")
+        write_json(json_file, returned_records, scan_info)
+
+    sys.exit(0)
 
 
 if __name__ == "__main__":
