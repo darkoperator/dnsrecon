@@ -1,5 +1,4 @@
 FROM python:alpine3.13
-RUN mkdir /app
 WORKDIR /app
 COPY . /app
 RUN apk add --update --no-cache build-base libffi-dev libxml2-dev libxslt-dev
