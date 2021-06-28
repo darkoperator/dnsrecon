@@ -37,7 +37,15 @@ def scrape_bing(dom):
 
     for n in searches:
         url = "http://www.bing.com/search?q=domain%3A" + dom + "&qs=n&first=" + n
-        sock = urllib.request.urlopen(url)
+        req = urllib.request.Request(
+            url,
+            data=None,
+            headers={
+                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/35.0.1916.47 Safari/537.36'
+            }
+        )
+
+        sock = urllib.request.urlopen(req, timeout=10)
         data = sock.read().decode("utf-8")
         results.extend(re.findall(r"([a-zA-Z0-9\-.]+" + dom + ")/?", data))
         sock.close()

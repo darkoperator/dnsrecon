@@ -453,7 +453,7 @@ def brute_domain(res, dictfile, dom, filter_=None, verbose=False, ignore_wildcar
             if type_ in ['A', 'AAAA']:
                 # Filter Records if filtering was enabled
                 if filter_:
-                    if address_or_target_ not in wildcard_set:
+                    if wildcard_set and address_or_target_ not in wildcard_set:
                         print_and_append = True
                         found_dict["address"] = address_or_target_
                 else:
@@ -907,7 +907,7 @@ def check_recursive(res, ns_server, timeout):
     return is_recursive
 
 
-def general_enum(res, domain, do_axfr, do_bing, do_yandex, do_spf, do_whois, do_crt, zw, thread_num=None):
+def general_enum(res, domain, do_axfr, do_bing, do_yandex, do_spf, do_whois, do_crt, zw, request_timeout, thread_num=None):
     """
     Function for performing general enumeration of a domain. It gets SOA, NS, MX
     A, AAAA and SRV records for a given domain. It will first try a Zone Transfer
@@ -1073,10 +1073,11 @@ def general_enum(res, domain, do_axfr, do_bing, do_yandex, do_spf, do_whois, do_
         if do_crt:
             print_status("Performing Crt.sh Search Enumeration")
             crt_rcd = se_result_process(res, scrape_crtsh(domain))
-            for r in crt_rcd:
-                if "address" in crt_rcd:
-                    ip_for_whois.append(r["address"])
-            returned_records.extend(crt_rcd)
+            if crt_rcd:
+                for r in crt_rcd:
+                    if "address" in crt_rcd:
+                        ip_for_whois.append(r["address"])
+                returned_records.extend(crt_rcd)
 
         if do_whois:
             whois_rcd = whois_ips(res, ip_for_whois)
@@ -1648,9 +1649,9 @@ Possible types:
             elif type_ == 'std':
                 print_status(f"{type_}: Performing General Enumeration against: {domain}...")
                 std_enum_records = general_enum(res, domain, xfr, bing, yandex,
-                                                spf_enum, do_whois, do_crt, zonewalk,
+                                                spf_enum, do_whois, do_crt, zonewalk, request_timeout,
                                                 thread_num=thread_num)
-                if do_output:
+                if do_output and std_enum_records:
                     returned_records.extend(std_enum_records)
 
             elif type_ == 'rvl':

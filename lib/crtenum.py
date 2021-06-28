@@ -34,7 +34,7 @@ def scrape_crtsh(dom):
 
     req = Request(url=url, headers=headers)
     try:
-        resp = urlopen(req)
+        resp = urlopen(req, timeout=30)
         data = resp.read()
     except HTTPError as e:
         print_error(f'Bad http status from crt.sh: "{e.code}"')

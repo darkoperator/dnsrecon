@@ -16,7 +16,6 @@
 #    along with this program; if not, write to the Free Software
 #    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
-
 import urllib
 import re
 import time
@@ -42,7 +41,7 @@ def scrape_yandex(dom):
     for _ in searches:
         url = "https://yandex.com/search/?text=site%3A" + dom
         try:
-            sock = urllib.request.urlopen(url)
+            sock = urllib.request.urlopen(url, timeout=10)
             data = sock.read().decode("utf-8")
             sock.close()
         except Exception as e:
