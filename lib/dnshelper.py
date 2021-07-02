@@ -82,7 +82,7 @@ class DnsHelper:
             return self._res.resolve(addr_, type_, tcp=self._is_tcp)
         except (dns.exception.Timeout, dns.resolver.NXDOMAIN,
                 dns.resolver.YXDOMAIN, dns.resolver.NoAnswer,
-                dns.resolver.NoNameservers, socket.error):
+                dns.resolver.NoNameservers, dns.name.EmptyLabel, socket.error):
             return None
 
     def resolve(self, target, type_, ns=None):
