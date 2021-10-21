@@ -1670,7 +1670,7 @@ Possible types:
                 brt_enum_records = brute_domain(res, dictionary, domain,
                                                 wildcard_filter, verbose, ignore_wildcardrr,
                                                 thread_num=thread_num)
-                if do_output:
+                if do_output and brt_enum_records:
                     returned_records.extend(brt_enum_records)
 
             elif type_ == 'srv':
