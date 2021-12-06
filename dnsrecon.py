@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#! /usr/bin/python3
 # -*- coding: utf-8 -*-
 
 #    DNSRecon
@@ -382,34 +382,36 @@ def brute_reverse(res, ip_list, verbose=False, thread_num=None):
     """
     global brtdata
     brtdata = []
+    returned_records = []
 
     print_status("Performing Reverse Lookup from {0} to {1}".format(ip_list[0], ip_list[-1]))
 
-    # Resolve each IP in a separate thread.
+    # Resolve each IP in a separate thread in groups of 255 hosts.
 
     ip_range = range(len(ip_list) - 1)
+    ip_group_size = 255
+    for ip_group in [ip_range[i:i+ip_group_size] for i in range(0, len(ip_range), ip_group_size)]:
 
-    try:
+        try:
 
-        with futures.ThreadPoolExecutor(max_workers=thread_num) as executor:
-            future_results = {executor.submit(res.get_ptr, str(ip_list[x])): x for x in ip_range}
-            brtdata = [future.result() for future in futures.as_completed(future_results)]
-            # Filter out results that are None
-            brtdata = [result for result in brtdata if result]
+            with futures.ThreadPoolExecutor(max_workers=thread_num) as executor:
+                future_results = {executor.submit(res.get_ptr, str(ip_list[x])): x for x in ip_group}
+                brtdata = [future.result() for future in futures.as_completed(future_results)]
+                # Filter out results that are None
+                brtdata = [result for result in brtdata if result]
 
-        if verbose:
-            for x in ip_range:
-                ipaddress = str(ip_list[x])
-                print_status(f"Trying {ipaddress}")
+            if verbose:
+                for x in ip_group:
+                    ipaddress = str(ip_list[x])
+                    print_status(f"Trying {ipaddress}")
 
-    except Exception as e:
-        print_error(e)
+        except Exception as e:
+            print_error(e)
 
-    returned_records = []
-    for rcd_found in brtdata:
-        for type_, name_, addr_ in rcd_found:
-            returned_records.append([{'type': type_, 'name': name_, 'address': addr_}])
-            print_good(f"\t {type_} {name_} {addr_}")
+        for rcd_found in brtdata:
+            for type_, name_, addr_ in rcd_found:
+                returned_records.append([{'type': type_, 'name': name_, 'address': addr_}])
+                print_good(f"\t {type_} {name_} {addr_}")
 
     print_good(f"{len(returned_records)} Records Found")
 
@@ -453,7 +455,7 @@ def brute_domain(res, dictfile, dom, filter_=None, verbose=False, ignore_wildcar
             if type_ in ['A', 'AAAA']:
                 # Filter Records if filtering was enabled
                 if filter_:
-                    if wildcard_set and address_or_target_ not in wildcard_set:
+                    if address_or_target_ not in wildcard_set:
                         print_and_append = True
                         found_dict["address"] = address_or_target_
                 else:
@@ -696,12 +698,12 @@ def create_db(db):
 def make_csv(data):
     csv_data = "Type,Name,Address,Target,Port,String\n"
     for record_tmp in data:
-        record = record_tmp
+        # the representation of data[i] is a list of one dictionary
+        # we want to exploit this dictionary
+        record = record_tmp[0]
         # make sure that we are working with a dictionary.
         if not isinstance(record, dict):
-            # the representation of data[i] is a list of one dictionary
-            # we want to exploit this dictionary
-            record = record_tmp[0]
+            continue
 
         type_ = record['type'].upper()
         csv_data += type_ + ","
@@ -907,7 +909,7 @@ def check_recursive(res, ns_server, timeout):
     return is_recursive
 
 
-def general_enum(res, domain, do_axfr, do_bing, do_yandex, do_spf, do_whois, do_crt, zw, request_timeout, thread_num=None):
+def general_enum(res, domain, do_axfr, do_bing, do_yandex, do_spf, do_whois, do_crt, zw, thread_num=None):
     """
     Function for performing general enumeration of a domain. It gets SOA, NS, MX
     A, AAAA and SRV records for a given domain. It will first try a Zone Transfer
@@ -1073,11 +1075,10 @@ def general_enum(res, domain, do_axfr, do_bing, do_yandex, do_spf, do_whois, do_
         if do_crt:
             print_status("Performing Crt.sh Search Enumeration")
             crt_rcd = se_result_process(res, scrape_crtsh(domain))
-            if crt_rcd:
-                for r in crt_rcd:
-                    if "address" in crt_rcd:
-                        ip_for_whois.append(r["address"])
-                returned_records.extend(crt_rcd)
+            for r in crt_rcd:
+                if "address" in crt_rcd:
+                    ip_for_whois.append(r["address"])
+            returned_records.extend(crt_rcd)
 
         if do_whois:
             whois_rcd = whois_ips(res, ip_for_whois)
@@ -1649,9 +1650,9 @@ Possible types:
             elif type_ == 'std':
                 print_status(f"{type_}: Performing General Enumeration against: {domain}...")
                 std_enum_records = general_enum(res, domain, xfr, bing, yandex,
-                                                spf_enum, do_whois, do_crt, zonewalk, request_timeout,
+                                                spf_enum, do_whois, do_crt, zonewalk,
                                                 thread_num=thread_num)
-                if do_output and std_enum_records:
+                if do_output:
                     returned_records.extend(std_enum_records)
 
             elif type_ == 'rvl':
@@ -1670,7 +1671,7 @@ Possible types:
                 brt_enum_records = brute_domain(res, dictionary, domain,
                                                 wildcard_filter, verbose, ignore_wildcardrr,
                                                 thread_num=thread_num)
-                if do_output and brt_enum_records:
+                if do_output:
                     returned_records.extend(brt_enum_records)
 
             elif type_ == 'srv':
