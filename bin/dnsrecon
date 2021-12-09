@@ -382,34 +382,36 @@ def brute_reverse(res, ip_list, verbose=False, thread_num=None):
     """
     global brtdata
     brtdata = []
+    returned_records = []
 
     print_status("Performing Reverse Lookup from {0} to {1}".format(ip_list[0], ip_list[-1]))
 
-    # Resolve each IP in a separate thread.
+    # Resolve each IP in a separate thread in groups of 255 hosts.
 
     ip_range = range(len(ip_list) - 1)
+    ip_group_size = 255
+    for ip_group in [ip_range[i:i + ip_group_size] for i in range(0, len(ip_range), ip_group_size)]:
 
-    try:
+        try:
 
-        with futures.ThreadPoolExecutor(max_workers=thread_num) as executor:
-            future_results = {executor.submit(res.get_ptr, str(ip_list[x])): x for x in ip_range}
-            brtdata = [future.result() for future in futures.as_completed(future_results)]
-            # Filter out results that are None
-            brtdata = [result for result in brtdata if result]
+            with futures.ThreadPoolExecutor(max_workers=thread_num) as executor:
+                future_results = {executor.submit(res.get_ptr, str(ip_list[x])): x for x in ip_group}
+                brtdata = [future.result() for future in futures.as_completed(future_results)]
+                # Filter out results that are None
+                brtdata = [result for result in brtdata if result]
 
-        if verbose:
-            for x in ip_range:
-                ipaddress = str(ip_list[x])
-                print_status(f"Trying {ipaddress}")
+            if verbose:
+                for x in ip_group:
+                    ipaddress = str(ip_list[x])
+                    print_status(f"Trying {ipaddress}")
 
-    except Exception as e:
-        print_error(e)
+        except Exception as e:
+            print_error(e)
 
-    returned_records = []
-    for rcd_found in brtdata:
-        for type_, name_, addr_ in rcd_found:
-            returned_records.append([{'type': type_, 'name': name_, 'address': addr_}])
-            print_good(f"\t {type_} {name_} {addr_}")
+        for rcd_found in brtdata:
+            for type_, name_, addr_ in rcd_found:
+                returned_records.append([{'type': type_, 'name': name_, 'address': addr_}])
+                print_good(f"\t {type_} {name_} {addr_}")
 
     print_good(f"{len(returned_records)} Records Found")
 
