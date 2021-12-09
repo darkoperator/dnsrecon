@@ -1246,7 +1246,7 @@ def ds_zone_walk(res, domain, lifetime):
                 nameserver = first_ns[2]
 
                 if nameserver:
-                     # At this point we should have a name server IP in 'nameserver'
+                    # At this point we should have a name server IP in 'nameserver'
                     print_status(f'Name Server {nameserver} will be used')
                     res = DnsHelper(domain, nameserver, lifetime)
 
