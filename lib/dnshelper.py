@@ -49,6 +49,8 @@ class DnsHelper:
         self._res = dns.resolver.Resolver(configure=configure)
 
         if ns_server:
+            if isinstance(ns_server, str):
+                ns_server = [ns_server]
             self._res.nameservers = ns_server
             if len(ns_server) > 1:
                 self._res.rotate = True
