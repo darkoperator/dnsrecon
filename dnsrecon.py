@@ -721,7 +721,10 @@ def make_csv(data):
 
         elif type_ in ['TXT', 'SPF']:
             if 'zone_server' not in record:
-                csv_data += record['name']
+                if type_ == 'SPF':
+                    csv_data += record["domain"]
+                else:
+                    csv_data += record['name']
 
             csv_data += ("," * 4) + "'{}'\n".format(record['strings'])
 
