@@ -1237,13 +1237,20 @@ def ds_zone_walk(res, domain, lifetime):
     nameserver = ''
 
     try:
-        soa_rcd = res.get_soa()[0][2]
+        # Get the list of SOA servers, should be a list of lists
+        target_soas = res.get_soa()
+        if target_soas:
+            first_ns = target_soas[0]
+            # The 3rd value is the SOA's IP address
+            if first_ns:
+                nameserver = first_ns[2]
 
-        print_status(f'Name Server {soa_rcd} will be used')
-        res = DnsHelper(domain, soa_rcd, lifetime)
-        nameserver = soa_rcd
+                if nameserver:
+                     # At this point we should have a name server IP in 'nameserver'
+                    print_status(f'Name Server {nameserver} will be used')
+                    res = DnsHelper(domain, nameserver, lifetime)
 
-        if nameserver == '':
+        if not nameserver:
             print_error("This zone appears to be misconfigured, no SOA record found.")
 
     except Exception as err:
