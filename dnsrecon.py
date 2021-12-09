@@ -1240,7 +1240,7 @@ def ds_zone_walk(res, domain, lifetime):
         soa_rcd = res.get_soa()[0][2]
 
         print_status(f'Name Server {soa_rcd} will be used')
-        res = DnsHelper(domain, [soa_rcd], lifetime)
+        res = DnsHelper(domain, soa_rcd, lifetime)
         nameserver = soa_rcd
 
         if nameserver == '':
