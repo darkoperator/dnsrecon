@@ -1240,10 +1240,14 @@ def ds_zone_walk(res, domain, lifetime):
         soa_rcd = res.get_soa()[0][2]
 
         print_status(f'Name Server {soa_rcd} will be used')
-        res = DnsHelper(domain, soa_rcd, lifetime)
+        res = DnsHelper(domain, [soa_rcd], lifetime)
         nameserver = soa_rcd
-    except Exception:
-        print_error("This zone appears to be misconfigured, no SOA record found.")
+
+        if nameserver == '':
+            print_error("This zone appears to be misconfigured, no SOA record found.")
+
+    except Exception as err:
+        print_error(f"Exception while trying to determine the SOA records for domain {domain}: {err}")
 
     timeout = res._res.timeout
 
