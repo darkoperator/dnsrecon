@@ -18,7 +18,7 @@
 #    along with this program; if not, write to the Free Software
 #    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
-__version__ = '0.10.1'
+__version__ = '1.0.0'
 __author__ = 'Carlos Perez, Carlos_Perez@darkoperator.com'
 
 __doc__ = """
@@ -455,7 +455,7 @@ def brute_domain(res, dictfile, dom, filter_=None, verbose=False, ignore_wildcar
             if type_ in ['A', 'AAAA']:
                 # Filter Records if filtering was enabled
                 if filter_:
-                    if address_or_target_ not in wildcard_set:
+                    if wildcard_set and address_or_target_ not in wildcard_set:
                         print_and_append = True
                         found_dict["address"] = address_or_target_
                 else:
@@ -698,12 +698,12 @@ def create_db(db):
 def make_csv(data):
     csv_data = "Type,Name,Address,Target,Port,String\n"
     for record_tmp in data:
-        # the representation of data[i] is a list of one dictionary
-        # we want to exploit this dictionary
-        record = record_tmp[0]
+        record = record_tmp
         # make sure that we are working with a dictionary.
         if not isinstance(record, dict):
-            continue
+            # the representation of data[i] is a list of one dictionary
+            # we want to exploit this dictionary
+            record = record_tmp[0]
 
         type_ = record['type'].upper()
         csv_data += type_ + ","
@@ -723,7 +723,10 @@ def make_csv(data):
 
         elif type_ in ['TXT', 'SPF']:
             if 'zone_server' not in record:
-                csv_data += record['name']
+                if type_ == 'SPF':
+                    csv_data += record["domain"]
+                else:
+                    csv_data += record['name']
 
             csv_data += ("," * 4) + "'{}'\n".format(record['strings'])
 
@@ -909,7 +912,7 @@ def check_recursive(res, ns_server, timeout):
     return is_recursive
 
 
-def general_enum(res, domain, do_axfr, do_bing, do_yandex, do_spf, do_whois, do_crt, zw, thread_num=None):
+def general_enum(res, domain, do_axfr, do_bing, do_yandex, do_spf, do_whois, do_crt, zw, request_timeout, thread_num=None):
     """
     Function for performing general enumeration of a domain. It gets SOA, NS, MX
     A, AAAA and SRV records for a given domain. It will first try a Zone Transfer
@@ -1075,10 +1078,11 @@ def general_enum(res, domain, do_axfr, do_bing, do_yandex, do_spf, do_whois, do_
         if do_crt:
             print_status("Performing Crt.sh Search Enumeration")
             crt_rcd = se_result_process(res, scrape_crtsh(domain))
-            for r in crt_rcd:
-                if "address" in crt_rcd:
-                    ip_for_whois.append(r["address"])
-            returned_records.extend(crt_rcd)
+            if crt_rcd:
+                for r in crt_rcd:
+                    if "address" in crt_rcd:
+                        ip_for_whois.append(r["address"])
+                returned_records.extend(crt_rcd)
 
         if do_whois:
             whois_rcd = whois_ips(res, ip_for_whois)
@@ -1235,13 +1239,24 @@ def ds_zone_walk(res, domain, lifetime):
     nameserver = ''
 
     try:
-        soa_rcd = res.get_soa()[0][2]
+        # Get the list of SOA servers, should be a list of lists
+        target_soas = res.get_soa()
+        if target_soas:
+            first_ns = target_soas[0]
+            # The 3rd value is the SOA's IP address
+            if first_ns:
+                nameserver = first_ns[2]
 
-        print_status(f'Name Server {soa_rcd} will be used')
-        res = DnsHelper(domain, soa_rcd, lifetime)
-        nameserver = soa_rcd
-    except Exception:
-        print_error("This zone appears to be misconfigured, no SOA record found.")
+                if nameserver:
+                    # At this point we should have a name server IP in 'nameserver'
+                    print_status(f'Name Server {nameserver} will be used')
+                    res = DnsHelper(domain, nameserver, lifetime)
+
+        if not nameserver:
+            print_error("This zone appears to be misconfigured, no SOA record found.")
+
+    except Exception as err:
+        print_error(f"Exception while trying to determine the SOA records for domain {domain}: {err}")
 
     timeout = res._res.timeout
 
@@ -1650,9 +1665,9 @@ Possible types:
             elif type_ == 'std':
                 print_status(f"{type_}: Performing General Enumeration against: {domain}...")
                 std_enum_records = general_enum(res, domain, xfr, bing, yandex,
-                                                spf_enum, do_whois, do_crt, zonewalk,
+                                                spf_enum, do_whois, do_crt, zonewalk, request_timeout,
                                                 thread_num=thread_num)
-                if do_output:
+                if do_output and std_enum_records:
                     returned_records.extend(std_enum_records)
 
             elif type_ == 'rvl':
@@ -1671,7 +1686,7 @@ Possible types:
                 brt_enum_records = brute_domain(res, dictionary, domain,
                                                 wildcard_filter, verbose, ignore_wildcardrr,
                                                 thread_num=thread_num)
-                if do_output:
+                if do_output and brt_enum_records:
                     returned_records.extend(brt_enum_records)
 
             elif type_ == 'srv':
