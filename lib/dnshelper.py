@@ -267,7 +267,7 @@ class DnsHelper:
 
         result = []
         for answer in answers:
-            strings_ = bytes.join(b'', answer.strings).decode('utf-8')
+            strings_ = bytes.join(b'', answer.strings).decode('utf-8', errors='ignore')
             result.append(['SPF', strings_])
 
         return result
@@ -288,7 +288,7 @@ class DnsHelper:
                 continue
 
             for answer in answers:
-                strings_ = bytes.join(b'', answer.strings).decode('utf-8')
+                strings_ = bytes.join(b'', answer.strings).decode('utf-8', errors='ignore')
                 result.append(['TXT', target_, strings_])
 
         return result
