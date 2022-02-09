@@ -19,7 +19,7 @@
 #    along with this program; if not, write to the Free Software
 #    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
-from dnsrecon.dnsrecon import *
+from dnsrecon import cli
 from dnsrecon.lib.dnshelper import DnsHelper
 import os
 
@@ -33,12 +33,12 @@ class Test_dnsrecon():
             fd.writelines([f"{name}\n" for name in namelist])
         helper = DnsHelper('zonetransfer.me')
         ns = '81.4.108.41'
-        result = in_cache(helper, namelist_filename, ns)
+        result = cli.in_cache(helper, namelist_filename, ns)
         os.remove(namelist_filename)
         assert len(result) == 1 and result[0]['type'] == 'A'
 
     def test_se_result_process(self):
         helper = DnsHelper('zonetransfer.me')
         hosts = ['www.megacorpone.com', 'www.zonetransfer.me']
-        result = se_result_process(helper, hosts)
+        result = cli.se_result_process(helper, hosts)
         assert len(result) >= 2

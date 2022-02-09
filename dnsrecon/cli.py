@@ -51,12 +51,12 @@ import dns.rdata
 import dns.flags
 import json
 from dns.dnssec import algorithm_to_text
-from lib.crtenum import scrape_crtsh
-from lib.bingenum import *
-from lib.yandexenum import *
-from lib.whois import *
-from lib.dnshelper import DnsHelper
-from lib.msf_print import *
+from dnsrecon.lib.crtenum import scrape_crtsh
+from dnsrecon.lib.bingenum import *
+from dnsrecon.lib.yandexenum import *
+from dnsrecon.lib.whois import *
+from dnsrecon.lib.dnshelper import DnsHelper
+from dnsrecon.lib.msf_print import *
 
 from concurrent import futures
 
@@ -1780,10 +1780,3 @@ Increase the timeout from {request_timeout} seconds to a higher number with --li
         write_json(json_file, returned_records, scan_info)
 
     sys.exit(0)
-
-
-if __name__ == "__main__":
-    try:
-        main()
-    except KeyboardInterrupt:
-        print_status('CTRL+C detected, quitting')

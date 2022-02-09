@@ -17,7 +17,7 @@
 
 
 from lxml import etree
-from lib.msf_print import *
+from dnsrecon.lib.msf_print import *
 
 
 from urllib.request import urlopen, Request
