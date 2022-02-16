@@ -1377,13 +1377,12 @@ def main():
     spf_enum = False
     do_whois = False
     do_crt = False
-    thread_num = None
+
     # By default thread_num will be None
     # If None number of workers will be default number of processors on machine * 5 with version 3.5 - 3.7
     # If using version 3.8+ will be min(32, os.cpu_count() + 4)
+    thread_num = None
 
-    # https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.as_completed
-    request_timeout = 3.0
     results_db = None
     zonewalk = False
     csv_file = None
@@ -1414,7 +1413,7 @@ def main():
         parser.add_argument("-w", help="Perform deep whois record analysis and reverse lookup of IP ranges found through Whois when doing a standard enumeration.", action="store_true")
         parser.add_argument("-z", help="Performs a DNSSEC zone walk with standard enumeration.", action="store_true")
         parser.add_argument("--threads", type=int, dest="threads", help="Number of threads to use in reverse lookups, forward lookups, brute force and SRV record enumeration.")
-        parser.add_argument("--lifetime", type=int, dest="lifetime", default=3, help="Time to wait for a server to respond to a query. default is 3")
+        parser.add_argument("--lifetime", type=float, dest="lifetime", default=3.0, help="Time to wait for a server to respond to a query. default is 3.0")
         parser.add_argument("--tcp", dest="tcp", help="Use TCP protocol to make queries.", action="store_true")
         parser.add_argument("--db", type=str, dest="db", help="SQLite 3 file to save found records.")
         parser.add_argument("-x", "--xml", type=str, dest="xml", help="XML file to save found records.")
@@ -1471,6 +1470,7 @@ Possible types:
         'brt': {'domain': True, 'dictionary': True},
         'snoop': {'domain': False, 'dictionary': True},
     }
+    valid_types = type_map.keys()
 
     #
     # Parse options
@@ -1487,12 +1487,19 @@ Possible types:
     types = []
     if type_arg:
         type_arg = type_arg.lower().strip()
-        type_match = re.match(r'^([a-z]+,?)+$', type_arg)
+
+        # we create a dynamic regex specifing min and max type length
+        # and max number of possible scan types
+        min_type_len = len(min(valid_types, key=len))
+        max_type_len = len(max(valid_types, key=len))
+        type_len = len(valid_types)
+        dynamic_regex = f"^([a-z]{{{min_type_len},{max_type_len}}},?){{,{type_len}}}$"
+
+        type_match = re.match(dynamic_regex, type_arg)
         if not type_match:
             print_error("This type of scan is not valid")
             sys.exit(1)
 
-        valid_types = type_map.keys()
         incorrect_types = [t for t in type_arg.split(',') if t not in valid_types]
         if incorrect_types:
             incorrect_types_str = ','.join(incorrect_types)
