@@ -531,7 +531,7 @@ class DnsHelper:
                                                  'weight': weight_})
                             continue
 
-                        for type_, name, addr_ in ip_list:
+                        for type_, name_, addr_ in ip_list:
                             if type_ in ['A', 'AAAA']:
                                 print_status(f"\t SRV {fqdn_} {target} {port_} {weight_} {addr_}")
                                 zone_records.append({'zone_server': ns_srv, 'type': 'SRV',
