@@ -1,4 +1,4 @@
-name: DNSrecon Python CI
+name: DNSrecon CI
 
 on:
   push:
@@ -35,6 +35,6 @@ jobs:
         # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
         flake8 . --count --exit-zero  --max-line-length=127 --statistics
     
-    - name: Test with pytest
+    - name: Run pytest tests
       run: |
         python3 -m pytest .

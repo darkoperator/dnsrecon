@@ -13,7 +13,7 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     url="https://github.com/darkoperator/dnsrecon",
     packages=setuptools.find_packages(exclude=["tests"]),
-    python_requires='>=3.6',
+    python_requires='>=3.7',
     entry_points={
         "console_scripts": [
             "dnsrecon = dnsrecon.__main__:main"
