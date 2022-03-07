@@ -21,6 +21,7 @@
 
 from dnsrecon.lib.dnshelper import DnsHelper
 from netaddr import IPAddress
+from re import match
 
 
 class Test_Lib_dnshelper():
@@ -82,4 +83,4 @@ class Test_Lib_dnshelper():
     def test_get_ptr(self):
         helper = DnsHelper('megacorpone.com')
         records = helper.get_ptr('51.79.37.18')
-        assert len(records) == 1 and records[0][1].endswith('megacorpone.com')
+        assert len(records) == 1 and match(r'^.+\.megacorpone\.com$', records[0][1])
