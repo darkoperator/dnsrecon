@@ -4,7 +4,7 @@
 #    Unit test for DNSRecon's dnshelper library
 #    Author: Filippo Lauria (@filippolauria)
 #
-#    Copyright (C) 2021  Carlos Perez
+#    Copyright (C) 2022  Carlos Perez
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -21,6 +21,7 @@
 
 from dnsrecon.lib.dnshelper import DnsHelper
 from netaddr import IPAddress
+from re import match
 
 
 class Test_Lib_dnshelper():
@@ -75,11 +76,11 @@ class Test_Lib_dnshelper():
             assert record[0] == 'SRV'
 
     def test_zone_transfer(self):
-        helper = DnsHelper('zonetransfer.me')
+        helper = DnsHelper('megacorpone.com')
         records = helper.zone_transfer()
-        assert len(records) == 135
+        assert len(records) == 30
 
     def test_get_ptr(self):
         helper = DnsHelper('megacorpone.com')
         records = helper.get_ptr('51.79.37.18')
-        assert len(records) == 1 and 'megacorpone.com' in records[0][1]
+        assert len(records) == 1 and match(r'^.+\.megacorpone\.com$', records[0][1])
