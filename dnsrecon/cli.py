@@ -1555,13 +1555,6 @@ Possible types:
     if arguments.ns_server:
         ns_raw_list = list(set(arguments.ns_server.strip().split(",")))
         for entry in ns_raw_list:
-            if check_nxdomain_hijack(entry):
-                continue
-
-            if netaddr.valid_glob(entry):
-                ns_server.append(entry)
-                continue
-
             # Resolve in the case if FQDN
             answer = socket_resolv(entry)
             # Check we actually got a list
@@ -1571,6 +1564,13 @@ Possible types:
             else:
                 # Exit if we cannot resolve it
                 print_error(f"Could not resolve NS server provided and server doesn't appear to be an IP: {entry}")
+
+            if check_nxdomain_hijack(socket.gethostbyname(entry)):
+                continue
+
+            if netaddr.valid_glob(entry):
+                ns_server.append(entry)
+                continue
 
         # User specified name servers but none of them validated
         if not ns_server:
