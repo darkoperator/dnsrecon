@@ -223,8 +223,9 @@ class DnsHelper:
         except (dns.exception.Timeout, dns.resolver.NXDOMAIN,
                 dns.resolver.YXDOMAIN, dns.resolver.NoAnswer,
                 dns.resolver.NoNameservers, dns.query.BadResponse,
-                socket.error):
-            print_error('Error while resolving SOA record.')
+                socket.error) as e:
+            print_error(f'Exception "{e}" while resolving SOA record.')
+            print_error(f'Error while resolving SOA while using {self._res.nameservers[0]} as nameserver.')
             return []
 
         # ~ we consider both response sections

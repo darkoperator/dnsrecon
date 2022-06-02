@@ -77,22 +77,25 @@ def process_range(arg):
     Function will take a string representation of a range for IPv4 or IPv6 in
     CIDR or Range format and return a list of IPs.
     """
-    try:
-        ip_list = None
-        range_vals = []
-        if re.match(r"\S*/\S*", arg):
-            ip_list = IPNetwork(arg)
+    ip_list = []
 
-        elif re.match(r"\S*-\S*", arg):
-            range_vals.extend(arg.split("-"))
-            if len(range_vals) == 2:
-                ip_list = IPRange(range_vals[0], range_vals[1])
-        else:
-            print_error("Range provided is not valid")
-            return []
-    except Exception:
-        print_error("Range provided is not valid")
-        return []
+    ranges_raw_list = list(set(arg.strip().split(",")))
+    for entry in ranges_raw_list:
+        try:
+            range_vals = []
+            if re.match(r"\S*/\S*", entry):
+                ip_list.append(IPNetwork(entry))
+
+            elif re.match(r"\S*-\S*", entry):
+                range_vals.extend(entry.split("-"))
+                if len(range_vals) == 2:
+                    ip_list.append(IPRange(range_vals[0], range_vals[1]))
+            else:
+                print_error(f"Range: {entry} provided is not valid")
+        except Exception:
+            print(Exception)
+            print_error(f"Range: {entry} provided is not valid")
+
     return ip_list
 
 
@@ -384,37 +387,38 @@ def brute_reverse(res, ip_list, verbose=False, thread_num=None):
     brtdata = []
     returned_records = []
 
-    print_status("Performing Reverse Lookup from {0} to {1}".format(ip_list[0], ip_list[-1]))
+    for i in range(len(ip_list)):
+        start_ip = ip_list[i][0]
+        end_ip = ip_list[i][-1]
+        print_status("Performing Reverse Lookup from {0} to {1}".format(start_ip, end_ip))
 
-    # Resolve each IP in a separate thread in groups of 255 hosts.
+        # Resolve each IP in a separate thread in groups of 255 hosts.
 
-    ip_range = range(len(ip_list) - 1)
-    ip_group_size = 255
-    for ip_group in [ip_range[i:i + ip_group_size] for i in range(0, len(ip_range), ip_group_size)]:
+        ip_range = range(len(ip_list[i]) - 1)
+        ip_group_size = 255
+        for ip_group in [ip_range[j:j + ip_group_size] for j in range(0, len(ip_range), ip_group_size)]:
 
-        try:
+            try:
+                with futures.ThreadPoolExecutor(max_workers=thread_num) as executor:
+                    future_results = {executor.submit(res.get_ptr, str(ip_list[i][x])): x for x in ip_group}
+                    brtdata = [future.result() for future in futures.as_completed(future_results)]
+                    # Filter out results that are None
+                    brtdata = [result for result in brtdata if result]
 
-            with futures.ThreadPoolExecutor(max_workers=thread_num) as executor:
-                future_results = {executor.submit(res.get_ptr, str(ip_list[x])): x for x in ip_group}
-                brtdata = [future.result() for future in futures.as_completed(future_results)]
-                # Filter out results that are None
-                brtdata = [result for result in brtdata if result]
+                if verbose:
+                    for x in ip_group:
+                        ipaddress = str(ip_list[x])
+                        print_status(f"Trying {ipaddress}")
 
-            if verbose:
-                for x in ip_group:
-                    ipaddress = str(ip_list[x])
-                    print_status(f"Trying {ipaddress}")
+            except Exception as e:
+                print_error(e)
 
-        except Exception as e:
-            print_error(e)
-
-        for rcd_found in brtdata:
-            for type_, name_, addr_ in rcd_found:
-                returned_records.append([{'type': type_, 'name': name_, 'address': addr_}])
-                print_good(f"\t {type_} {name_} {addr_}")
+            for rcd_found in brtdata:
+                for type_, name_, addr_ in rcd_found:
+                    returned_records.append([{'type': type_, 'name': name_, 'address': addr_}])
+                    print_good(f"\t {type_} {name_} {addr_}")
 
     print_good(f"{len(returned_records)} Records Found")
-
     return returned_records
 
 
@@ -960,7 +964,11 @@ def general_enum(res, domain, do_axfr, do_bing, do_yandex, do_spf, do_whois, do_
                 ip_for_whois.append(found_soa_record[2])
 
         except Exception:
-            print_error(f"Could not Resolve SOA Record for {domain}")
+            print(found_soa_records)
+            if found_soa_records == []:
+                print_error(f"No SOA records found for {domain}")
+            else:
+                print_error(f"Could not Resolve SOA Record for {domain}")
 
         # Enumerate Name Servers
         try:
@@ -1555,13 +1563,6 @@ Possible types:
     if arguments.ns_server:
         ns_raw_list = list(set(arguments.ns_server.strip().split(",")))
         for entry in ns_raw_list:
-            if check_nxdomain_hijack(entry):
-                continue
-
-            if netaddr.valid_glob(entry):
-                ns_server.append(entry)
-                continue
-
             # Resolve in the case if FQDN
             answer = socket_resolv(entry)
             # Check we actually got a list
@@ -1571,6 +1572,13 @@ Possible types:
             else:
                 # Exit if we cannot resolve it
                 print_error(f"Could not resolve NS server provided and server doesn't appear to be an IP: {entry}")
+
+            if check_nxdomain_hijack(socket.gethostbyname(entry)):
+                continue
+
+            if netaddr.valid_glob(entry):
+                ns_server.append(entry)
+                continue
 
         # User specified name servers but none of them validated
         if not ns_server:
