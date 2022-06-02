@@ -964,7 +964,11 @@ def general_enum(res, domain, do_axfr, do_bing, do_yandex, do_spf, do_whois, do_
                 ip_for_whois.append(found_soa_record[2])
 
         except Exception:
-            print_error(f"Could not Resolve SOA Record for {domain}")
+            print(found_soa_records)
+            if found_soa_records == []:
+                print_error(f"No SOA records found for {domain}")
+            else:
+                print_error(f"Could not Resolve SOA Record for {domain}")
 
         # Enumerate Name Servers
         try:
