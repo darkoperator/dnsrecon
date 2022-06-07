@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="dnsrecon",
-    version="1.1.0",
+    version="1.1.1",
     author="Carlos Perez",
     author_email="carlos_perez@darkoperator.com",
     description="DNS Enumeration Script",
