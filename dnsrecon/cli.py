@@ -316,7 +316,7 @@ def brute_tlds(res, domain, verbose=False, thread_num=None):
                         print_good(f"\t {type_} {name_} {addr_}")
                         found_tlds.append([{"type": type_, "name": name_, "address": addr_}])
             print_good(f"{len(found_tlds)} Records Found")
- 
+
     except Exception as e:
         print_error(e)
 
@@ -363,10 +363,10 @@ def brute_srv(res, domain, verbose=False, thread_num=None):
                 res = future.result()
                 for type_, name_, target_, addr_, port_, priority_ in res:
                     returned_records.append({"type": type_,
-                                            "name": name_,
-                                            "target": target_,
-                                            "address": addr_,
-                                            "port": port_})
+                                             "name": name_,
+                                             "target": target_,
+                                             "address": addr_,
+                                             "port": port_})
                     print_good(f"\t {type_} {name_} {target_} {addr_} {port_}")
     except Exception as e:
         print_error(e)
@@ -377,6 +377,7 @@ def brute_srv(res, domain, verbose=False, thread_num=None):
         print_error(f"No SRV Records Found for {domain}")
 
     return returned_records
+
 
 def brute_reverse(res, ip_list, verbose=False, thread_num=None):
     """
