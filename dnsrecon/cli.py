@@ -299,6 +299,8 @@ def brute_tlds(res, domain, verbose=False, thread_num=None):
             print_status(f'Trying: {domain_main}.{cc}')
         for cc, tld in zip(cctld, total_tlds):
             print_status(f'Trying: {domain_main}.{cc}.{tld}')
+
+    found_tlds = []
     try:
         with futures.ThreadPoolExecutor(max_workers=thread_num) as executor:
             future_results = {**{executor.submit(res.get_ip, f'{domain_main}.{tld}'): tld for tld in total_tlds},
@@ -306,19 +308,18 @@ def brute_tlds(res, domain, verbose=False, thread_num=None):
                               **{executor.submit(res.get_ip, f'{domain_main}.{cc}.{tld}'): (cc, tld) for (cc, tld) in
                                  zip(cctld, total_tlds)}}
 
-            brtdata = [future.result() for future in futures.as_completed(future_results)]
-            brtdata = [result for result in brtdata if len(result) > 0]
-
+            # Display logs as soon as a thread is finished
+            for future in futures.as_completed(future_results):
+                res = future.result()
+                for type_, name_, addr_ in res:
+                    if type_ in ['A', 'AAAA']:
+                        print_good(f"\t {type_} {name_} {addr_}")
+                        found_tlds.append([{"type": type_, "name": name_, "address": addr_}])
+            print_good(f"{len(found_tlds)} Records Found")
+ 
     except Exception as e:
         print_error(e)
 
-    found_tlds = []
-    for rcd_found in brtdata:
-        for type_, name_, addr_ in rcd_found:
-            if type_ in ['A', 'AAAA']:
-                print_good(f"\t {type_} {name_} {addr_}")
-                found_tlds.append([{"type": type_, "name": name_, "address": addr_}])
-    print_good(f"{len(found_tlds)} Records Found")
     return found_tlds
 
 
@@ -352,31 +353,30 @@ def brute_srv(res, domain, verbose=False, thread_num=None):
 
     try:
         with futures.ThreadPoolExecutor(max_workers=thread_num) as executor:
-            future_results = {executor.submit(res.get_srv, srvtype + domain): srvtype for srvtype in srvrcd}
-            brtdata = [future.result() for future in futures.as_completed(future_results)]
             if verbose:
                 for srvtype in srvrcd:
                     srvtype_domain = srvtype + domain
                     print_status(f"Trying {srvtype_domain}...")
+            future_results = {executor.submit(res.get_srv, srvtype + domain): srvtype for srvtype in srvrcd}
+            # Display logs as soon as a thread is finished
+            for future in futures.as_completed(future_results):
+                res = future.result()
+                for type_, name_, target_, addr_, port_, priority_ in res:
+                    returned_records.append({"type": type_,
+                                            "name": name_,
+                                            "target": target_,
+                                            "address": addr_,
+                                            "port": port_})
+                    print_good(f"\t {type_} {name_} {target_} {addr_} {port_}")
     except Exception as e:
         print_error(e)
 
-    if brtdata:
-        for rcd_found in brtdata:
-            for type_, name_, target_, addr_, port_, priority_ in rcd_found:
-                returned_records.append({"type": type_,
-                                         "name": name_,
-                                         "target": target_,
-                                         "address": addr_,
-                                         "port": port_})
-                print_good(f"\t {type_} {name_} {target_} {addr_} {port_}")
+    if len(returned_records) > 0:
+        print_good(f"{len(returned_records)} Records Found")
     else:
         print_error(f"No SRV Records Found for {domain}")
 
-    print_good(f"{len(returned_records)} Records Found")
-
     return returned_records
-
 
 def brute_reverse(res, ip_list, verbose=False, thread_num=None):
     """
@@ -399,24 +399,22 @@ def brute_reverse(res, ip_list, verbose=False, thread_num=None):
         for ip_group in [ip_range[j:j + ip_group_size] for j in range(0, len(ip_range), ip_group_size)]:
 
             try:
-                with futures.ThreadPoolExecutor(max_workers=thread_num) as executor:
-                    future_results = {executor.submit(res.get_ptr, str(ip_list[i][x])): x for x in ip_group}
-                    brtdata = [future.result() for future in futures.as_completed(future_results)]
-                    # Filter out results that are None
-                    brtdata = [result for result in brtdata if result]
-
                 if verbose:
                     for x in ip_group:
                         ipaddress = str(ip_list[x])
                         print_status(f"Trying {ipaddress}")
 
+                with futures.ThreadPoolExecutor(max_workers=thread_num) as executor:
+                    future_results = {executor.submit(res.get_ptr, str(ip_list[i][x])): x for x in ip_group}
+                    # Display logs as soon as a thread is finished
+                    for future in futures.as_completed(future_results):
+                        res = future.result()
+                        for type_, name_, addr_ in res:
+                            returned_records.append([{'type': type_, 'name': name_, 'address': addr_}])
+                            print_good(f"\t {type_} {name_} {addr_}")
+
             except Exception as e:
                 print_error(e)
-
-            for rcd_found in brtdata:
-                for type_, name_, addr_ in rcd_found:
-                    returned_records.append([{'type': type_, 'name': name_, 'address': addr_}])
-                    print_good(f"\t {type_} {name_} {addr_}")
 
     print_good(f"{len(returned_records)} Records Found")
     return returned_records
@@ -449,32 +447,30 @@ def brute_domain(res, dictfile, dom, filter_=None, verbose=False, ignore_wildcar
                     print_status(f"Trying {target}")
         with futures.ThreadPoolExecutor(max_workers=thread_num) as executor:
             future_results = {executor.submit(res.get_ip, target): target for target in targets}
-            brtdata = [future.result() for future in futures.as_completed(future_results)]
-
-    # Process the output of the threads.
-    for rcd_found in brtdata:
-        for type_, name_, address_or_target_ in rcd_found:
-            print_and_append = False
-            found_dict = {"type": type_, "name": name_}
-            if type_ in ['A', 'AAAA']:
-                # Filter Records if filtering was enabled
-                if filter_:
-                    if wildcard_set and address_or_target_ not in wildcard_set:
+            # Display logs as soon as a thread is finished
+            for future in futures.as_completed(future_results):
+                res = future.result()
+                for type_, name_, address_or_target_ in res:
+                    print_and_append = False
+                    found_dict = {"type": type_, "name": name_}
+                    if type_ in ['A', 'AAAA']:
+                        # Filter Records if filtering was enabled
+                        if filter_:
+                            if wildcard_set and address_or_target_ not in wildcard_set:
+                                print_and_append = True
+                                found_dict["address"] = address_or_target_
+                        else:
+                            print_and_append = True
+                            found_dict["address"] = address_or_target_
+                    elif type_ == 'CNAME':
                         print_and_append = True
-                        found_dict["address"] = address_or_target_
-                else:
-                    print_and_append = True
-                    found_dict["address"] = address_or_target_
-            elif type_ == 'CNAME':
-                print_and_append = True
-                found_dict["target"] = address_or_target_
+                        found_dict["target"] = address_or_target_
 
-            if print_and_append:
-                print_good(f"\t {type_} {name_} {address_or_target_}")
-                found_hosts.append(found_dict)
+                    if print_and_append:
+                        print_good(f"\t {type_} {name_} {address_or_target_}")
+                        found_hosts.append(found_dict)
 
-    # Clear Global variable
-    brtdata = []
+                brtdata.append(res)
 
     print_good(f"{len(found_hosts)} Records Found")
     return found_hosts
@@ -944,7 +940,7 @@ def general_enum(res, domain, do_axfr, do_bing, do_yandex, do_spf, do_whois, do_
             if len(returned_records) == 0:
                 from_zt = True
 
-    # If a Zone Trasfer was possible there is no need to enumerate the rest
+    # If a Zone Transfer was possible there is no need to enumerate the rest
     if from_zt is None:
 
         # Check if DNSSEC is configured
