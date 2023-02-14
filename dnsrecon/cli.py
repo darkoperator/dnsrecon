@@ -489,7 +489,6 @@ def brute_tlds(res, domain, verbose=False, thread_num=None):
              'xn--xkc2al3hye2a', 'xn--xkc2dl3a5ee0h', 'xn--y9a3aq',
              'xn--yfro4i67o', 'xn--ygbi2ammx', 'ye', 'yt', 'za', 'zm', 'zw']
 
-
     domain_main = domain.split(".")[0]
 
     # Let the user know how long it could take
