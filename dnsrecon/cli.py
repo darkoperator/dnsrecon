@@ -839,7 +839,7 @@ def dns_sec_check(domain, res):
     Check if a zone is configured for DNSSEC and if so if NSEC or NSEC3 is used.
     """
     try:
-        answer = res.resolve(domain, 'DNSKEY')
+        answer = res.resolve(domain, 'DNSKEY', res._res.nameservers[0])
         print_status("DNSSEC is configured for {0}".format(domain))
         nsectype = get_nsec_type(domain, res)
         print_status("DNSKEYs:")
