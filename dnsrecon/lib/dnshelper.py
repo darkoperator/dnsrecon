@@ -507,7 +507,7 @@ class DnsHelper:
                     for rdata in rdataset:
                         target = strip_last_dot(rdata.target.to_text())
 
-                        for type_, name_, addr in self.get_ip(target):
+                        for type_, name_, addr_ in self.get_ip(target):
                             if type_ in ['A', 'AAAA']:
                                 print_status(f"\t CNAME {fqdn_} {target} {addr_}")
                                 zone_records.append({'zone_server': ns_srv, 'type': 'CNAME',
