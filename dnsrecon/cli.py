@@ -663,7 +663,7 @@ def brute_domain(res, dictfile, dom, filter_=None, verbose=False, ignore_wildcar
                     if type_ in ['A', 'AAAA']:
                         # Filter Records if filtering was enabled
                         if filter_:
-                            if wildcard_set and address_or_target_ not in wildcard_set:
+                            if not wildcard_set or address_or_target_ not in wildcard_set:
                                 print_and_append = True
                                 found_dict["address"] = address_or_target_
                         else:
