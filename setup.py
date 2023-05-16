@@ -14,11 +14,6 @@ setuptools.setup(
     url="https://github.com/darkoperator/dnsrecon",
     packages=setuptools.find_packages(exclude=["tests"]),
     python_requires='>=3.7',
-    install_requires=[
-        'dnspython>=2.0.0',
-        'netaddr',
-        'lxml',
-    ],
     entry_points={
         "console_scripts": [
             "dnsrecon = dnsrecon.__main__:main"
