@@ -615,8 +615,8 @@ def brute_reverse(res, ip_list, verbose=False, thread_num=None):
                     future_results = {executor.submit(res.get_ptr, str(ip_list[i][x])): x for x in ip_group}
                     # Display logs as soon as a thread is finished
                     for future in futures.as_completed(future_results):
-                        res = future.result()
-                        for type_, name_, addr_ in res:
+                        res_ = future.result()
+                        for type_, name_, addr_ in res_:
                             returned_records.append([{'type': type_, 'name': name_, 'address': addr_}])
                             print_good(f"\t {type_} {name_} {addr_}")
 
