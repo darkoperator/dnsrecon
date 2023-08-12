@@ -49,7 +49,9 @@ def scrape_yandex(dom):
             return []
 
         if re.search("enter_captcha_value", data):
-            print_error("Yandex has detected the search as \'bot activity, stopping search...")
+            print_error(
+                "Yandex has detected the search as 'bot activity, stopping search..."
+            )
             return unique(results)
 
         results.extend(re.findall(r"([a-zA-Z0-9\-\.]+" + dom + ")/?", data))

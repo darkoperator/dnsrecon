@@ -26,11 +26,13 @@ from urllib.error import URLError, HTTPError
 
 def scrape_crtsh(dom):
     """
-    Function for enumerating sub-domains by scraping crt.sh.
+    Function for enumerating subdomains by scraping crt.sh.
     """
     results = []
-    headers = {'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64; rv:31.0) Gecko/20100101 Firefox/31.0'}
-    url = f'https://crt.sh/?q=%25.{dom}'
+    headers = {
+        "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:31.0) Gecko/20100101 Firefox/31.0"
+    }
+    url = f"https://crt.sh/?q=%25.{dom}"
 
     req = Request(url=url, headers=headers)
     try:
@@ -44,16 +46,16 @@ def scrape_crtsh(dom):
         return results
 
     root = etree.HTML(data)
-    tbl = root.xpath('//table/tr/td/table/tr/td[5]')
+    tbl = root.xpath("//table/tr/td/table/tr/td[5]")
     if len(tbl) < 1:
-        print_error('Certificates for subdomains not found')
+        print_error("Certificates for subdomains not found")
         return results
 
     for ent in tbl:
         sub_dom = ent.text
-        if not sub_dom.endswith('.' + dom):
+        if not sub_dom.endswith("." + dom):
             continue
-        if sub_dom.startswith('*.'):
+        if sub_dom.startswith("*."):
             print_status(f"\t {sub_dom} wildcard")
             continue
         if sub_dom not in results:

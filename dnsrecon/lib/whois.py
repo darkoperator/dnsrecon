@@ -33,9 +33,9 @@ def get_whois(ip_addrs):
     ip = IPAddress(ip_addrs)
     info_of_ip = ip.info
     if ip.version == 4 and ip.is_private() is False:
-        for i in info_of_ip['IPv4']:
-            whois_server = i['whois']
-            if len(whois_server) == 0 and i['status'] != "Reserved":
+        for i in info_of_ip["IPv4"]:
+            whois_server = i["whois"]
+            if len(whois_server) == 0 and i["status"] != "Reserved":
                 whois_server = "whois.arin.net"
             elif len(whois_server) == 0:
                 whois_server = None
@@ -57,12 +57,12 @@ def whois(target, whois_srv):
             s.send(("n " + target + "\r\n").encode("utf-8"))
         else:
             s.send((target + "\r\n").encode("utf-8"))
-        response = ''
+        response = ""
         while True:
             d = s.recv(WHOIS_RECEIVE_BUFFER_SIZE)
             response += str(d)
             counter += 1
-            if str(d) == '' or counter == 5:
+            if str(d) == "" or counter == 5:
                 break
         s.close()
     except Exception as e:
@@ -77,7 +77,7 @@ def get_whois_nets(data):
     where each list has the starting and ending IP of the found range.
     """
 
-    pattern = r'([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}) - ([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})'
+    pattern = r"([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}) - ([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})"
     results = re.findall(pattern, data)
 
     return results
@@ -86,7 +86,7 @@ def get_whois_nets(data):
 def get_whois_orgname(data):
     org_pattern = r"OrgName\:\s*(.*)\n"
     result = re.findall(org_pattern, data)
-    # Lets try RIPENET Format
+    # Let's try RIPENET Format
     if not result:
         org_pattern = r"netname\:\s*(.*)\n"
         result = re.findall(org_pattern, data)

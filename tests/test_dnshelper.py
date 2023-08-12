@@ -4,7 +4,7 @@
 #    Unit test for DNSRecon's dnshelper library
 #    Author: Filippo Lauria (@filippolauria)
 #
-#    Copyright (C) 2022  Carlos Perez
+#    Copyright (C) 2023 Carlos Perez
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -24,63 +24,62 @@ from netaddr import IPAddress
 from re import match
 
 
-class Test_Lib_dnshelper():
-
+class Test_Lib_dnshelper:
     def test_get_a(self):
-        helper = DnsHelper('google.com')
-        records = helper.get_a('ipv4.google.com')
+        helper = DnsHelper("google.com")
+        records = helper.get_a("ipv4.google.com")
         for record in records:
-            assert record[0] in ['A', 'CNAME']
+            assert record[0] in ["A", "CNAME"]
 
     def test_get_aaaa(self):
-        helper = DnsHelper('google.com')
-        records = helper.get_aaaa('ipv6.google.com')
+        helper = DnsHelper("google.com")
+        records = helper.get_aaaa("ipv6.google.com")
         for record in records:
-            assert record[0] in ['AAAA', 'CNAME']
+            assert record[0] in ["AAAA", "CNAME"]
 
     def test_get_mx(self):
-        helper = DnsHelper('google.com')
+        helper = DnsHelper("google.com")
         records = helper.get_mx()
         for record in records:
-            assert record[0] == 'MX'
+            assert record[0] == "MX"
 
     def test_get_ip(self):
-        helper = DnsHelper('google.com')
-        records = helper.get_ip('google.com')
+        helper = DnsHelper("google.com")
+        records = helper.get_ip("google.com")
         for record in records:
             ip = IPAddress(record[2])
             assert ip.version in [4, 6]  # ~ redundant
 
     def test_get_txt(self):
-        helper = DnsHelper('gmail.com')
+        helper = DnsHelper("gmail.com")
         records = helper.get_txt()
         for record in records:
-            assert record[0] == 'TXT'
+            assert record[0] == "TXT"
 
     def test_get_ns(self):
-        helper = DnsHelper('megacorpone.com')
+        helper = DnsHelper("megacorpone.com")
         records = helper.get_ns()
         for record in records:
-            assert record[0] == 'NS'
+            assert record[0] == "NS"
 
     def test_get_soa(self):
-        helper = DnsHelper('megacorpone.com')
+        helper = DnsHelper("megacorpone.com")
         records = helper.get_soa()
         for record in records:
-            assert record[0] == 'SOA'
+            assert record[0] == "SOA"
 
     def test_get_srv(self):
-        helper = DnsHelper('nsztm1.digi.ninja')
-        records = helper.get_srv('_sip._tcp.zonetransfer.me')
+        helper = DnsHelper("nsztm1.digi.ninja")
+        records = helper.get_srv("_sip._tcp.zonetransfer.me")
         for record in records:
-            assert record[0] == 'SRV'
+            assert record[0] == "SRV"
 
     def test_zone_transfer(self):
-        helper = DnsHelper('megacorpone.com')
+        helper = DnsHelper("megacorpone.com")
         records = helper.zone_transfer()
-        assert len(records) == 30
+        assert len(records) == 34
 
     def test_get_ptr(self):
-        helper = DnsHelper('megacorpone.com')
-        records = helper.get_ptr('51.79.37.18')
-        assert len(records) == 1 and match(r'^.+\.megacorpone\.com$', records[0][1])
+        helper = DnsHelper("megacorpone.com")
+        records = helper.get_ptr("51.79.37.18")
+        assert len(records) == 1 and match(r"^.+\.megacorpone\.com$", records[0][1])
