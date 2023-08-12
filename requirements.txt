@@ -3,4 +3,6 @@ netaddr
 lxml
 flake8
 pytest
-
+black==23.7.0
+flake8==6.1.0
+isort==5.12.0
