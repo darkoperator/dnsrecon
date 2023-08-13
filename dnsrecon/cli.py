@@ -1344,7 +1344,7 @@ def general_enum(
 def query_ds(res, target, ns, timeout=5.0):
     """
     Function for performing DS Record queries. Returns answer object. Since a
-    timeout will break the DS NSEC chain of a zone walk it will exit if a timeout
+    timeout will break the DS NSEC chain of a zone walk, it will exit if a timeout
     happens.
     """
     try:
