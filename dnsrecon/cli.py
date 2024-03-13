@@ -713,7 +713,7 @@ def whois_ips(res, ip_list):
                     )
                 )
 
-        elif "n" in answer:
+        elif "n" in answer or answer == ['']:
             print_status("No Reverse Lookups will be performed.")
         else:
             for a in answer:
