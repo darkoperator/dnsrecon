@@ -32,7 +32,7 @@ def get_whois(ip_addrs):
     whois_server = None
     ip = IPAddress(ip_addrs)
     info_of_ip = ip.info
-    if ip.version == 4 and ip.is_private() is False:
+    if ip.version == 4 and ip.is_ipv4_private_use() is False:
         for i in info_of_ip["IPv4"]:
             whois_server = i["whois"]
             if len(whois_server) == 0 and i["status"] != "Reserved":
