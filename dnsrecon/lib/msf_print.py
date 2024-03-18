@@ -1,5 +1,5 @@
-import sys
 import platform
+import sys
 
 # -*- coding: utf-8 -*-
 
@@ -19,33 +19,33 @@ import platform
 #    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 
-def print_status(message=""):
-    if sys.stdout.isatty() and platform.system() != "Windows":
-        print(f"\033[1;34m[*]\033[1;m {message}")
+def print_status(message=''):
+    if sys.stdout.isatty() and platform.system() != 'Windows':
+        print(f'\033[1;34m[*]\033[1;m {message}')
     else:
-        print(f"[*] {message}")
+        print(f'[*] {message}')
 
 
-def print_good(message=""):
-    if sys.stdout.isatty() and platform.system() != "Windows":
-        print(f"\033[1;32m[+]\033[1;m {message}")
+def print_good(message=''):
+    if sys.stdout.isatty() and platform.system() != 'Windows':
+        print(f'\033[1;32m[+]\033[1;m {message}')
     else:
-        print(f"[+] {message}")
+        print(f'[+] {message}')
 
 
-def print_error(message=""):
-    if sys.stdout.isatty() and platform.system() != "Windows":
-        print(f"\033[1;31m[-]\033[1;m {message}")
+def print_error(message=''):
+    if sys.stdout.isatty() and platform.system() != 'Windows':
+        print(f'\033[1;31m[-]\033[1;m {message}')
     else:
-        print(f"[-] {message}")
+        print(f'[-] {message}')
 
 
-def print_debug(message=""):
-    if sys.stdout.isatty() and platform.system() != "Windows":
-        print(f"\033[1;31m[!]\033[1;m {message}")
+def print_debug(message=''):
+    if sys.stdout.isatty() and platform.system() != 'Windows':
+        print(f'\033[1;31m[!]\033[1;m {message}')
     else:
-        print(f"[!] {message}")
+        print(f'[!] {message}')
 
 
-def print_line(message=""):
-    print(f"{message}")
+def print_line(message=''):
+    print(f'{message}')

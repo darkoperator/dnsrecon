@@ -1,0 +1,57 @@
+[tool.pytest.ini_options]
+minversion = "8.0.0"
+addopts = "--no-header"
+testpaths = [
+    "tests",
+    "tests/discovery/",
+]
+
+
+[tool.ruff]
+# Exclude a variety of commonly ignored directories.
+exclude = [
+    "tests",
+    ".eggs",
+    ".git",
+    ".git-rewrite",
+    ".mypy_cache",
+    ".pyenv",
+    ".pytest_cache",
+    ".pytype",
+    ".ruff_cache",
+    ".github",
+    ".venv",
+    ".vscode",
+    ".idea",
+    "__pypackages__",
+    "build",
+    "dist",
+    "site-packages",
+    "venv",
+]
+
+line-length = 130
+target-version = "py310"
+show-fixes = true
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I", "UP", "TCH"]
+ignore = ["E721", "F403", "F405", "UP030"]
+
+# Allow fix for all enabled rules (when `--fix`) is provided.
+fixable = ["ALL"]
+unfixable = []
+
+# Allow unused variables when underscore-prefixed.
+dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+
+[tool.ruff.format]
+# Like Black, use double quotes for strings.
+quote-style = "single"
+indent-style = "space"
+
+# Like Black, respect magic trailing commas.
+skip-magic-trailing-comma = false
+
+# Like Black, automatically detect the appropriate line ending.
+line-ending = "auto"

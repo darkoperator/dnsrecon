@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 
 #    Copyright (C) 2020 Cristiano Maruti (twitter: @cmaruti)
 #
@@ -16,11 +15,12 @@
 #    along with this program; if not, write to the Free Software
 #    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
-import urllib
 import re
 import time
-from dnsrecon.lib.msf_print import *
+import urllib
 import urllib.request
+
+from dnsrecon.lib.msf_print import *
 
 url_opener = urllib.request.FancyURLopener
 
@@ -35,26 +35,24 @@ def scrape_yandex(dom):
     Function for enumerating sub-domains and hosts by scraping Bing.
     """
     results = []
-    searches = ["1", "2", "3", "4", "5", "10", "20", "30"]
+    searches = ['1', '2', '3', '4', '5', '10', '20', '30']
     urllib._urlopener = AppURLopener()
 
     for _ in searches:
-        url = "https://yandex.com/search/?text=site%3A" + dom
+        url = 'https://yandex.com/search/?text=site%3A' + dom
         try:
             sock = urllib.request.urlopen(url, timeout=10)
-            data = sock.read().decode("utf-8")
+            data = sock.read().decode('utf-8')
             sock.close()
         except Exception as e:
             print_error(e)
             return []
 
-        if re.search("enter_captcha_value", data):
-            print_error(
-                "Yandex has detected the search as 'bot activity, stopping search..."
-            )
+        if re.search('enter_captcha_value', data):
+            print_error("Yandex has detected the search as 'bot activity, stopping search...")
             return unique(results)
 
-        results.extend(re.findall(r"([a-zA-Z0-9\-\.]+" + dom + ")/?", data))
+        results.extend(re.findall(r'([a-zA-Z0-9\-\.]+' + dom + ')/?', data))
 
         time.sleep(10)
 

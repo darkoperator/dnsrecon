@@ -15,7 +15,7 @@ jobs:
       max-parallel: 8
       matrix:
         os: [ubuntu-latest, macos-latest]
-        python-version: [3.8, 3.9, 3.10.12, 3.11]
+        python-version: [3.9, 3.10.12, 3.11, 3.12]
 
     steps:
     - uses: actions/checkout@v4
@@ -28,13 +28,14 @@ jobs:
         pip install --upgrade pip
         pip install -r requirements-dev.txt
 
-    - name: Lint with flake8
+    - name: Lint with ruff
       run: |
-        # stop the build if there are Python syntax errors or undefined names
-        flake8 . --count --show-source --statistics --config .flake8
-        # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
-        flake8 . --count --exit-zero  --max-line-length=127 --statistics --config .flake8
-    
-    - name: Run pytest tests
+        ruff check
+
+    - name: Format with ruff
       run: |
-        python3 -m pytest .
+        ruff format --check --diff
+
+    - name: Test with pytest
+      run: |
+        pytest

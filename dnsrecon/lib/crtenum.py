@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 #    Copyright (C) 2010  Carlos Perez
 #
 #    This program is free software; you can redistribute it and/or modify
@@ -16,12 +14,12 @@
 #    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 
+from urllib.error import HTTPError, URLError
+from urllib.request import Request, urlopen
+
 from lxml import etree
+
 from dnsrecon.lib.msf_print import *
-
-
-from urllib.request import urlopen, Request
-from urllib.error import URLError, HTTPError
 
 
 def scrape_crtsh(dom):
@@ -29,10 +27,8 @@ def scrape_crtsh(dom):
     Function for enumerating subdomains by scraping crt.sh.
     """
     results = []
-    headers = {
-        "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:31.0) Gecko/20100101 Firefox/31.0"
-    }
-    url = f"https://crt.sh/?q=%25.{dom}"
+    headers = {'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64; rv:31.0) Gecko/20100101 Firefox/31.0'}
+    url = f'https://crt.sh/?q=%25.{dom}'
 
     req = Request(url=url, headers=headers)
     try:
@@ -46,17 +42,17 @@ def scrape_crtsh(dom):
         return results
 
     root = etree.HTML(data)
-    tbl = root.xpath("//table/tr/td/table/tr/td[5]")
+    tbl = root.xpath('//table/tr/td/table/tr/td[5]')
     if len(tbl) < 1:
-        print_error("Certificates for subdomains not found")
+        print_error('Certificates for subdomains not found')
         return results
 
     for ent in tbl:
         sub_dom = ent.text
-        if not sub_dom.endswith("." + dom):
+        if not sub_dom.endswith('.' + dom):
             continue
-        if sub_dom.startswith("*."):
-            print_status(f"\t {sub_dom} wildcard")
+        if sub_dom.startswith('*.'):
+            print_status(f'\t {sub_dom} wildcard')
             continue
         if sub_dom not in results:
             results.append(sub_dom)

@@ -1,39 +1,40 @@
 import setuptools
+
 from dnsrecon.cli import __version__ as dnsrecon_version
 
-with open("README.md", "r") as fh:
+with open('README.md') as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name="dnsrecon",
+    name='dnsrecon',
     version=dnsrecon_version,
-    author="Carlos Perez",
-    author_email="carlos_perez@darkoperator.com",
-    description="DNS Enumeration Script",
+    author='Carlos Perez',
+    author_email='carlos_perez@darkoperator.com',
+    description='DNS Enumeration Script',
     long_description=long_description,
-    long_description_content_type="text/markdown",
-    url="https://github.com/darkoperator/dnsrecon",
-    packages=setuptools.find_packages(exclude=["tests"]),
-    python_requires=">=3.8",
-    entry_points={"console_scripts": ["dnsrecon = dnsrecon.__main__:main"]},
+    long_description_content_type='text/markdown',
+    url='https://github.com/darkoperator/dnsrecon',
+    packages=setuptools.find_packages(exclude=['tests']),
+    python_requires='>=3.9',
+    entry_points={'console_scripts': ['dnsrecon = dnsrecon.__main__:main']},
     classifiers=[
-        "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.8",
-        "Programming Language :: Python :: 3.9",
-        "Programming Language :: Python :: 3.10",
-        "Programming Language :: Python :: 3.11",
-        "License :: OSI Approved :: GNU General Public License v2 (GPLv2)",
-        "Operating System :: OS Independent",
+        'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.9',
+        'Programming Language :: Python :: 3.10',
+        'Programming Language :: Python :: 3.11',
+        'Programming Language :: Python :: 3.12',
+        'License :: OSI Approved :: GNU General Public License v2 (GPLv2)',
+        'Operating System :: OS Independent',
     ],
     data_files=[
         (
-            "/etc/dnsrecon",
+            '/etc/dnsrecon',
             [
-                "namelist.txt",
-                "snoop.txt",
-                "subdomains-top1mil-20000.txt",
-                "subdomains-top1mil-5000.txt",
-                "subdomains-top1mil.txt",
+                'namelist.txt',
+                'snoop.txt',
+                'subdomains-top1mil-20000.txt',
+                'subdomains-top1mil-5000.txt',
+                'subdomains-top1mil.txt',
             ],
         )
     ],
