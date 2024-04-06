@@ -31,6 +31,7 @@ import os
 import sqlite3
 from argparse import ArgumentParser, RawTextHelpFormatter
 from concurrent import futures
+from pathlib import Path
 from random import SystemRandom
 from string import ascii_letters, digits
 from xml.dom import minidom
@@ -60,6 +61,7 @@ from dnsrecon.lib.yandexenum import *
 brtdata = []
 
 CONFIG = {'disable_check_recursion': False, 'disable_check_bindversion': False}
+DATA_DIR = Path(__file__).parent / 'data'
 
 
 def process_range(arg):
@@ -1810,8 +1812,7 @@ Possible types:
     dictionary = ''
     if any(dictionary_required):
         # we generate a list of possible dictionary files
-        script_dir = os.path.dirname(os.path.realpath(__file__)) + os.sep
-        dictionaries = ['/etc/dnsrecon/namelist.txt', script_dir + 'namelist.txt']
+        dictionaries = ['/etc/dnsrecon/namelist.txt', DATA_DIR / 'namelist.txt']
 
         # if the user has provided a custom dictionary file,
         # we insert it as the first entry of the list
