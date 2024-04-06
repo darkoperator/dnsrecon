@@ -1,3 +1,39 @@
+[project]
+name = "dnsrecon"
+description = "DNS Enumeration Script"
+readme = "README.md"
+authors = [{ name = "Carlos Perez", email = "carlos_perez@darkoperator.com" }]
+requires-python = ">=3.9"
+urls.Homepage = "https://github.com/darkoperator/dnsrecon"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "License :: OSI Approved :: GNU General Public License v2 (GPLv2)",
+    "Operating System :: OS Independent",
+]
+dynamic = ["dependencies", "optional-dependencies", "version"]
+
+[project.scripts]
+dnsrecon = "dnsrecon.__main__:main"
+
+[tool.setuptools.dynamic]
+version = { attr = "dnsrecon.cli.__version__" }
+dependencies = { file = "requirements.txt" }
+optional-dependencies.dev = { file = "requirements-dev.txt" }
+
+[tool.setuptools.packages.find]
+include = ["dnsrecon*"]
+
+[tool.setuptools.package-data]
+"*" = ["*.txt"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
 [tool.pytest.ini_options]
 minversion = "8.0.0"
 addopts = "--no-header"
