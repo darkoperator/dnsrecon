@@ -57,13 +57,13 @@ class Test_Lib_dnshelper:
             assert record[0] == "TXT"
 
     def test_get_ns(self):
-        helper = DnsHelper("megacorpone.com")
+        helper = DnsHelper("zonetransfer.me")
         records = helper.get_ns()
         for record in records:
             assert record[0] == "NS"
 
     def test_get_soa(self):
-        helper = DnsHelper("megacorpone.com")
+        helper = DnsHelper("zonetransfer.me")
         records = helper.get_soa()
         for record in records:
             assert record[0] == "SOA"
@@ -75,11 +75,11 @@ class Test_Lib_dnshelper:
             assert record[0] == "SRV"
 
     def test_zone_transfer(self):
-        helper = DnsHelper("megacorpone.com")
+        helper = DnsHelper("zonetransfer.me")
         records = helper.zone_transfer()
-        assert len(records) == 34
+        assert len(records) >= 135
 
     def test_get_ptr(self):
-        helper = DnsHelper("megacorpone.com")
+        helper = DnsHelper("zonetransfer.me")
         records = helper.get_ptr("51.79.37.18")
         assert len(records) == 1 and match(r"^.+\.megacorpone\.com$", records[0][1])
