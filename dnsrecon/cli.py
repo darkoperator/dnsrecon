@@ -209,12 +209,12 @@ def check_nxdomain_hijack(nameserver):
         try:
             answers = res.resolve(testname, record_type, tcp=True)
         except (
-                dns.resolver.NoNameservers,
-                dns.resolver.NXDOMAIN,
-                dns.exception.Timeout,
-                dns.resolver.NoAnswer,
-                socket.error,
-                dns.query.BadResponse,
+            dns.resolver.NoNameservers,
+            dns.resolver.NXDOMAIN,
+            dns.exception.Timeout,
+            dns.resolver.NoAnswer,
+            socket.error,
+            dns.query.BadResponse,
         ):
             continue
 
@@ -287,8 +287,7 @@ def brute_tlds(res, domain, verbose=False, thread_num=None):
             future_results = {
                 **{executor.submit(res.get_ip, f'{domain_main}.{tld}'): tld for tld in total_tlds},
                 **{executor.submit(res.get_ip, f'{domain_main}.{cc}'): cc for cc in cctld},
-                **{executor.submit(res.get_ip, f'{domain_main}.{cc}.{tld}'): (cc, tld) for (cc, tld) in
-                   zip(cctld, total_tlds)},
+                **{executor.submit(res.get_ip, f'{domain_main}.{cc}.{tld}'): (cc, tld) for (cc, tld) in zip(cctld, total_tlds)},
             }
 
             # Display logs as soon as a thread is finished
@@ -435,7 +434,7 @@ def brute_reverse(res, ip_list, verbose=False, thread_num=None):
 
         ip_range = range(len(ip_list[i]) - 1)
         ip_group_size = 255
-        for ip_group in [ip_range[j: j + ip_group_size] for j in range(0, len(ip_range), ip_group_size)]:
+        for ip_group in [ip_range[j : j + ip_group_size] for j in range(0, len(ip_range), ip_group_size)]:
             try:
                 if verbose:
                     for x in ip_group:
@@ -459,13 +458,13 @@ def brute_reverse(res, ip_list, verbose=False, thread_num=None):
 
 
 def brute_domain(
-        res,
-        dictfile,
-        dom,
-        filter_=None,
-        verbose=False,
-        ignore_wildcard=False,
-        thread_num=None,
+    res,
+    dictfile,
+    dom,
+    filter_=None,
+    verbose=False,
+    ignore_wildcard=False,
+    thread_num=None,
 ):
     """
     Main Function for domain brute forcing
@@ -662,8 +661,7 @@ def whois_ips(res, ip_list):
 
         if 'a' in answer:
             for i in range(len(list_whois)):
-                print_status(
-                    'Performing Reverse Lookup of range {0}-{1}'.format(list_whois[i]['start'], list_whois[i]['end']))
+                print_status('Performing Reverse Lookup of range {0}-{1}'.format(list_whois[i]['start'], list_whois[i]['end']))
                 found_records.append(brute_reverse(res, expand_range(list_whois[i]['start'], list_whois[i]['end'])))
 
         elif 'n' in answer:
@@ -672,8 +670,7 @@ def whois_ips(res, ip_list):
             for a in answer:
                 net_selected = list_whois[int(a)]
                 print_status(net_selected['orgname'])
-                print_status(
-                    'Performing Reverse Lookup of range {0}-{1}'.format(net_selected['start'], net_selected['end']))
+                print_status('Performing Reverse Lookup of range {0}-{1}'.format(net_selected['start'], net_selected['end']))
                 found_records.append(brute_reverse(res, expand_range(net_selected['start'], net_selected['end'])))
     else:
         print_error('No IP Ranges were found in the Whois query results')
@@ -845,26 +842,26 @@ def write_db(db, data):
     for n in data:
         if re.match(r'PTR|^[A]$|AAAA', n['type']):
             query = (
-                    'insert into data( domain, type, name, address ) '
-                    + 'values( "{domain}", "{type}", "{name}","{address}" )'.format(**n)
+                'insert into data( domain, type, name, address ) '
+                + 'values( "{domain}", "{type}", "{name}","{address}" )'.format(**n)
             )
 
         elif re.match(r'NS$', n['type']):
             query = (
-                    'insert into data( domain, type, name, address ) '
-                    + 'values( "{domain}", "{type}", "{target}", "{address}" )'.format(**n)
+                'insert into data( domain, type, name, address ) '
+                + 'values( "{domain}", "{type}", "{target}", "{address}" )'.format(**n)
             )
 
         elif re.match(r'SOA', n['type']):
             query = (
-                    'insert into data( domain, type, name, address ) '
-                    + 'values( "{domain}", "{type}", "{mname}", "{address}" )'.format(**n)
+                'insert into data( domain, type, name, address ) '
+                + 'values( "{domain}", "{type}", "{mname}", "{address}" )'.format(**n)
             )
 
         elif re.match(r'MX', n['type']):
             query = (
-                    'insert into data( domain, type, name, address ) '
-                    + 'values( "{domain}", "{type}", "{exchange}", "{address}" )'.format(**n)
+                'insert into data( domain, type, name, address ) '
+                + 'values( "{domain}", "{type}", "{exchange}", "{address}" )'.format(**n)
             )
 
         elif re.match(r'TXT', n['type']):
@@ -875,14 +872,14 @@ def write_db(db, data):
 
         elif re.match(r'SRV', n['type']):
             query = (
-                    'insert into data( domain, type, name, target, address, port ) '
-                    + 'values( "{domain}", "{type}", "{name}" , "{target}", "{address}" ,"{port}" )'.format(**n)
+                'insert into data( domain, type, name, target, address, port ) '
+                + 'values( "{domain}", "{type}", "{name}" , "{target}", "{address}" ,"{port}" )'.format(**n)
             )
 
         elif re.match(r'CNAME', n['type']):
             query = (
-                    'insert into data( domain, type, name, target ) '
-                    + 'values( "{domain}", "{type}", "{name}" , "{target}" )'.format(**n)
+                'insert into data( domain, type, name, target ) '
+                + 'values( "{domain}", "{type}", "{name}" , "{target}" )'.format(**n)
             )
 
         else:
@@ -891,8 +888,7 @@ def write_db(db, data):
             del n['type']
             record_data = ''.join([f'{key}={value},' for key, value in n.items()])
             records = [t, record_data]
-            query = 'insert into data(domain,type,text) values ("%(domain)", \'' + records[0] + "','" + records[
-                1] + "')"
+            query = 'insert into data(domain,type,text) values ("%(domain)", \'' + records[0] + "','" + records[1] + "')"
 
         # Execute Query and commit
         cur.execute(query)
@@ -937,8 +933,7 @@ def dns_sec_check(domain, res):
 
     except dns.exception.Timeout:
         print_error('A timeout error occurred please make sure you can reach the target DNS Servers')
-        print_error(
-            f'directly and requests are not being filtered. Increase the timeout from {res._res.timeout} second')
+        print_error(f'directly and requests are not being filtered. Increase the timeout from {res._res.timeout} second')
         print_error('to a higher number with --lifetime <time> option.')
         sys.exit(1)
     except dns.resolver.NoAnswer:
@@ -960,11 +955,11 @@ def check_bindversion(res, ns_server, timeout):
                 print_status(f'\t Bind Version for {ns_server} {version}')
 
         except (
-                dns.resolver.NXDOMAIN,
-                dns.exception.Timeout,
-                dns.resolver.NoAnswer,
-                socket.error,
-                dns.query.BadResponse,
+            dns.resolver.NXDOMAIN,
+            dns.exception.Timeout,
+            dns.resolver.NoAnswer,
+            socket.error,
+            dns.query.BadResponse,
         ):
             pass
 
@@ -994,17 +989,17 @@ def check_recursive(res, ns_server, timeout):
 
 
 def general_enum(
-        res,
-        domain,
-        do_axfr,
-        do_bing,
-        do_yandex,
-        do_spf,
-        do_whois,
-        do_crt,
-        zw,
-        request_timeout,
-        thread_num=None,
+    res,
+    domain,
+    do_axfr,
+    do_bing,
+    do_yandex,
+    do_spf,
+    do_whois,
+    do_crt,
+    zw,
+    request_timeout,
+    thread_num=None,
 ):
     """
     Function for performing general enumeration of a domain. It gets SOA, NS, MX
