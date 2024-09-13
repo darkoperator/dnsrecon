@@ -1940,13 +1940,13 @@ Possible types:
             elif type_ == 'bing':
                 print_status(f'{type_}: Performing Bing Search Enumeration against {domain}...')
                 bing_enum_records = se_result_process(res, scrape_bing(domain))
-                if do_output:
+                if bing_enum_records is not None and do_output:
                     returned_records.extend(bing_enum_records)
 
             elif type_ == 'yand':
                 print_status(f'{type_}: Performing Yandex Search Enumeration against {domain}...')
                 yandex_enum_records = se_result_process(res, scrape_yandex(domain))
-                if do_output:
+                if yandex_enum_records is not None and do_output:
                     returned_records.extend(yandex_enum_records)
 
             elif type_ == 'crt':
