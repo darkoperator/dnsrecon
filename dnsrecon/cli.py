@@ -1952,8 +1952,10 @@ Possible types:
             elif type_ == 'crt':
                 print_status(f'{type_}: Performing Crt.sh Search Enumeration against {domain}...')
                 crt_enum_records = se_result_process(res, scrape_crtsh(domain))
-                if do_output:
+                if crt_enum_records is not None and do_output:
                     returned_records.extend(crt_enum_records)
+                else:
+                    print("[-] No records returned from crt.sh enumeration")
 
             elif type_ == 'snoop':
                 if not (dictionary and ns_server):
