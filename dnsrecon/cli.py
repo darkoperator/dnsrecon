@@ -67,26 +67,25 @@ DATA_DIR = Path(__file__).parent / 'data'
 def process_range(arg):
     """
     This function will take a string representation of a range for IPv4 or IPv6 in
-    CIDR or Range format and return a list of IPs.
+    CIDR or Range format and return a list of individual IP addresses.
     """
     ip_list = []
 
     ranges_raw_list = list(set(arg.strip().split(',')))
     for entry in ranges_raw_list:
         try:
-            range_vals = []
             if re.match(r'\S*/\S*', entry):
-                ip_list.append(IPNetwork(entry))
+                # If CIDR, expand to individual IPs
+                ip_list.extend(list(netaddr.IPNetwork(entry)))
 
             elif re.match(r'\S*-\S*', entry):
-                range_vals.extend(entry.split('-'))
-                if len(range_vals) == 2:
-                    ip_list.append(IPRange(range_vals[0], range_vals[1]))
+                # If range, expand to individual IPs
+                start, end = entry.split('-')
+                ip_list.extend(list(netaddr.iter_iprange(start, end)))
             else:
                 print_error(f'Range: {entry} provided is not valid')
-        except Exception:
-            print(Exception)
-            print_error(f'Range: {entry} provided is not valid')
+        except Exception as e:
+            print_error(f'Error processing range: {entry} - {e}')
 
     return ip_list
 
@@ -415,7 +414,6 @@ def brute_srv(res, domain, verbose=False, thread_num=None):
 
     return returned_records
 
-
 def brute_reverse(res, ip_list, verbose=False, thread_num=None):
     """
     Reverse look-up brute force for given CIDR example 192.168.1.1/24. Returns an
@@ -425,37 +423,46 @@ def brute_reverse(res, ip_list, verbose=False, thread_num=None):
     brtdata = []
     returned_records = []
 
-    for i in range(len(ip_list)):
-        start_ip = ip_list[i][0]
-        end_ip = ip_list[i][-1]
-        print_status(f'Performing Reverse Lookup from {start_ip} to {end_ip}')
+    # Ensure that ip_list contains individual IPs instead of IPNetwork or IPRange objects.
+    expanded_ips = []
+    for entry in ip_list:
+        if isinstance(entry, netaddr.IPNetwork) or isinstance(entry, netaddr.IPRange):
+            expanded_ips.extend(list(entry))
+        else:
+            expanded_ips.append(entry)
 
-        # Resolve each IP in a separate thread in groups of 255 hosts.
+    start_ip = expanded_ips[0]
+    end_ip = expanded_ips[-1]
+    print_status(f'Performing Reverse Lookup from {start_ip} to {end_ip}')
 
-        ip_range = range(len(ip_list[i]) - 1)
-        ip_group_size = 255
-        for ip_group in [ip_range[j : j + ip_group_size] for j in range(0, len(ip_range), ip_group_size)]:
-            try:
-                if verbose:
-                    for x in ip_group:
-                        ipaddress = str(ip_list[x])
-                        print_status(f'Trying {ipaddress}')
+    ip_group_size = 255
+    for ip_group in [expanded_ips[j: j + ip_group_size] for j in range(0, len(expanded_ips), ip_group_size)]:
+        try:
+            if verbose:
+                for ip in ip_group:
+                    print_status(f'Trying {ip}')
 
-                with futures.ThreadPoolExecutor(max_workers=thread_num) as executor:
-                    future_results = {executor.submit(res.get_ptr, str(ip_list[i][x])): x for x in ip_group}
-                    # Display logs as soon as a thread is finished
-                    for future in futures.as_completed(future_results):
+            with futures.ThreadPoolExecutor(max_workers=thread_num) as executor:
+                # Submit each IP for reverse lookup, converting to string as necessary
+                future_results = {executor.submit(res.get_ptr, str(ip)): ip for ip in ip_group}
+
+                # Display logs as soon as a thread is finished
+                for future in futures.as_completed(future_results):
+                    ip_address = future_results[future]
+                    try:
                         res_ = future.result()
-                        for type_, name_, addr_ in res_:
-                            returned_records.append([{'type': type_, 'name': name_, 'address': addr_}])
-                            print_good(f'\t {type_} {name_} {addr_}')
+                        if res_:
+                            for type_, name_, addr_ in res_:
+                                returned_records.append({'type': type_, 'name': name_, 'address': addr_})
+                                print_good(f'\t {type_} {name_} {addr_}')
+                    except Exception as e:
+                        print_error(f"Error resolving IP {ip_address}: {e}")
 
-            except Exception as e:
-                print_error(e)
+        except Exception as e:
+            print_error(f"Error with thread executor: {e}")
 
     print_good(f'{len(returned_records)} Records Found')
     return returned_records
-
 
 def brute_domain(
     res,
