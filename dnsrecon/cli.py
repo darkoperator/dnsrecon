@@ -247,11 +247,22 @@ def brute_tlds(res, domain, verbose=False, thread_num=None):
     global brtdata
     brtdata = []
 
+    # https://en.wikipedia.org/wiki/Country_code_top-level_domain#Types
+    # https://www.iana.org/domains
+    # Taken from http://data.iana.org/TLD/tlds-alpha-by-domain.txt
     # Define TLDs and Country Code TLDs
     itld = ['arpa']
+
+    # Generic TLD
     gtld = TLDS.generic_tlds()
+
+    # Generic restricted TLD
     grtld = ['biz', 'name', 'pro']
+
+    # Sponsored TLD
     stld = TLDS.sponsored_tlds()
+
+    # Country Code TLD
     cctld = TLDS.country_codes()
 
     domain_main = domain.split('.')[0]
