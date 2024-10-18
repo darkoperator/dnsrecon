@@ -416,7 +416,7 @@ class DnsHelper:
         Function for testing for zone transfers for a given Domain, it will parse the
         output by record type.
         """
-        # if anyone reports a record not parsed I will add it, the list is a long one
+        # if anyone reports a record not parsed, I will add it; the list is long
         # I tried to include those I thought where the most common.
 
         zone_records = []

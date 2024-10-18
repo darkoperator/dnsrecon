@@ -3,14 +3,13 @@ name = "dnsrecon"
 description = "DNS Enumeration Script"
 readme = "README.md"
 authors = [{ name = "Carlos Perez", email = "carlos_perez@darkoperator.com" }]
-requires-python = ">=3.9"
+requires-python = ">=3.11"
 urls.Homepage = "https://github.com/darkoperator/dnsrecon"
 classifiers = [
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "License :: OSI Approved :: GNU General Public License v2 (GPLv2)",
     "Operating System :: OS Independent",
 ]
@@ -67,7 +66,7 @@ exclude = [
 ]
 
 line-length = 130
-target-version = "py310"
+target-version = "py311"
 show-fixes = true
 
 [tool.ruff.lint]
