@@ -287,6 +287,9 @@ def brute_tlds(res, domain, verbose=False, thread_num=None):
                     full_domain = f'{domain_main}.{cc}.{tld}'
                     future_results[executor.submit(res.get_ip, full_domain)] = full_domain
 
+                    if verbose:
+                        print_status(f'Queuing: {full_domain}')
+
             # Display results as soon as threads are completed
             for future in futures.as_completed(future_results):
                 full_domain = future_results[future]
