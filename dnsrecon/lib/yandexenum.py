@@ -20,8 +20,9 @@ import time
 import urllib
 import urllib.request
 
-from dnsrecon.lib.msf_print import *
+from loguru import logger
 
+__name__ = 'yandexenum'
 url_opener = urllib.request.FancyURLopener
 
 
@@ -45,11 +46,11 @@ def scrape_yandex(dom):
             data = sock.read().decode('utf-8')
             sock.close()
         except Exception as e:
-            print_error(e)
+            logger.error(e)
             return []
 
         if re.search('enter_captcha_value', data):
-            print_error("Yandex has detected the search as 'bot activity, stopping search...")
+            logger.error("Yandex has detected the search as 'bot activity, stopping search...")
             return unique(results)
 
         results.extend(re.findall(r'([a-zA-Z0-9\-\.]+' + dom + ')/?', data))

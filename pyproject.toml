@@ -70,7 +70,16 @@ target-version = "py311"
 show-fixes = true
 
 [tool.ruff.lint]
-select = ["E4", "E7", "E9", "F", "I", "UP", "TCH"]
+select = ["E4",
+    "E7",
+    "E9",
+    "F",
+    "I",
+    "UP",
+    "TCH",
+    "RUF",
+    "PT",
+    ]
 ignore = ["E721", "F403", "F405", "UP030"]
 
 # Allow fix for all enabled rules (when `--fix`) is provided.

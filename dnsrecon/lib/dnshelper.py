@@ -25,8 +25,7 @@ import dns.resolver
 import dns.reversename
 from dns.dnssec import algorithm_to_text
 from dns.zone import *
-
-from .msf_print import *
+from loguru import logger
 
 DNS_PORT_NUMBER = 53
 DNS_QUERY_TIMEOUT = 4.0
@@ -262,8 +261,8 @@ class DnsHelper:
             dns.resolver.NoNameservers,
             dns.query.BadResponse,
         ) as e:
-            print_error(f'Exception "{e}" while resolving SOA record.')
-            print_error(f'Error while resolving SOA while using {self._res.nameservers[0]} as nameserver.')
+            logger.error(f'Exception "{e}" while resolving SOA record.')
+            logger.error(f'Error while resolving SOA while using {self._res.nameservers[0]} as nameserver.')
             return []
 
         # ~ we consider both response sections
@@ -421,50 +420,50 @@ class DnsHelper:
 
         zone_records = []
         ns_records = []
-        print_status(f'Checking for Zone Transfer for {self._domain} name servers')
+        logger.info(f'Checking for Zone Transfer for {self._domain} name servers')
 
         # Find SOA for Domain
-        print_status('Resolving SOA Record')
+        logger.info('Resolving SOA Record')
         try:
             soa_srvs = self.get_soa()
             for type_, name_, addr_ in soa_srvs:
-                print_good(f'\t {type_} {name_} {addr_}')
+                logger.info(f'\t {type_} {name_} {addr_}')
                 ns_records.append(addr_)
         except Exception:
-            print_error('Could not obtain the domains SOA Record.')
+            logger.error('Could not obtain the domains SOA Record.')
             return
 
         # Find NS for Domain
-        print_status('Resolving NS Records')
+        logger.info('Resolving NS Records')
         try:
             ns_srvs = []
             ns_srvs = self.get_ns()
-            print_status('NS Servers found:')
+            logger.info('NS Servers found:')
             for type_, name_, addr_ in ns_srvs:
-                print_good(f'\t {type_} {name_} {addr_}')
+                logger.info(f'\t {type_} {name_} {addr_}')
                 ns_records.append(addr_)
         except Exception as e:
-            print_error(f'Could not Resolve NS Records: {e}')
+            logger.error(f'Could not Resolve NS Records: {e}')
 
         # Remove duplicates
-        print_status('Removing any duplicate NS server IP Addresses...')
+        logger.info('Removing any duplicate NS server IP Addresses...')
         ns_records = list(set(ns_records))
 
         # Test each NS Server
         for ns_srv in ns_records:
-            print_status(' ')
-            print_status(f'Trying NS server {ns_srv}')
+            logger.info(' ')
+            logger.info(f'Trying NS server {ns_srv}')
 
             if not self.check_tcp_dns(ns_srv):
-                print_error(f'Zone Transfer Failed for {ns_srv}!')
-                print_error('Port 53 TCP is being filtered')
+                logger.error(f'Zone Transfer Failed for {ns_srv}!')
+                logger.error('Port 53 TCP is being filtered')
                 zone_records.append({'type': 'info', 'zone_transfer': 'failed', 'ns_server': ns_srv})
                 continue
 
-            print_good(f'{ns_srv} Has port 53 TCP Open')
+            logger.info(f'{ns_srv} Has port 53 TCP Open')
             try:
                 zone = self.from_wire(dns.query.xfr(ns_srv, self._domain))
-                print_good('Zone Transfer was successful!!')
+                logger.info('Zone Transfer was successful!!')
                 zone_records.append({'type': 'info', 'zone_transfer': 'success', 'ns_server': ns_srv})
 
                 for name, rdataset in zone.iterate_rdatasets(dns.rdatatype.SOA):
@@ -473,7 +472,7 @@ class DnsHelper:
 
                         for type_, name_, addr_ in self.get_ip(mname):
                             if type_ in ['A', 'AAAA']:
-                                print_status(f'\t SOA {mname} {addr_}')
+                                logger.info(f'\t SOA {mname} {addr_}')
                                 zone_records.append(
                                     {
                                         'zone_server': ns_srv,
@@ -496,7 +495,7 @@ class DnsHelper:
 
                         for type_, name_, addr_ in self.get_ip(target):
                             if type_ in ['A', 'AAAA']:
-                                print_status(f'\t NS {target} {addr_}')
+                                logger.info(f'\t NS {target} {addr_}')
                                 zone_records.append(
                                     {
                                         'zone_server': ns_srv,
@@ -509,13 +508,13 @@ class DnsHelper:
                 for name, rdataset in zone.iterate_rdatasets(dns.rdatatype.TXT):
                     for rdata in rdataset:
                         s = '; '.join([string.decode() for string in rdata.strings])
-                        print_status(f'\t TXT {s}')
+                        logger.info(f'\t TXT {s}')
                         zone_records.append({'zone_server': ns_srv, 'type': 'TXT', 'strings': s})
 
                 for name, rdataset in zone.iterate_rdatasets(dns.rdatatype.SPF):
                     for rdata in rdataset:
                         s = '; '.join([string.decode() for string in rdata.strings])
-                        print_status(f'\t SPF {s}')
+                        logger.info(f'\t SPF {s}')
                         zone_records.append({'zone_server': ns_srv, 'type': 'SPF', 'strings': s})
 
                 for name, rdataset in zone.iterate_rdatasets(dns.rdatatype.PTR):
@@ -523,7 +522,7 @@ class DnsHelper:
                         target = rdata.target.to_text() + '.' + self._domain
                         for type_, name_, addr_ in self.get_ip(target):
                             if type_ in ['A', 'AAAA']:
-                                print_status(f'\t PTR {target} {addr_}')
+                                logger.info(f'\t PTR {target} {addr_}')
                                 zone_records.append(
                                     {
                                         'zone_server': ns_srv,
@@ -540,7 +539,7 @@ class DnsHelper:
                         for type_, name_, addr_ in self.get_ip(exchange):
                             fqdn_ = str(name) + '.' + self._domain
                             if type_ in ['A', 'AAAA']:
-                                print_status(f'\t MX {fqdn_} {exchange} {addr_}')
+                                logger.info(f'\t MX {fqdn_} {exchange} {addr_}')
                                 zone_records.append(
                                     {
                                         'zone_server': ns_srv,
@@ -554,7 +553,7 @@ class DnsHelper:
                 for name, rdataset in zone.iterate_rdatasets(dns.rdatatype.AAAA):
                     fqdn_ = str(name) + '.' + self._domain
                     for rdata in rdataset:
-                        print_status(f'\t AAAA {fqdn_} {rdata.address}')
+                        logger.info(f'\t AAAA {fqdn_} {rdata.address}')
                         zone_records.append(
                             {
                                 'zone_server': ns_srv,
@@ -567,7 +566,7 @@ class DnsHelper:
                 for name, rdataset in zone.iterate_rdatasets(dns.rdatatype.A):
                     fqdn_ = str(name) + '.' + self._domain
                     for rdata in rdataset:
-                        print_status(f'\t A {fqdn_} {rdata.address}')
+                        logger.info(f'\t A {fqdn_} {rdata.address}')
                         zone_records.append(
                             {
                                 'zone_server': ns_srv,
@@ -584,7 +583,7 @@ class DnsHelper:
 
                         for type_, name_, addr_ in self.get_ip(target):
                             if type_ in ['A', 'AAAA']:
-                                print_status(f'\t CNAME {fqdn_} {target} {addr_}')
+                                logger.info(f'\t CNAME {fqdn_} {target} {addr_}')
                                 zone_records.append(
                                     {
                                         'zone_server': ns_srv,
@@ -605,7 +604,7 @@ class DnsHelper:
 
                         ip_list = self.get_ip(rdata.target.to_text())
                         if not ip_list:
-                            print_status(f'\t SRV {fqdn_} {target} {port_} {weight_} no_ip')
+                            logger.info(f'\t SRV {fqdn_} {target} {port_} {weight_} no_ip')
                             zone_records.append(
                                 {
                                     'zone_server': ns_srv,
@@ -621,7 +620,7 @@ class DnsHelper:
 
                         for type_, name_, addr_ in ip_list:
                             if type_ in ['A', 'AAAA']:
-                                print_status(f'\t SRV {fqdn_} {target} {port_} {weight_} {addr_}')
+                                logger.info(f'\t SRV {fqdn_} {target} {port_} {weight_} {addr_}')
                                 zone_records.append(
                                     {
                                         'zone_server': ns_srv,
@@ -638,7 +637,7 @@ class DnsHelper:
                     for rdata in rdataset:
                         cpu_ = rdata.cpu.decode()
                         os_ = rdata.os.decode()
-                        print_status(f'\t HINFO {cpu_} {os_}')
+                        logger.info(f'\t HINFO {cpu_} {os_}')
                         zone_records.append(
                             {
                                 'zone_server': ns_srv,
@@ -653,7 +652,7 @@ class DnsHelper:
                         addr_ = rdata.address
                         bitmap_ = rdata.bitmap
                         proto_ = rdata.protocol
-                        print_status(f'\t WKS {addr_} {bitmap_} {proto_}')
+                        logger.info(f'\t WKS {addr_} {bitmap_} {proto_}')
                         zone_records.append(
                             {
                                 'zone_server': ns_srv,
@@ -668,7 +667,7 @@ class DnsHelper:
                     for rdata in rdataset:
                         mbox_ = rdata.mbox.to_text()
                         txt_ = rdata.txt.to_text()
-                        print_status(f'\t RP {mbox_} {txt_}')
+                        logger.info(f'\t RP {mbox_} {txt_}')
                         zone_records.append(
                             {
                                 'zone_server': ns_srv,
@@ -682,7 +681,7 @@ class DnsHelper:
                     for rdata in rdataset:
                         subtype_ = str(rdata.subtype)
                         hostname_ = rdata.hostname.to_text()
-                        print_status(f'\t AFSDB {subtype_} {hostname_}')
+                        logger.info(f'\t AFSDB {subtype_} {hostname_}')
                         zone_records.append(
                             {
                                 'zone_server': ns_srv,
@@ -695,7 +694,7 @@ class DnsHelper:
                 for name, rdataset in zone.iterate_rdatasets(dns.rdatatype.LOC):
                     for rdata in rdataset:
                         coordinates_ = rdata.to_text()
-                        print_status(f'\t LOC {coordinates_}')
+                        logger.info(f'\t LOC {coordinates_}')
                         zone_records.append(
                             {
                                 'zone_server': ns_srv,
@@ -707,13 +706,13 @@ class DnsHelper:
                 for name, rdataset in zone.iterate_rdatasets(dns.rdatatype.X25):
                     for rdata in rdataset:
                         addr_ = rdata.address
-                        print_status(f'\t X25 {addr_}')
+                        logger.info(f'\t X25 {addr_}')
                         zone_records.append({'zone_server': ns_srv, 'type': 'X25', 'address': addr_})
 
                 for name, rdataset in zone.iterate_rdatasets(dns.rdatatype.ISDN):
                     for rdata in rdataset:
                         addr_ = rdata.address
-                        print_status(f'\t ISDN {addr_}')
+                        logger.info(f'\t ISDN {addr_}')
                         zone_records.append({'zone_server': ns_srv, 'type': 'ISDN', 'address': addr_})
 
                 for name, rdataset in zone.iterate_rdatasets(dns.rdatatype.RT):
@@ -722,7 +721,7 @@ class DnsHelper:
                         exchange = strip_last_dot(rdata.exchange.to_text())
                         pref_ = str(rdata.preference)
 
-                        print_status(f'\t RT {exchange} {pref_}')
+                        logger.info(f'\t RT {exchange} {pref_}')
                         zone_records.append(
                             {
                                 'zone_server': ns_srv,
@@ -735,7 +734,7 @@ class DnsHelper:
                 for name, rdataset in zone.iterate_rdatasets(dns.rdatatype.NSAP):
                     for rdata in rdataset:
                         addr_ = rdata.address
-                        print_status(f'\t NSAP {addr_}')
+                        logger.info(f'\t NSAP {addr_}')
                         zone_records.append({'zone_server': ns_srv, 'type': 'NSAP', 'address': addr_})
 
                 for name, rdataset in zone.iterate_rdatasets(dns.rdatatype.NAPTR):
@@ -747,7 +746,7 @@ class DnsHelper:
                         replacement_ = rdata.replacement.to_text()
                         service_ = rdata.service.decode()
 
-                        print_status(f'\t NAPTR {flags_} {order_} {pref_} {regexp_} {replacement_} {service_}')
+                        logger.info(f'\t NAPTR {flags_} {order_} {pref_} {regexp_} {replacement_} {service_}')
                         zone_records.append(
                             {
                                 'zone_server': ns_srv,
@@ -767,7 +766,7 @@ class DnsHelper:
                         cert_type_ = rdata.certificate_type
                         key_tag_ = rdata.key_tag
 
-                        print_status(f'\t CERT {rdata.to_text()}')
+                        logger.info(f'\t CERT {rdata.to_text()}')
                         zone_records.append(
                             {
                                 'zone_server': ns_srv,
@@ -791,7 +790,7 @@ class DnsHelper:
                         signer_ = str(rdata.signer)
                         type_covered_ = rdata.type_covered
 
-                        print_status(
+                        logger.info(
                             f'\t SIG {algo_} {expiration_} {inception_} {key_tag_} {labels_} {original_ttl_} {signature_} {signer_} {type_covered_}'
                         )
                         zone_records.append(
@@ -822,7 +821,7 @@ class DnsHelper:
                         signer_ = str(rdata.signer)
                         type_covered_ = rdata.type_covered
 
-                        print_status(
+                        logger.info(
                             f'\t RRSIG {algo_} {expiration_} {inception_} {key_tag_} {labels_} {original_ttl_} {signature_} {signer_} {type_covered_}'
                         )
                         zone_records.append(
@@ -848,7 +847,7 @@ class DnsHelper:
                         key_ = dns.rdata._hexify(rdata.key)
                         proto_ = rdata.protocol
 
-                        print_status(f'\t DNSKEY {algo_} {flags_} {key_} {proto_}')
+                        logger.info(f'\t DNSKEY {algo_} {flags_} {key_} {proto_}')
                         zone_records.append(
                             {
                                 'zone_server': ns_srv,
@@ -867,7 +866,7 @@ class DnsHelper:
                         digest_type_ = rdata.digest_type
                         key_tag_ = rdata.key_tag
 
-                        print_status(f'\t DS {algo_} {digest_} {digest_type_} {key_tag_}')
+                        logger.info(f'\t DS {algo_} {digest_} {digest_type_} {key_tag_}')
                         zone_records.append(
                             {
                                 'zone_server': ns_srv,
@@ -882,7 +881,7 @@ class DnsHelper:
                 for name, rdataset in zone.iterate_rdatasets(dns.rdatatype.NSEC):
                     for rdata in rdataset:
                         next_ = rdata.next.to_text()
-                        print_status(f'\t NSEC {next_}')
+                        logger.info(f'\t NSEC {next_}')
                         zone_records.append({'zone_server': ns_srv, 'type': 'NSEC', 'next': next_})
 
                 for name, rdataset in zone.iterate_rdatasets(dns.rdatatype.NSEC3):
@@ -892,7 +891,7 @@ class DnsHelper:
                         iterations_ = rdata.iterations
                         salt_ = dns.rdata._hexify(rdata.salt)
 
-                        print_status(f'\t NSEC3 {algo_} {flags_} {iterations_} {salt_}')
+                        logger.info(f'\t NSEC3 {algo_} {flags_} {iterations_} {salt_}')
                         zone_records.append(
                             {
                                 'zone_server': ns_srv,
@@ -911,7 +910,7 @@ class DnsHelper:
                         iterations_ = rdata.iterations
                         salt_ = dns.rdata._hexify(rdata.salt)
 
-                        print_status(f'\t NSEC3PARAM {algo_} {flags_} {iterations_} {salt_}')
+                        logger.info(f'\t NSEC3PARAM {algo_} {flags_} {iterations_} {salt_}')
                         zone_records.append(
                             {
                                 'zone_server': ns_srv,
@@ -931,7 +930,7 @@ class DnsHelper:
                         gw_type_ = rdata.gateway_type
                         prec_ = rdata.precedence
 
-                        print_status(f'\t IPSECKEY {algo_} {gw_} {gw_type_} {key_} {prec_}')
+                        logger.info(f'\t IPSECKEY {algo_} {gw_} {gw_type_} {key_} {prec_}')
                         zone_records.append(
                             {
                                 'zone_server': ns_srv,
@@ -944,7 +943,7 @@ class DnsHelper:
                             }
                         )
             except Exception as e:
-                print_error(f'Zone Transfer Failed ({e})')
+                logger.error(f'Zone Transfer Failed ({e})')
                 zone_records.append({'type': 'info', 'zone_transfer': 'failed', 'ns_server': ns_srv})
 
         return zone_records

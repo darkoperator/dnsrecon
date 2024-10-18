@@ -17,9 +17,10 @@
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
+from loguru import logger
 from lxml import etree
 
-from dnsrecon.lib.msf_print import *
+__name__ = 'crtenum'
 
 
 def scrape_crtsh(dom):
@@ -27,7 +28,7 @@ def scrape_crtsh(dom):
     Function for enumerating subdomains by scraping crt.sh.
     """
     results = []
-    headers = {'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64; rv:31.0) Gecko/20100101 Firefox/31.0'}
+    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.3'}
     url = f'https://crt.sh/?q=%25.{dom}'
 
     req = Request(url=url, headers=headers)
@@ -35,16 +36,16 @@ def scrape_crtsh(dom):
         resp = urlopen(req, timeout=30)
         data = resp.read()
     except HTTPError as e:
-        print_error(f'Bad http status from crt.sh: "{e.code}"')
+        logger.error(f'Bad http status from crt.sh: "{e.code}"')
         return results
     except URLError as e:
-        print_error(f'Connection with crt.sh failed. Reason: "{e.reason}"')
+        logger.error(f'Connection with crt.sh failed. Reason: "{e.reason}"')
         return results
 
     root = etree.HTML(data)
     tbl = root.xpath('//table/tr/td/table/tr/td[5]')
     if len(tbl) < 1:
-        print_error('Certificates for subdomains not found')
+        logger.error('Certificates for subdomains not found')
         return results
 
     for ent in tbl:
@@ -52,7 +53,7 @@ def scrape_crtsh(dom):
         if not sub_dom.endswith('.' + dom):
             continue
         if sub_dom.startswith('*.'):
-            print_status(f'\t {sub_dom} wildcard')
+            logger.info(f'\t {sub_dom} wildcard')
             continue
         if sub_dom not in results:
             results.append(sub_dom)

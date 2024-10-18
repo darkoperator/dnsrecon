@@ -17,6 +17,8 @@ import re
 import time
 import urllib.request
 
+__name__ = 'bingenum'
+
 url_opener = urllib.request.FancyURLopener
 
 

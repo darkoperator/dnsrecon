@@ -18,6 +18,8 @@ import socket
 
 from netaddr import *
 
+__name__ = 'whois.py'
+
 WHOIS_PORT_NUMBER = 43
 WHOIS_RECEIVE_BUFFER_SIZE = 4096
 
