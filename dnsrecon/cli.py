@@ -1623,9 +1623,7 @@ def main():
             action='store_true',
         )
         parser.add_argument(
-        '--disable_check_nxdomain',
-        help='Disables check for NXDOMAIN hijacking on name servers.',
-        action='store_true'
+            '--disable_check_nxdomain', help='Disables check for NXDOMAIN hijacking on name servers.', action='store_true'
         )
         parser.add_argument(
             '--disable_check_recursion',
