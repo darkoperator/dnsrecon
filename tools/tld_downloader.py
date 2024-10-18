@@ -7,7 +7,7 @@ import json
 
 
 def read_tld_data(file_path):
-    with open(file_path, 'r') as f:
+    with open(file_path) as f:
         return json.load(f)
 
 
