@@ -414,6 +414,7 @@ def brute_srv(res, domain, verbose=False, thread_num=None):
 
     return returned_records
 
+
 def brute_reverse(res, ip_list, verbose=False, thread_num=None):
     """
     Reverse look-up brute force for given CIDR example 192.168.1.1/24. Returns an
@@ -436,7 +437,7 @@ def brute_reverse(res, ip_list, verbose=False, thread_num=None):
     print_status(f'Performing Reverse Lookup from {start_ip} to {end_ip}')
 
     ip_group_size = 255
-    for ip_group in [expanded_ips[j: j + ip_group_size] for j in range(0, len(expanded_ips), ip_group_size)]:
+    for ip_group in [expanded_ips[j : j + ip_group_size] for j in range(0, len(expanded_ips), ip_group_size)]:
         try:
             if verbose:
                 for ip in ip_group:
@@ -456,13 +457,14 @@ def brute_reverse(res, ip_list, verbose=False, thread_num=None):
                                 returned_records.append({'type': type_, 'name': name_, 'address': addr_})
                                 print_good(f'\t {type_} {name_} {addr_}')
                     except Exception as e:
-                        print_error(f"Error resolving IP {ip_address}: {e}")
+                        print_error(f'Error resolving IP {ip_address}: {e}')
 
         except Exception as e:
-            print_error(f"Error with thread executor: {e}")
+            print_error(f'Error with thread executor: {e}')
 
     print_good(f'{len(returned_records)} Records Found')
     return returned_records
+
 
 def brute_domain(
     res,
