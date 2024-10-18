@@ -1,3 +1,4 @@
 dnspython>=2.6.1
 netaddr
 lxml
+requests
