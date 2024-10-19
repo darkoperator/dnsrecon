@@ -702,13 +702,14 @@ def prettify(elem):
     reparsed = minidom.parseString(rough_string)
     return reparsed.toprettyxml(indent='    ')
 
+
 def dns_record_from_dict(record_dict_list, scan_info, domains):
     """
     Saves DNS Records to XML Given a list of dictionaries each representing
     a record to be saved, returns the XML Document formatted.
     """
     xml_doc = Element('dnsrecon')
-    
+
     # Add scan information
     scanelem = Element('scaninfo')
     scanelem.attrib['arguments'] = scan_info[0]
@@ -719,10 +720,10 @@ def dns_record_from_dict(record_dict_list, scan_info, domains):
         domelem = Element('domain')
         domelem.attrib['domain_name'] = domain
         xml_doc.append(domelem)
-        
+
         # Filter records for the current domain
         domain_records = [r for r in record_dict_list if r.get('domain') == domain]
-        
+
         for r in domain_records:
             elem = Element('record')
             for k, v in r.items():
@@ -731,6 +732,7 @@ def dns_record_from_dict(record_dict_list, scan_info, domains):
             domelem.append(elem)
 
     return prettify(xml_doc)
+
 
 def create_db(db):
     """
@@ -766,6 +768,7 @@ def create_db(db):
     else:
         pass
 
+
 def make_csv(data):
     csv_data = 'Domain,Type,Name,Address,Target,Port,String\n'
     for record_tmp in data:
@@ -778,7 +781,7 @@ def make_csv(data):
 
         domain = record.get('domain', '')
         type_ = record['type'].upper()
-        csv_data += f"{domain},{type_},"
+        csv_data += f'{domain},{type_},'
 
         if type_ in ['PTR', 'A', 'AAAA', 'NS', 'SOA', 'MX']:
             if type_ in ['PTR', 'A', 'AAAA']:
@@ -1493,6 +1496,8 @@ def ds_zone_walk(res, domain, lifetime):
         logger.error('Zone could not be walked')
 
     return records
+
+
 def main():
     logger.remove()
     logger.add(sys.stderr, format='{time} {level} {message}', level='DEBUG')
@@ -1845,7 +1850,7 @@ Possible types:
 
     # Iterate over each domain and perform enumeration
     for domain in domain_list:
-        logger.info(f"Starting enumeration for domain: {domain}")
+        logger.info(f'Starting enumeration for domain: {domain}')
 
         # Initialize the resolver for the current domain
         res = DnsHelper(domain, ns_server, request_timeout, proto)
@@ -1968,7 +1973,7 @@ Increase the timeout from {request_timeout} seconds to a higher number with --li
                 )
                 continue  # Continue with the next domain
 
-        logger.info(f"Completed enumeration for domain: {domain}\n")
+        logger.info(f'Completed enumeration for domain: {domain}\n')
 
     # After processing all domains, handle output
     if do_output:
