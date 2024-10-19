@@ -28,7 +28,9 @@ def scrape_crtsh(dom):
     Function for enumerating subdomains by scraping crt.sh.
     """
     results = []
-    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.3'}
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.3'
+    }
     url = f'https://crt.sh/?q=%25.{dom}'
 
     req = Request(url=url, headers=headers)
