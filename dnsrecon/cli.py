@@ -31,7 +31,7 @@ import json
 import os
 import sqlite3
 import sys
-from argparse import ArgumentParser, RawTextHelpFormatter, ArgumentError
+from argparse import ArgumentError, ArgumentParser, RawTextHelpFormatter
 from concurrent import futures
 from pathlib import Path
 from random import SystemRandom
@@ -1502,9 +1502,6 @@ def ds_zone_walk(res, domain, lifetime):
 
 
 def main():
-    logger.remove()
-    logger.add(sys.stderr, format='{time} {level} {message}', level='DEBUG')
-    logger.add('~/.config/dnsrecon/dnsrecon.log', rotation='100 MB', compression='tar.gz')
     #
     # Option Variables
     #
@@ -1607,6 +1604,15 @@ def main():
             default=3.0,
             help='Time to wait for a server to respond to a query. default is 3.0',
         )
+
+        parser.add_argument(
+            '--loglevel',
+            type=str,
+            choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'],
+            default='INFO',
+            help='Log level to use. default is INFO',
+        )
+
         parser.add_argument(
             '--tcp',
             dest='tcp',
@@ -1665,6 +1671,9 @@ Possible types:
     zonewalk: Perform a DNSSEC zone walk using NSEC records.""",
         )
         arguments = parser.parse_args()
+        logger.remove()
+        logger.add(sys.stderr, format='{time} {level} {message}', level=arguments.loglevel)
+        logger.add('~/.config/dnsrecon/dnsrecon.log', rotation='100 MB', compression='tar.gz')
 
     except SystemExit:
         # Handle exit() from passing --help
