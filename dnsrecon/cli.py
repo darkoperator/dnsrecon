@@ -18,7 +18,7 @@
 
 __version__ = '1.3.0'
 __author__ = 'Carlos Perez, Carlos_Perez@darkoperator.com'
-__name__ = 'cli.py'
+__name__ = 'cli'
 
 __doc__ = """
 DNSRecon https://www.darkoperator.com
