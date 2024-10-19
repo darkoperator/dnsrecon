@@ -31,7 +31,7 @@ import json
 import os
 import sqlite3
 import sys
-from argparse import ArgumentParser, RawTextHelpFormatter, ArgumentError
+from argparse import ArgumentError, ArgumentParser, RawTextHelpFormatter
 from concurrent import futures
 from pathlib import Path
 from random import SystemRandom
@@ -1506,7 +1506,6 @@ def main():
     # Option Variables
     #
 
-    returned_records = []
     output_file = None
     xfr = None
     bing = False
@@ -1762,7 +1761,7 @@ Possible types:
         if not os.path.isfile(arguments.input_list):
             logger.error(f"Input list file '{arguments.input_list}' does not exist.")
             sys.exit(1)
-        with open(arguments.input_list, 'r') as f:
+        with open(arguments.input_list) as f:
             domain_list = [line.strip() for line in f if line.strip()]
         if not domain_list:
             logger.error(f"No domains found in the input list file '{arguments.input_list}'.")
