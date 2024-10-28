@@ -245,31 +245,15 @@ def brute_tlds(res, domain, verbose=False, thread_num=None):
     This function performs a check of a given domain for known TLD values.
     Prints and returns a dictionary of the results.
     """
-    global brtdata
-    brtdata = []
 
-    # Define TLDs and Country Code TLDs
-    itld = ['arpa']
-
-    # Generic TLD
-    gtld = TLDS.generic_tlds()
-
-    # Generic restricted TLD
-    grtld = ['biz', 'name', 'pro']
-
-    # Sponsored TLD
-    stld = TLDS.sponsored_tlds()
-
-    # Country Code TLD
-    cctld = TLDS.country_codes()
-
-    domain_main = domain.split('.')[0]
-
-    # Combine all TLDs
-    total_tlds = list(set(itld + gtld + grtld + stld))
+    total_tlds = []
+    tlds_list = get_list('https://raw.githubusercontent.com/publicsuffix/list/master/public_suffix_list.dat', 'lists/all_tld.txt')
+    for tld in tlds_list.split('\n'):
+        if '/' not in tld.strip() and tld.strip() != '':
+            total_tlds.append(tld.strip().lower().replace('*.',''))
 
     # Let the user know how long it could take
-    total_combinations = len(cctld) * len(total_tlds)
+    total_combinations = len(total_tlds)
     duration = time.strftime('%H:%M:%S', time.gmtime(total_combinations / 3))
     logger.info(f'The operation could take up to: {duration}')
 
@@ -278,15 +262,13 @@ def brute_tlds(res, domain, verbose=False, thread_num=None):
     try:
         with futures.ThreadPoolExecutor(max_workers=thread_num) as executor:
             future_results = {}
+         
+            for tld in total_tlds:
+                full_domain = f'{domain_main}.{tld}'
+                future_results[executor.submit(res.get_ip, full_domain)] = full_domain
 
-            # Nested loop to combine cctld and total_tlds
-            for cc in cctld:
-                for tld in total_tlds:
-                    full_domain = f'{domain_main}.{cc}.{tld}'
-                    future_results[executor.submit(res.get_ip, full_domain)] = full_domain
-
-                    if verbose:
-                        logger.info(f'Queuing: {full_domain}')
+                if verbose:
+                    logger.info(f'Queuing: {full_domain}')
 
             # Display results as soon as threads are completed
             for future in futures.as_completed(future_results):
