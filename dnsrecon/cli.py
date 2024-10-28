@@ -246,7 +246,14 @@ def brute_tlds(res, domain, verbose=False, thread_num=None):
     """
 
     total_tlds = []
-    tlds_list = get_list('https://raw.githubusercontent.com/publicsuffix/list/master/public_suffix_list.dat', 'lists/all_tld.txt')
+    try:
+        tlds_list = requests.get(
+            'https://raw.githubusercontent.com/publicsuffix/list/master/public_suffix_list.dat', timeout=30
+        ).text
+    except Exception as e:
+        tlds_list = ''
+        logger.error(f'Error {e} retrieving TLDs list')
+
     for tld in tlds_list.split('\n'):
         if '/' not in tld.strip() and tld.strip() != '':
             total_tlds.append(tld.strip().lower().replace('*.', ''))
@@ -263,7 +270,7 @@ def brute_tlds(res, domain, verbose=False, thread_num=None):
             future_results = {}
 
             for tld in total_tlds:
-                full_domain = f'{domain_main}.{tld}'
+                full_domain = f'{domain}.{tld}'
                 future_results[executor.submit(res.get_ip, full_domain)] = full_domain
 
                 if verbose:
