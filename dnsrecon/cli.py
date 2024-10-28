@@ -249,7 +249,7 @@ def brute_tlds(res, domain, verbose=False, thread_num=None):
     tlds_list = get_list('https://raw.githubusercontent.com/publicsuffix/list/master/public_suffix_list.dat', 'lists/all_tld.txt')
     for tld in tlds_list.split('\n'):
         if '/' not in tld.strip() and tld.strip() != '':
-            total_tlds.append(tld.strip().lower().replace('*.',''))
+            total_tlds.append(tld.strip().lower().replace('*.', ''))
 
     # Let the user know how long it could take
     total_combinations = len(total_tlds)
@@ -261,7 +261,7 @@ def brute_tlds(res, domain, verbose=False, thread_num=None):
     try:
         with futures.ThreadPoolExecutor(max_workers=thread_num) as executor:
             future_results = {}
-         
+
             for tld in total_tlds:
                 full_domain = f'{domain_main}.{tld}'
                 future_results[executor.submit(res.get_ip, full_domain)] = full_domain
