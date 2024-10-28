@@ -55,7 +55,6 @@ from loguru import logger
 from dnsrecon.lib.bingenum import *
 from dnsrecon.lib.crtenum import scrape_crtsh
 from dnsrecon.lib.dnshelper import DnsHelper
-from dnsrecon.lib.tlds import TLDS
 from dnsrecon.lib.whois import *
 from dnsrecon.lib.yandexenum import *
 
