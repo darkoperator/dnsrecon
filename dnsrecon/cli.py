@@ -247,7 +247,9 @@ def brute_tlds(res, domain, verbose=False, thread_num=None):
 
     total_tlds = []
     try:
-        tlds_list = requests.get('https://raw.githubusercontent.com/publicsuffix/list/master/public_suffix_list.dat', timeout=30).text
+        tlds_list = requests.get(
+            'https://raw.githubusercontent.com/publicsuffix/list/master/public_suffix_list.dat', timeout=30
+        ).text
     except Exception as e:
         tlds_list = ''
         logger.error(f'Error {e} retrieving TLDs list')
