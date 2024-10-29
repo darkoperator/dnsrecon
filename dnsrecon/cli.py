@@ -1662,7 +1662,7 @@ Possible types:
         arguments = parser.parse_args()
         logger.remove()
         logger.add(sys.stderr, format='{time} {level} {message}', level=arguments.loglevel)
-        logger.add('~/.config/dnsrecon/dnsrecon.log', rotation='100 MB', compression='tar.gz')
+        logger.add(Path(Path.home(), '.config/dnsrecon/dnsrecon.log'), rotation='100 MB', compression='tar.gz')
 
     except SystemExit:
         # Handle exit() from passing --help
