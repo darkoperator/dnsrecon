@@ -33,7 +33,7 @@ class AppURLopener(url_opener):
 
 def scrape_yandex(dom):
     """
-    Function for enumerating sub-domains and hosts by scraping Bing.
+    Function for enumerating sub-domains and hosts by scraping Yandex.
     """
     results = []
     searches = ['1', '2', '3', '4', '5', '10', '20', '30']
