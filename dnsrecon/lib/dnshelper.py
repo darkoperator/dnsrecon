@@ -108,7 +108,7 @@ class DnsHelper:
         self,
         q,
         where,
-        timeout=None,
+        timeout=DNS_QUERY_TIMEOUT,
         port=53,
         af=None,
         source=None,
@@ -462,7 +462,7 @@ class DnsHelper:
 
             logger.info(f'{ns_srv} Has port 53 TCP Open')
             try:
-                zone = self.from_wire(dns.query.xfr(ns_srv, self._domain))
+                zone = self.from_wire(dns.query.xfr(ns_srv, self._domain, timeout=DNS_QUERY_TIMEOUT))
                 logger.info('Zone Transfer was successful!!')
                 zone_records.append({'type': 'info', 'zone_transfer': 'success', 'ns_server': ns_srv})
 
