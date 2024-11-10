@@ -16,7 +16,7 @@
 #    along with this program; if not, write to the Free Software
 #    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
-__version__ = '1.3.0'
+__version__ = '1.3.1'
 __author__ = 'Carlos Perez, Carlos_Perez@darkoperator.com'
 __name__ = 'cli'
 
@@ -49,6 +49,7 @@ import dns.resolver
 import dns.reversename
 import dns.zone
 import netaddr
+import requests
 from dns.dnssec import algorithm_to_text
 from loguru import logger
 
