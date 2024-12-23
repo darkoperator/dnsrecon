@@ -1838,6 +1838,7 @@ Possible types:
     spf_enum = arguments.s
     wildcard_filter = arguments.f
     proto = 'tcp' if arguments.tcp else 'udp'
+    ns_server = arguments.ns_server.split(',') if arguments.ns_server else []
 
     # Initialize an empty list to hold all records
     all_returned_records = []
