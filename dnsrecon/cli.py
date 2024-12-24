@@ -1707,7 +1707,7 @@ Possible types:
 
     # if user requests tool version, we print it and exit
     if arguments.version:
-        print(f'DNSRecon version {__version__} https://www.darkoperator.com')
+        logger.info(f'DNSRecon version {__version__} https://www.darkoperator.com')
         sys.exit(0)
 
     # validating type param which is in the form: type1,type2,...,typeN
@@ -1937,7 +1937,7 @@ Possible types:
                     if crt_enum_records is not None and do_output:
                         all_returned_records.extend(crt_enum_records)
                     else:
-                        print('[-] No records returned from crt.sh enumeration')
+                        logger.info('[-] No records returned from crt.sh enumeration')
 
                 elif type_ == 'snoop':
                     if not (dictionary and ns_server):
