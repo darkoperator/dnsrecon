@@ -385,8 +385,8 @@ def brute_srv(res, domain, verbose=False, thread_num=None):
             future_results = {executor.submit(res.get_srv, srvtype + domain): srvtype for srvtype in srvrcd}
             # Display logs as soon as a thread is finished
             for future in futures.as_completed(future_results):
-                res = future.result()
-                for type_, name_, target_, addr_, port_, priority_ in res:
+                result = future.result()
+                for type_, name_, target_, addr_, port_, priority_ in result:
                     returned_records.append(
                         {
                             'type': type_,
@@ -496,8 +496,8 @@ def brute_domain(
             future_results = {executor.submit(res.get_ip, target): target for target in targets}
             # Display logs as soon as a thread is finished
             for future in futures.as_completed(future_results):
-                res = future.result()
-                for type_, name_, address_or_target_ in res:
+                result = future.result()
+                for type_, name_, address_or_target_ in result:
                     print_and_append = False
                     found_dict = {'type': type_, 'name': name_}
                     if type_ in ['A', 'AAAA']:
