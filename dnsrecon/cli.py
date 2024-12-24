@@ -114,11 +114,11 @@ def process_spf_data(res, data):
 
     # Create a list of IPNetwork objects.
     for ip in ipv4:
-        for i in IPNetwork(ip):
+        for i in netaddr.IPNetwork(ip):
             ip_list.append(i)
 
     for ip in ipv6:
-        for i in IPNetwork(ip):
+        for i in netaddr.IPNetwork(ip):
             ip_list.append(i)
 
     # Extract and process include values.
@@ -138,7 +138,7 @@ def expand_cidr(cidr_to_expand):
     Function to expand a given CIDR and return an Array of IP Addresses that
     form the range covered by the CIDR.
     """
-    return IPNetwork(cidr_to_expand)
+    return netaddr.IPNetwork(cidr_to_expand)
 
 
 def expand_range(startip, endip):
@@ -146,14 +146,14 @@ def expand_range(startip, endip):
     Function to expand a given range and return an Array of IP Addresses that
     form the range.
     """
-    return IPRange(startip, endip)
+    return netaddr.IPRange(startip, endip)
 
 
 def range2cidr(ip1, ip2):
     """
     Function to return the maximum CIDR given a range of IP's
     """
-    r1 = IPRange(ip1, ip2)
+    r1 = netaddr.IPRange(ip1, ip2)
     return str(r1.cidrs()[-1])
 
 
