@@ -58,9 +58,11 @@ def whois(target, whois_srv):
         response = ''
         while True:
             d = s.recv(WHOIS_RECEIVE_BUFFER_SIZE)
-            response += str(d)
+            if not d:
+                break
+            response += d.decode('utf-8')
             counter += 1
-            if str(d) == '' or counter == 5:
+            if counter == 5:
                 break
         s.close()
     except Exception as e:
