@@ -114,11 +114,11 @@ def process_spf_data(res, data):
 
     # Create a list of IPNetwork objects.
     for ip in ipv4:
-        for i in IPNetwork(ip):
+        for i in netaddr.IPNetwork(ip):
             ip_list.append(i)
 
     for ip in ipv6:
-        for i in IPNetwork(ip):
+        for i in netaddr.IPNetwork(ip):
             ip_list.append(i)
 
     # Extract and process include values.
@@ -138,7 +138,7 @@ def expand_cidr(cidr_to_expand):
     Function to expand a given CIDR and return an Array of IP Addresses that
     form the range covered by the CIDR.
     """
-    return IPNetwork(cidr_to_expand)
+    return netaddr.IPNetwork(cidr_to_expand)
 
 
 def expand_range(startip, endip):
@@ -146,14 +146,14 @@ def expand_range(startip, endip):
     Function to expand a given range and return an Array of IP Addresses that
     form the range.
     """
-    return IPRange(startip, endip)
+    return netaddr.IPRange(startip, endip)
 
 
 def range2cidr(ip1, ip2):
     """
     Function to return the maximum CIDR given a range of IP's
     """
-    r1 = IPRange(ip1, ip2)
+    r1 = netaddr.IPRange(ip1, ip2)
     return str(r1.cidrs()[-1])
 
 
@@ -385,8 +385,8 @@ def brute_srv(res, domain, verbose=False, thread_num=None):
             future_results = {executor.submit(res.get_srv, srvtype + domain): srvtype for srvtype in srvrcd}
             # Display logs as soon as a thread is finished
             for future in futures.as_completed(future_results):
-                res = future.result()
-                for type_, name_, target_, addr_, port_, priority_ in res:
+                result = future.result()
+                for type_, name_, target_, addr_, port_, priority_ in result:
                     returned_records.append(
                         {
                             'type': type_,
@@ -496,8 +496,8 @@ def brute_domain(
             future_results = {executor.submit(res.get_ip, target): target for target in targets}
             # Display logs as soon as a thread is finished
             for future in futures.as_completed(future_results):
-                res = future.result()
-                for type_, name_, address_or_target_ in res:
+                result = future.result()
+                for type_, name_, address_or_target_ in result:
                     print_and_append = False
                     found_dict = {'type': type_, 'name': name_}
                     if type_ in ['A', 'AAAA']:
@@ -1707,7 +1707,7 @@ Possible types:
 
     # if user requests tool version, we print it and exit
     if arguments.version:
-        print(f'DNSRecon version {__version__} https://www.darkoperator.com')
+        logger.info(f'DNSRecon version {__version__} https://www.darkoperator.com')
         sys.exit(0)
 
     # validating type param which is in the form: type1,type2,...,typeN
@@ -1937,7 +1937,7 @@ Possible types:
                     if crt_enum_records is not None and do_output:
                         all_returned_records.extend(crt_enum_records)
                     else:
-                        print('[-] No records returned from crt.sh enumeration')
+                        logger.info('[-] No records returned from crt.sh enumeration')
 
                 elif type_ == 'snoop':
                     if not (dictionary and ns_server):
