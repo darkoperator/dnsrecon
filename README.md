@@ -14,5 +14,50 @@ This script provides the ability to perform:
 * Perform a PTR Record lookup for a given IP Range or CIDR.
 * Check a DNS Server Cached records for A, AAAA and CNAME Records provided a list of host records in a text file to check.
 
-# Python Version
-DNSRecon requires python3.6+
+# Installation
+
+## Requirements
+DNSRecon requires Python 3.12 or higher.
+
+## Using uv (Recommended)
+
+1. Install uv if you haven't already:
+   ```bash
+   curl -LsSf https://astral.sh/uv/install.sh | sh
+   ```
+
+2. Clone the repository:
+   ```bash
+   git clone https://github.com/darkoperator/dnsrecon.git
+   cd dnsrecon
+   ```
+
+3. Install dependencies and create virtual environment:
+   ```bash
+   uv sync
+   ```
+
+4. Run DNSRecon:
+   ```bash
+   uv run dnsrecon
+   ```
+
+## Development
+
+To install development dependencies:
+```bash
+uv sync --extra dev
+```
+
+To run tests:
+```bash
+uv run pytest
+```
+
+To run linting and formatting:
+```bash
+uv run ruff check
+```
+```bash
+uv run ruff format
+```

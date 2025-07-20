@@ -93,7 +93,7 @@ def xml_parse(xm_file, ifilter, tfilter, nfilter, list):
                                 if elem.attrib['address'] not in iplist:
                                     print(elem.attrib['address'])
                             else:
-                                print_good(f"{elem.attrib['type']} {elem.attrib['name']} {elem.attrib['address']}")
+                                print_good(f'{elem.attrib["type"]} {elem.attrib["name"]} {elem.attrib["address"]}')
 
                         # Process NS Records
                         elif re.search(r'NS', elem.attrib['type']) and re.search(nfilter, elem.attrib['target'], re.I):
@@ -101,7 +101,7 @@ def xml_parse(xm_file, ifilter, tfilter, nfilter, list):
                                 if elem.attrib['address'] not in iplist:
                                     iplist.append(elem.attrib['address'])
                             else:
-                                print_good(f"{elem.attrib['type']} {elem.attrib['target']} {elem.attrib['address']}")
+                                print_good(f'{elem.attrib["type"]} {elem.attrib["target"]} {elem.attrib["address"]}')
 
                         # Process SOA Records
                         elif re.search(r'SOA', elem.attrib['type']) and re.search(nfilter, elem.attrib['mname'], re.I):
@@ -109,7 +109,7 @@ def xml_parse(xm_file, ifilter, tfilter, nfilter, list):
                                 if elem.attrib['address'] not in iplist:
                                     iplist.append(elem.attrib['address'])
                             else:
-                                print_good(f"{elem.attrib['type']} {elem.attrib['mname']} {elem.attrib['address']}")
+                                print_good(f'{elem.attrib["type"]} {elem.attrib["mname"]} {elem.attrib["address"]}')
 
                         # Process MS Records
                         elif re.search(r'MX', elem.attrib['type']) and re.search(nfilter, elem.attrib['exchange'], re.I):
@@ -117,7 +117,7 @@ def xml_parse(xm_file, ifilter, tfilter, nfilter, list):
                                 if elem.attrib['address'] not in iplist:
                                     iplist.append(elem.attrib['address'])
                             else:
-                                print_good(f"{elem.attrib['type']} {elem.attrib['exchange']} {elem.attrib['address']}")
+                                print_good(f'{elem.attrib["type"]} {elem.attrib["exchange"]} {elem.attrib["address"]}')
 
                         # Process SRV Records
                         elif re.search(r'SRV', elem.attrib['type']) and re.search(nfilter, elem.attrib['target'], re.I):
@@ -126,7 +126,7 @@ def xml_parse(xm_file, ifilter, tfilter, nfilter, list):
                                     iplist.append(elem.attrib['address'])
                             else:
                                 print_good(
-                                    '{0} {1} {2} {3} {4}'.format(
+                                    '{} {} {} {} {}'.format(
                                         elem.attrib['type'],
                                         elem.attrib['name'],
                                         elem.attrib['address'],
@@ -139,7 +139,7 @@ def xml_parse(xm_file, ifilter, tfilter, nfilter, list):
                     # Process TXT and SPF Records
                     if re.search(r'TXT|SPF', elem.attrib['type']):
                         if not list:
-                            print_good('{0} {1}'.format(elem.attrib['type'], elem.attrib['strings']))
+                            print_good('{} {}'.format(elem.attrib['type'], elem.attrib['strings']))
     # Process IPs in a list
     if len(iplist) > 0:
         try:

@@ -15,20 +15,11 @@
 #    You should have received a copy of the GNU General Public License
 #    along with this program; if not, write to the Free Software
 #    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
-
-__version__ = '1.3.1'
-__author__ = 'Carlos Perez, Carlos_Perez@darkoperator.com'
-__name__ = 'cli'
-
-__doc__ = """
-DNSRecon https://www.darkoperator.com
-
- by Carlos Perez, Darkoperator
-"""
-
 import datetime
 import json
 import os
+import re
+import socket
 import sqlite3
 import sys
 from argparse import ArgumentError, ArgumentParser, RawTextHelpFormatter
@@ -58,6 +49,17 @@ from dnsrecon.lib.crtenum import scrape_crtsh
 from dnsrecon.lib.dnshelper import DnsHelper
 from dnsrecon.lib.whois import *
 from dnsrecon.lib.yandexenum import *
+
+__version__ = '1.3.1'
+__author__ = 'Carlos Perez, Carlos_Perez@darkoperator.com'
+__name__ = 'cli'
+
+__doc__ = """
+DNSRecon https://www.darkoperator.com
+
+ by Carlos Perez, Darkoperator
+"""
+
 
 # Global Variables for Brute force Threads
 brtdata = []
@@ -210,11 +212,11 @@ def check_nxdomain_hijack(nameserver):
         try:
             answers = res.resolve(testname, record_type, tcp=True)
         except (
+            OSError,
             dns.resolver.NoNameservers,
             dns.resolver.NXDOMAIN,
             dns.exception.Timeout,
             dns.resolver.NoAnswer,
-            socket.error,
             dns.query.BadResponse,
         ):
             continue
@@ -649,7 +651,7 @@ def whois_ips(res, ip_list):
         logger.info('The following IP Ranges were found:')
         for i in range(len(list_whois)):
             logger.info(
-                '\t {0} {1}-{2} {3}'.format(
+                '\t {} {}-{} {}'.format(
                     str(i) + ')',
                     list_whois[i]['start'],
                     list_whois[i]['end'],
@@ -663,7 +665,7 @@ def whois_ips(res, ip_list):
 
         if 'a' in answer:
             for i in range(len(list_whois)):
-                logger.info('Performing Reverse Lookup of range {0}-{1}'.format(list_whois[i]['start'], list_whois[i]['end']))
+                logger.info('Performing Reverse Lookup of range {}-{}'.format(list_whois[i]['start'], list_whois[i]['end']))
                 found_records.append(brute_reverse(res, expand_range(list_whois[i]['start'], list_whois[i]['end'])))
 
         elif 'n' in answer:
@@ -672,7 +674,7 @@ def whois_ips(res, ip_list):
             for a in answer:
                 net_selected = list_whois[int(a)]
                 logger.info(net_selected['orgname'])
-                logger.info('Performing Reverse Lookup of range {0}-{1}'.format(net_selected['start'], net_selected['end']))
+                logger.info('Performing Reverse Lookup of range {}-{}'.format(net_selected['start'], net_selected['end']))
                 found_records.append(brute_reverse(res, expand_range(net_selected['start'], net_selected['end'])))
     else:
         logger.error('No IP Ranges were found in the Whois query results')
@@ -948,13 +950,7 @@ def check_bindversion(res, ns_server, timeout):
                 version = response.answer[0].to_text().split(' ')[-1]
                 logger.info(f'\t Bind Version for {ns_server} {version}')
 
-        except (
-            dns.resolver.NXDOMAIN,
-            dns.exception.Timeout,
-            dns.resolver.NoAnswer,
-            socket.error,
-            dns.query.BadResponse,
-        ):
+        except (OSError, dns.resolver.NXDOMAIN, dns.exception.Timeout, dns.resolver.NoAnswer, dns.query.BadResponse):
             pass
 
     return version
@@ -976,7 +972,7 @@ def check_recursive(res, ns_server, timeout):
             if result:
                 logger.error(f'\t Recursion enabled on NS Server {ns_server}')
             is_recursive = True
-        except (socket.error, dns.exception.Timeout):
+        except (OSError, dns.exception.Timeout):
             pass
 
     return is_recursive
@@ -1254,7 +1250,7 @@ def get_constants(prefix):
     """
     Create a dictionary mapping socket module constants to their names.
     """
-    return dict((getattr(socket, n), n) for n in dir(socket) if n.startswith(prefix))
+    return {getattr(socket, n): n for n in dir(socket) if n.startswith(prefix)}
 
 
 def socket_resolv(target):
@@ -1288,7 +1284,7 @@ def lookup_next(target, res):
         srv_answer = res.get_srv(target)
         if len(srv_answer) > 0:
             for r in srv_answer:
-                logger.info('\t {0}'.format(' '.join(r)))
+                logger.info('\t {}'.format(' '.join(r)))
                 returned_records.append(
                     {
                         'type': r[0],
@@ -1303,13 +1299,13 @@ def lookup_next(target, res):
         txt_answer = res.get_txt(target)
         if len(txt_answer) > 0:
             for r in txt_answer:
-                logger.info('\t {0}'.format(' '.join(r)))
+                logger.info('\t {}'.format(' '.join(r)))
                 returned_records.append({'type': r[0], 'name': r[1], 'strings': r[2]})
         else:
             txt_answer = res.get_txt(target)
             if len(txt_answer) > 0:
                 for r in txt_answer:
-                    logger.info('\t {0}'.format(' '.join(r)))
+                    logger.info('\t {}'.format(' '.join(r)))
                     returned_records.append({'type': r[0], 'name': r[1], 'strings': r[2]})
             else:
                 logger.info(f'\t A {target} no_ip')
@@ -1472,7 +1468,7 @@ def ds_zone_walk(res, domain, lifetime):
     except EOFError:
         logger.error(f'SoA nameserver {nameserver} failed to answer the DNSSEC query for {target}')
 
-    except socket.error:
+    except OSError:
         logger.error(f'SoA nameserver {nameserver} failed to answer the DNSSEC query for {domain}')
 
     # Give a summary of the walk

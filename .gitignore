@@ -3,6 +3,7 @@
 *.pyc
 *.pyo
 venv/
+.venv/
 *.pytest_cache/
 *.egg-info
 build/

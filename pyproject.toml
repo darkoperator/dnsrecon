@@ -3,25 +3,37 @@ name = "dnsrecon"
 description = "DNS Enumeration Script"
 readme = "README.md"
 authors = [{ name = "Carlos Perez", email = "carlos_perez@darkoperator.com" }]
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 urls.Homepage = "https://github.com/darkoperator/dnsrecon"
 classifiers = [
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "License :: OSI Approved :: GNU General Public License v2 (GPLv2)",
     "Operating System :: OS Independent",
 ]
-dynamic = ["dependencies", "optional-dependencies", "version"]
+dynamic = ["version"]
+dependencies = [
+    "dnspython>=2.7.0",
+    "netaddr",
+    "lxml",
+    "requests",
+    "loguru",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest==8.4.1",
+    "ruff==0.12.4",
+    "setuptools",
+    "pyupgrade"
+]
 
 [project.scripts]
 dnsrecon = "dnsrecon.__main__:main"
 
 [tool.setuptools.dynamic]
 version = { attr = "dnsrecon.cli.__version__" }
-dependencies = { file = "requirements.txt" }
-optional-dependencies.dev = { file = "requirements-dev.txt" }
 
 [tool.setuptools.packages.find]
 include = ["dnsrecon*"]
@@ -41,6 +53,20 @@ testpaths = [
     "tests/discovery/",
 ]
 
+
+[tool.mypy]
+python_version = "3.12"
+warn_unused_configs = true
+ignore_missing_imports = true
+show_traceback = true
+show_error_codes = true
+namespace_packages = true
+
+[tool.uv]
+python-preference = "managed"
+
+[tool.uv.pip]
+python-version = "3.12"
 
 [tool.ruff]
 # Exclude a variety of commonly ignored directories.
@@ -66,7 +92,7 @@ exclude = [
 ]
 
 line-length = 130
-target-version = "py311"
+target-version = "py312"
 show-fixes = true
 
 [tool.ruff.lint]
@@ -77,6 +103,7 @@ select = ["E4",
     "I",
     "UP",
     "TCH",
+    "FA",
     "RUF",
     "PT",
     ]
