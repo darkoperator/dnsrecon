@@ -373,6 +373,34 @@ class DnsHelper:
 
         return result
 
+    def get_caa(self, target=None):
+        """
+        Function for CAA Record resolving. Returns all CAA records for the domain.
+        CAA records specify which certificate authorities are allowed to issue certificates for a domain.
+        """
+        if target is None:
+            target = self._domain
+            
+        answers = self.get_answers('CAA', target)
+        if not answers:
+            return []
+
+        result = []
+        for answer in answers.response.answer:
+            for rdata in answer:
+                if rdata.rdtype == 5:  # CNAME
+                    target_ = strip_last_dot(rdata.target.to_text())
+                    result.append(['CNAME', target, target_])
+                    target = target_
+                else:
+                    # CAA record format: flags tag value
+                    flags = rdata.flags
+                    tag = rdata.tag.decode('utf-8') if isinstance(rdata.tag, bytes) else rdata.tag
+                    value = rdata.value.decode('utf-8') if isinstance(rdata.value, bytes) else rdata.value
+                    result.append(['CAA', target, f'{flags} {tag} "{value}"'])
+
+        return result
+
     def get_nsec(self, host):
         """
         Function for querying for a NSEC record and retrieving the rdata object.

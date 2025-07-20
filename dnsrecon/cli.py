@@ -1650,6 +1650,7 @@ Possible types:
     bing:     Perform Bing search for subdomains and hosts.
     yand:     Perform Yandex search for subdomains and hosts.
     crt:      Perform crt.sh search for subdomains and hosts.
+    caa:      CAA records.
     snoop:    Perform cache snooping against all NS servers for a given domain, testing
               all with file containing the domains, file given with -D option.
 
@@ -1690,6 +1691,7 @@ Possible types:
         'bing': {'domain': True, 'dictionary': False},
         'yand': {'domain': True, 'dictionary': False},
         'crt': {'domain': True, 'dictionary': False},
+        'caa': {'domain': True, 'dictionary': False},
         'rvl': {'domain': False, 'dictionary': False},
         'zonewalk': {'domain': True, 'dictionary': False},
         'brt': {'domain': True, 'dictionary': True},
@@ -1934,6 +1936,28 @@ Possible types:
                         all_returned_records.extend(crt_enum_records)
                     else:
                         logger.info('[-] No records returned from crt.sh enumeration')
+
+                elif type_ == 'caa':
+                    logger.info(f'{type_}: Performing CAA Record Enumeration against {domain}...')
+                    caa_records = res.get_caa()
+                    if caa_records:
+                        for record in caa_records:
+                            record_type, name, value = record[:3]
+                            logger.info(f'     {record_type} {name} {value}')
+                        if do_output:
+                            # Convert to the format expected by output functions
+                            caa_enum_records = []
+                            for record in caa_records:
+                                record_type, name, value = record[:3]
+                                caa_enum_records.append({
+                                    'type': record_type,
+                                    'name': name,
+                                    'address': value,
+                                    'target': name
+                                })
+                            all_returned_records.extend(caa_enum_records)
+                    else:
+                        logger.info(f'{type_}: No CAA records found for {domain}')
 
                 elif type_ == 'snoop':
                     if not (dictionary and ns_server):

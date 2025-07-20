@@ -83,3 +83,9 @@ class Test_Lib_dnshelper:
         helper = DnsHelper("zonetransfer.me")
         records = helper.get_ptr("51.79.37.18")
         assert len(records) == 1 and match(r"^.+\.megacorpone\.com$", records[0][1])
+
+    def test_get_caa(self):
+        helper = DnsHelper("apple.com")
+        records = helper.get_caa()
+        for record in records:
+            assert record[0] in ["CAA", "CNAME"]
