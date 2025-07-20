@@ -380,7 +380,7 @@ class DnsHelper:
         """
         if target is None:
             target = self._domain
-            
+
         answers = self.get_answers('CAA', target)
         if not answers:
             return []

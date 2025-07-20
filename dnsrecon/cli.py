@@ -1949,12 +1949,7 @@ Possible types:
                             caa_enum_records = []
                             for record in caa_records:
                                 record_type, name, value = record[:3]
-                                caa_enum_records.append({
-                                    'type': record_type,
-                                    'name': name,
-                                    'address': value,
-                                    'target': name
-                                })
+                                caa_enum_records.append({'type': record_type, 'name': name, 'address': value, 'target': name})
                             all_returned_records.extend(caa_enum_records)
                     else:
                         logger.info(f'{type_}: No CAA records found for {domain}')
