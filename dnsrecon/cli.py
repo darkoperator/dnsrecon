@@ -1352,7 +1352,7 @@ def get_next(res, target, ns, timeout):
     return next_host
 
 
-def ds_zone_walk(res, domain, lifetime):
+def ds_zone_walk(res, domain, request_timeout):
     """
     Perform DNSSEC Zone Walk using NSEC records found in the error an additional
     records section of the message to find the next host to query in the zone.
@@ -1370,7 +1370,7 @@ def ds_zone_walk(res, domain, lifetime):
                 nameserver = first_ns[2]
                 if nameserver:
                     logger.info(f'Name Server {nameserver} will be used')
-                    res = DnsHelper(domain, nameserver, lifetime)
+                    res = DnsHelper(domain, nameserver, request_timeout)
 
         if not nameserver:
             logger.error('This zone appears to be misconfigured, no SOA record found.')
