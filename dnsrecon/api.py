@@ -872,6 +872,13 @@ async def cache_snoop(
         # Use default wordlist if none provided
         if not wordlist:
             wordlist = os.path.join(os.path.dirname(__file__), 'data', 'namelist.txt')
+        else:
+            # Only allow wordlists within the data directory
+            data_dir = os.path.join(os.path.dirname(__file__), 'data')
+            requested_path = os.path.normpath(os.path.join(data_dir, wordlist))
+            if not requested_path.startswith(data_dir):
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Invalid wordlist path')
+            wordlist = requested_path
 
         if not os.path.exists(wordlist):
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Wordlist file not found')
