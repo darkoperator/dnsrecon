@@ -30,11 +30,22 @@ jobs:
 
     - name: Lint with ruff
       run: |
-        ruff check
+        ruff check --fix
 
     - name: Format with ruff
       run: |
-        ruff format --check --diff
+        ruff format
+
+    - name: Commit changes for ruff formating and linting
+      if: github.event_name == 'push'
+      run: |
+        git config user.name github-actions
+        git config user.email github-actions@github.com
+        git add .
+        git commit -m "Apply ruff fixes and formatting" || true # Use || true to prevent failure if no changes
+        git push origin HEAD:${{ github.ref_name }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Test with pytest
       run: |
