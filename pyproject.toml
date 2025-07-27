@@ -19,18 +19,26 @@ dependencies = [
     "lxml",
     "requests",
     "loguru",
+    "fastapi==0.116.1",
+    "uvicorn[standard]==0.35.0",
+    "slowapi==0.1.9",
+    "ujson==5.10.0"
 ]
 
 [project.optional-dependencies]
 dev = [
     "pytest==8.4.1",
-    "ruff==0.12.4",
+    "pytest-asyncio==1.1.0",
+    "httpx==0.28.1",
+    "ruff==0.12.5",
     "setuptools",
-    "pyupgrade"
+    "pyupgrade",
+    "types-ujson==5.10.0.20250326"
 ]
 
 [project.scripts]
 dnsrecon = "dnsrecon.__main__:main"
+restdnsrecon = "dnsrecon.api_cli:main"
 
 [tool.setuptools.dynamic]
 version = { attr = "dnsrecon.cli.__version__" }
