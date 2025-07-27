@@ -62,7 +62,8 @@ def scrape_bing(dom):
 
         sock = urllib.request.urlopen(req, timeout=10)
         data = sock.read().decode('utf-8')
-        results.extend(re.findall(r'([a-zA-Z0-9\-.]+' + dom + ')/?', data))
+        safe_dom = re.escape(dom)
+        results.extend(re.findall(r'([a-zA-Z0-9\-.]+' + safe_dom + ')/?', data))
         sock.close()
         time.sleep(5)
 
