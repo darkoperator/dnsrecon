@@ -487,6 +487,13 @@ def brute_domain(
 
     found_hosts = []
 
+    # Define a safe root directory for dictionary files
+    safe_root = os.path.join(os.path.dirname(__file__), 'data')
+    dictfile = os.path.normpath(os.path.join(safe_root, dictfile))
+    if not dictfile.startswith(safe_root):
+        logger.error('Invalid dictionary file path.')
+        return None
+
     # Check if the Dictionary file exists
     if os.path.isfile(dictfile):
         with open(dictfile) as fd:

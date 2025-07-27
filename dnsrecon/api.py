@@ -359,8 +359,13 @@ async def brute_force_domain(
         res = DnsHelper(domain)
 
         # Use default wordlist if none provided
+        safe_root = os.path.join(os.path.dirname(__file__), 'data')
         if not wordlist:
-            wordlist = os.path.join(os.path.dirname(__file__), 'data', 'subdomains-top1mil-5000.txt')
+            wordlist = os.path.join(safe_root, 'subdomains-top1mil-5000.txt')
+        else:
+            wordlist = os.path.normpath(os.path.join(safe_root, wordlist))
+            if not wordlist.startswith(safe_root):
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Invalid wordlist path')
 
         results = brute_domain(
             res=res,
