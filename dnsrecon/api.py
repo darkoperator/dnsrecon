@@ -8,7 +8,6 @@ from pydantic import BaseModel, Field
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
-from starlette.staticfiles import StaticFiles
 
 from dnsrecon.cli import (
     brute_domain,
@@ -19,7 +18,6 @@ from dnsrecon.cli import (
     check_nxdomain_hijack,
     check_recursive,
     check_wildcard,
-    dns_sec_check,
     ds_zone_walk,
     general_enum,
     in_cache,
