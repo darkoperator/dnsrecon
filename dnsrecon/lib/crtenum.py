@@ -14,15 +14,30 @@
 #    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 
-from urllib.error import HTTPError, URLError
-from urllib.request import Request, urlopen
-
+import httpx
+import stamina
 from loguru import logger
 from lxml import etree
 
 __name__ = 'crtenum'
 
+RETRY_ATTEMPTS = 5
 
+
+def is_transient_error(e: Exception) -> bool:
+    if isinstance(e, httpx.HTTPStatusError) and e.response.status_code in {429, 500, 502, 503, 504}:
+        logger.error(f'Bad http status from crt.sh: "{e.response.status_code}"')
+        return True
+    if isinstance(e, httpx.TimeoutException):
+        logger.error(f'Connection with crt.sh failed. Reason: "{e}"')
+        return False
+    if isinstance(e, httpx.RequestError):
+        logger.error(f'HTTP request error. Reason: "{e}"')
+        return True
+    return False
+
+
+@stamina.retry(on=is_transient_error, attempts=RETRY_ATTEMPTS)
 def scrape_crtsh(dom):
     """
     Function for enumerating subdomains by scraping crt.sh.
@@ -33,16 +48,9 @@ def scrape_crtsh(dom):
     }
     url = f'https://crt.sh/?q=%25.{dom}'
 
-    req = Request(url=url, headers=headers)
-    try:
-        resp = urlopen(req, timeout=30)
-        data = resp.read()
-    except HTTPError as e:
-        logger.error(f'Bad http status from crt.sh: "{e.code}"')
-        return results
-    except URLError as e:
-        logger.error(f'Connection with crt.sh failed. Reason: "{e.reason}"')
-        return results
+    resp = httpx.get(url, headers=headers, timeout=30)
+    resp.raise_for_status()
+    data = resp.text
 
     root = etree.HTML(data)
     tbl = root.xpath('//table/tr/td/table/tr/td[5]')
