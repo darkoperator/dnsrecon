@@ -14,6 +14,8 @@
 #    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 
+import random
+
 import httpx
 import stamina
 from loguru import logger
@@ -21,19 +23,22 @@ from lxml import etree
 
 __name__ = 'crtenum'
 
-RETRY_ATTEMPTS = 5
+RETRY_ATTEMPTS = 10
+COMMON_USER_AGENTS = (
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36',
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:140.0) Gecko/20100101 Firefox/140.0',
+)
 
 
 def is_transient_error(e: Exception) -> bool:
+    if isinstance(e, httpx.TimeoutException):
+        logger.error(f'Connection with crt.sh failed. Reason: "{e}"')
+        return True
     if isinstance(e, httpx.HTTPStatusError) and e.response.status_code in {429, 500, 502, 503, 504}:
         logger.error(f'Bad http status from crt.sh: "{e.response.status_code}"')
         return True
-    if isinstance(e, httpx.TimeoutException):
-        logger.error(f'Connection with crt.sh failed. Reason: "{e}"')
-        return False
-    if isinstance(e, httpx.RequestError):
-        logger.error(f'HTTP request error. Reason: "{e}"')
-        return True
+    logger.error(f'Something went wrong. Reason: "{e}"')
     return False
 
 
@@ -43,9 +48,7 @@ def scrape_crtsh(dom):
     Function for enumerating subdomains by scraping crt.sh.
     """
     results = []
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.3'
-    }
+    headers = {'User-Agent': random.choice(COMMON_USER_AGENTS)}
     url = f'https://crt.sh/?q=%25.{dom}'
 
     resp = httpx.get(url, headers=headers, timeout=30)
