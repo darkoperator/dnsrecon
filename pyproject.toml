@@ -30,7 +30,7 @@ dev = [
     "pytest==8.4.1",
     "pytest-asyncio==1.1.0",
     "httpx==0.28.1",
-    "ruff==0.12.8",
+    "ruff==0.12.9",
     "setuptools",
     "pyupgrade",
     "types-ujson==5.10.0.20250326"
