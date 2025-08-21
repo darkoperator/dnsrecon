@@ -22,7 +22,7 @@ dependencies = [
     "fastapi==0.116.1",
     "uvicorn[standard]==0.35.0",
     "slowapi==0.1.9",
-    "ujson==5.10.0"
+    "ujson==5.11.0"
 ]
 
 [project.optional-dependencies]
