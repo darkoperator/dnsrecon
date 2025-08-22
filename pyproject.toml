@@ -33,7 +33,7 @@ dev = [
     "ruff==0.12.9",
     "setuptools",
     "pyupgrade",
-    "types-ujson==5.10.0.20250326"
+    "types-ujson==5.10.0.20250822"
 ]
 
 [project.scripts]
