@@ -18,10 +18,12 @@ dependencies = [
     "netaddr",
     "lxml",
     "requests",
+    "httpx==0.28.1",
     "loguru",
     "fastapi==0.116.1",
     "uvicorn[standard]==0.35.0",
     "slowapi==0.1.9",
+    "stamina==25.1.0",
     "ujson==5.11.0"
 ]
 
@@ -29,7 +31,6 @@ dependencies = [
 dev = [
     "pytest==8.4.1",
     "pytest-asyncio==1.1.0",
-    "httpx==0.28.1",
     "ruff==0.12.11",
     "setuptools",
     "pyupgrade",

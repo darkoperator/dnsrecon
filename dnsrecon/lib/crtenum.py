@@ -14,35 +14,48 @@
 #    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 
-from urllib.error import HTTPError, URLError
-from urllib.request import Request, urlopen
+import random
 
+import httpx
+import stamina
 from loguru import logger
 from lxml import etree
 
 __name__ = 'crtenum'
 
+RETRY_ATTEMPTS = 20
+WAIT_MAX = 60
 
+COMMON_USER_AGENTS = (
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36',
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:140.0) Gecko/20100101 Firefox/140.0',
+)
+
+
+def is_transient_error(e: Exception) -> bool:
+    if isinstance(e, httpx.TimeoutException):
+        logger.error(f'Connection with crt.sh failed. Reason: "{e}"')
+        return True
+    if isinstance(e, httpx.HTTPStatusError) and e.response.status_code in {429, 500, 502, 503, 504}:
+        logger.error(f'Bad http status from crt.sh: "{e.response.status_code}"')
+        return True
+    logger.error(f'Something went wrong. Reason: "{e}"')
+    return False
+
+
+@stamina.retry(on=is_transient_error, attempts=RETRY_ATTEMPTS, wait_max=WAIT_MAX)
 def scrape_crtsh(dom):
     """
     Function for enumerating subdomains by scraping crt.sh.
     """
     results = []
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.3'
-    }
+    headers = {'User-Agent': random.choice(COMMON_USER_AGENTS)}
     url = f'https://crt.sh/?q=%25.{dom}'
 
-    req = Request(url=url, headers=headers)
-    try:
-        resp = urlopen(req, timeout=30)
-        data = resp.read()
-    except HTTPError as e:
-        logger.error(f'Bad http status from crt.sh: "{e.code}"')
-        return results
-    except URLError as e:
-        logger.error(f'Connection with crt.sh failed. Reason: "{e.reason}"')
-        return results
+    resp = httpx.get(url, headers=headers, timeout=30)
+    resp.raise_for_status()
+    data = resp.text
 
     root = etree.HTML(data)
     tbl = root.xpath('//table/tr/td/table/tr/td[5]')
