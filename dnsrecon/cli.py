@@ -568,7 +568,7 @@ def in_cache(res, dict_file, ns):
     return found_records
 
 
-def se_result_process(res, se_entries):
+def se_result_process(res, domain, se_entries):
     """
     This function processes the results returned from a Search Engine and does
     an A and AAAA query for the IP of the found host. Prints and returns a dictionary
@@ -584,7 +584,7 @@ def se_result_process(res, se_entries):
                 continue
 
             logger.info(f'\t {type_} {name_} {address_or_target_}')
-            resolved_se_entry = {'type': type_, 'name': name_}
+            resolved_se_entry = {'type': type_, 'name': name_, 'domain': domain}
 
             if type_ == 'A':
                 resolved_se_entry['address'] = address_or_target_
@@ -851,7 +851,7 @@ def write_db(db, data):
         if re.match(r'PTR|^[A]$|AAAA', n['type']):
             query = (
                 'insert into data( domain, type, name, address ) '
-                + 'values( "{domain}", "{type}", "{name}","{address}" )'.format(**n)
+                + 'values( "{domain}", "{type}", "{name}", "{address}" )'.format(**n)
             )
 
         elif re.match(r'NS$', n['type']):
@@ -873,21 +873,27 @@ def write_db(db, data):
             )
 
         elif re.match(r'TXT', n['type']):
-            query = 'insert into data( domain, type, text) ' + 'values( "{domain}", "{type}","{strings}" )'.format(**n)
+            query = 'insert into data( domain, type, text) ' + 'values( "{domain}", "{type}", "{strings}" )'.format(**n)
 
         elif re.match(r'SPF', n['type']):
-            query = 'insert into data( domain, type, text) ' + 'values( "{domain}", "{type}","{strings}" )'.format(**n)
+            query = 'insert into data( domain, type, text) ' + 'values( "{domain}", "{type}", "{strings}" )'.format(**n)
 
         elif re.match(r'SRV', n['type']):
             query = (
                 'insert into data( domain, type, name, target, address, port ) '
-                + 'values( "{domain}", "{type}", "{name}" , "{target}", "{address}" ,"{port}" )'.format(**n)
+                + 'values( "{domain}", "{type}", "{name}", "{target}", "{address}", "{port}" )'.format(**n)
             )
 
         elif re.match(r'CNAME', n['type']):
             query = (
                 'insert into data( domain, type, name, target ) '
-                + 'values( "{domain}", "{type}", "{name}" , "{target}" )'.format(**n)
+                + 'values( "{domain}", "{type}", "{name}", "{target}" )'.format(**n)
+            )
+        elif re.match(r'CAA', n['type']):
+            # Preserve some of the previous behavior when writing CAA records to the database would fall into the else clause
+            text = ','.join([f'{key}={value}' for key, value in n.items() if key != 'type'])
+            query = "insert into data( domain, type, name, target, address, text ) values ('{domain}', '{type}', '{name}', '{target}', '{address}', '{text}')".format(
+                **n, text=text
             )
 
         else:
@@ -896,7 +902,7 @@ def write_db(db, data):
             del n['type']
             record_data = ''.join([f'{key}={value},' for key, value in n.items()])
             records = [t, record_data]
-            query = 'insert into data(domain,type,text) values ("%(domain)", \'' + records[0] + "','" + records[1] + "')"
+            query = 'insert into data( domain, type, text ) values ("%(domain)", \'' + records[0] + "', '" + records[1] + "')"
 
         # Execute Query and commit
         cur.execute(query)
@@ -1190,7 +1196,7 @@ def general_enum(
         # Do Bing Search enumeration if selected
         if do_bing:
             logger.info('Performing Bing Search Enumeration')
-            bing_rcd = se_result_process(res, scrape_bing(domain))
+            bing_rcd = se_result_process(res, domain, scrape_bing(domain))
             if bing_rcd:
                 for r in bing_rcd:
                     if 'address' in bing_rcd:
@@ -1200,7 +1206,7 @@ def general_enum(
         # Do Yandex Search enumeration if selected
         if do_yandex:
             logger.info('Performing Yandex Search Enumeration')
-            yandex_rcd = se_result_process(res, scrape_bing(domain))
+            yandex_rcd = se_result_process(res, domain, scrape_bing(domain))
             if yandex_rcd:
                 for r in yandex_rcd:
                     if 'address' in yandex_rcd:
@@ -1209,7 +1215,7 @@ def general_enum(
 
         if do_crt:
             logger.info('Performing Crt.sh Search Enumeration')
-            crt_rcd = se_result_process(res, scrape_crtsh(domain))
+            crt_rcd = se_result_process(res, domain, scrape_crtsh(domain))
             if crt_rcd:
                 for r in crt_rcd:
                     if 'address' in crt_rcd:
@@ -1926,19 +1932,19 @@ Possible types:
 
                 elif type_ == 'bing':
                     logger.info(f'{type_}: Performing Bing Search Enumeration against {domain}...')
-                    bing_enum_records = se_result_process(res, scrape_bing(domain))
+                    bing_enum_records = se_result_process(res, domain, scrape_bing(domain))
                     if bing_enum_records is not None and do_output:
                         all_returned_records.extend(bing_enum_records)
 
                 elif type_ == 'yand':
                     logger.info(f'{type_}: Performing Yandex Search Enumeration against {domain}...')
-                    yandex_enum_records = se_result_process(res, scrape_yandex(domain))
+                    yandex_enum_records = se_result_process(res, domain, scrape_yandex(domain))
                     if yandex_enum_records is not None and do_output:
                         all_returned_records.extend(yandex_enum_records)
 
                 elif type_ == 'crt':
                     logger.info(f'{type_}: Performing Crt.sh Search Enumeration against {domain}...')
-                    crt_enum_records = se_result_process(res, scrape_crtsh(domain))
+                    crt_enum_records = se_result_process(res, domain, scrape_crtsh(domain))
                     if crt_enum_records is not None and do_output:
                         all_returned_records.extend(crt_enum_records)
                     else:
@@ -1956,7 +1962,9 @@ Possible types:
                             caa_enum_records = []
                             for record in caa_records:
                                 record_type, name, value = record[:3]
-                                caa_enum_records.append({'type': record_type, 'name': name, 'address': value, 'target': name})
+                                caa_enum_records.append(
+                                    {'type': record_type, 'name': name, 'address': value, 'target': name, 'domain': domain}
+                                )
                             all_returned_records.extend(caa_enum_records)
                     else:
                         logger.info(f'{type_}: No CAA records found for {domain}')
