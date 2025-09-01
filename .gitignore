@@ -9,3 +9,4 @@ venv/
 build/
 dist/
 *.junie/
+uv.lock
