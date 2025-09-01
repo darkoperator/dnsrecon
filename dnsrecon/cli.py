@@ -50,7 +50,7 @@ from dnsrecon.lib.dnshelper import DnsHelper
 from dnsrecon.lib.whois import *
 from dnsrecon.lib.yandexenum import *
 
-__version__ = '1.5.0'
+__version__ = '1.5.1'
 __author__ = 'Carlos Perez, Carlos_Perez@darkoperator.com'
 __name__ = 'cli'
 
