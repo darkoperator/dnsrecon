@@ -23,7 +23,9 @@ from lxml import etree
 
 __name__ = 'crtenum'
 
-RETRY_ATTEMPTS = 10
+RETRY_ATTEMPTS = 20
+WAIT_MAX = 60
+
 COMMON_USER_AGENTS = (
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36',
     'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36',
@@ -42,7 +44,7 @@ def is_transient_error(e: Exception) -> bool:
     return False
 
 
-@stamina.retry(on=is_transient_error, attempts=RETRY_ATTEMPTS)
+@stamina.retry(on=is_transient_error, attempts=RETRY_ATTEMPTS, wait_max=WAIT_MAX)
 def scrape_crtsh(dom):
     """
     Function for enumerating subdomains by scraping crt.sh.
