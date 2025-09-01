@@ -69,3 +69,56 @@ def test_get_nsec_type():
             result = cli.get_nsec_type("zonetransfer.me", mock_instance)
 
         assert result is None
+
+def test_se_result_process():
+    with patch('dnsrecon.lib.dnshelper.DnsHelper') as mock_dns_helper:
+        mock_instance = mock_dns_helper.return_value
+        mock_instance.get_ip.return_value = [
+            ("A", "zonetransfer.me", "192.0.2.1"),
+            ("CNAME", "zonetransfer.me", "some.domain.com"),
+            ("AAAA", "zonetransfer.me", "2001:db8::1"),
+        ]
+        results = cli.se_result_process(mock_instance, "zonetransfer.me", ["zonetransfer.me"])
+        assert len(results) == 2
+        assert results[0]['type'] == 'A'
+        assert results[0]['name'] == 'zonetransfer.me'
+        assert results[0]['domain'] == 'zonetransfer.me'
+        assert results[0]['address'] == '192.0.2.1'
+        assert results[1]['type'] == 'CNAME'
+        assert results[1]['name'] == 'zonetransfer.me'
+        assert results[1]['domain'] == 'zonetransfer.me'
+        assert results[1]['target'] == 'some.domain.com'
+
+def test_write_db():
+    with patch('sqlite3.connect') as mock_sqlite3_connect:
+        cursor = MagicMock()
+        cursor.return_value.execute.return_value = None
+        mock_sqlite3_connect.return_value = MagicMock()
+        mock_sqlite3_connect.return_value.cursor.return_value = cursor
+        result = cli.write_db("test.db", [
+            {"domain": "zonetransfer.me", "type": "A", "name": "zonetransfer.me", "address": "192.0.2.1"},
+            {"domain": "zonetransfer.me", "type": "CAA", "name": "zonetransfer.me", "address": "192.0.2.1", "target": "example.com"},
+            {"domain": "zonetransfer.me", "type": "CNAME", "name": "zonetransfer.me", "target": "some.domain.com"},
+            {"domain": "zonetransfer.me", "type": "AAAA", "name": "zonetransfer.me", "address": "2001:db8::1"},
+            {"domain": "zonetransfer.me", "type": "MX", "name": "zonetransfer.me", "exchange": "mail.zonetransfer.me", "address": "192.0.2.1"},
+            {"domain": "zonetransfer.me", "type": "TXT", "name": "zonetransfer.me", "text": "txt.zonetransfer.me", "strings": "txt.zonetransfer.me"},
+            {"domain": "zonetransfer.me", "type": "NS", "name": "zonetransfer.me", "target": "ns.zonetransfer.me", "address": "192.0.2.1"},
+            {"domain": "zonetransfer.me", "type": "SOA", "name": "zonetransfer.me", "mname": "soa.zonetransfer.me", "address": "192.0.2.1"},
+            {"domain": "zonetransfer.me", "type": "SRV", "name": "zonetransfer.me", "target": "srv.zonetransfer.me", "address": "192.0.2.1", "port": "80"},
+            {"domain": "zonetransfer.me", "type": "SPF", "name": "zonetransfer.me", "strings": "spf.zonetransfer.me"},
+            {"domain": "zonetransfer.me", "type": "PTR", "name": "zonetransfer.me", "address": "192.0.2.1"},
+            {"domain": "zonetransfer.me", "type": "OTHER", "name": "zonetransfer.me", "strings": "spf.zonetransfer.me"},
+        ])
+        assert cursor.execute.call_count == 12
+        assert cursor.execute.call_args_list[0][0][0] == 'insert into data( domain, type, name, address ) values( "zonetransfer.me", "A", "zonetransfer.me", "192.0.2.1" )'
+        assert cursor.execute.call_args_list[1][0][0] == "insert into data( domain, type, name, target, address, text ) values ('zonetransfer.me', 'CAA', 'zonetransfer.me', 'example.com', '192.0.2.1', 'domain=zonetransfer.me,name=zonetransfer.me,address=192.0.2.1,target=example.com')"
+        assert cursor.execute.call_args_list[2][0][0] == 'insert into data( domain, type, name, target ) values( "zonetransfer.me", "CNAME", "zonetransfer.me", "some.domain.com" )'
+        assert cursor.execute.call_args_list[3][0][0] == 'insert into data( domain, type, name, address ) values( "zonetransfer.me", "AAAA", "zonetransfer.me", "2001:db8::1" )'
+        assert cursor.execute.call_args_list[4][0][0] == 'insert into data( domain, type, name, address ) values( "zonetransfer.me", "MX", "mail.zonetransfer.me", "192.0.2.1" )'
+        assert cursor.execute.call_args_list[5][0][0] == 'insert into data( domain, type, text) values( "zonetransfer.me", "TXT", "txt.zonetransfer.me" )'
+        assert cursor.execute.call_args_list[6][0][0] == 'insert into data( domain, type, name, address ) values( "zonetransfer.me", "NS", "ns.zonetransfer.me", "192.0.2.1" )'
+        assert cursor.execute.call_args_list[7][0][0] == 'insert into data( domain, type, name, address ) values( "zonetransfer.me", "SOA", "soa.zonetransfer.me", "192.0.2.1" )'
+        assert cursor.execute.call_args_list[8][0][0] == 'insert into data( domain, type, name, target, address, port ) values( "zonetransfer.me", "SRV", "zonetransfer.me", "srv.zonetransfer.me", "192.0.2.1", "80" )'
+        assert cursor.execute.call_args_list[9][0][0] == 'insert into data( domain, type, text) values( "zonetransfer.me", "SPF", "spf.zonetransfer.me" )'
+        assert cursor.execute.call_args_list[10][0][0] == 'insert into data( domain, type, name, address ) values( "zonetransfer.me", "PTR", "zonetransfer.me", "192.0.2.1" )'
+        assert cursor.execute.call_args_list[11][0][0] == 'insert into data( domain, type, text ) values ("%(domain)", \'OTHER\', \'domain=zonetransfer.me,name=zonetransfer.me,strings=spf.zonetransfer.me,\')'
