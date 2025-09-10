@@ -12,7 +12,7 @@ This script provides the ability to perform:
 * Check for Wildcard Resolution.
 * Brute Force subdomain and host A and AAAA records given a domain and a wordlist.
 * Perform a PTR Record lookup for a given IP Range or CIDR.
-* Check a DNS Server Cached records for A, AAAA and CNAME Records provided a list of host records in a text file to check.
+* Check a DNS Server Cached records for A, AAAA and CNAME ReRefactor Dockerfile: streamline apt operations, switch to `uv` for dependency management, and improve non-root user setup.cords provided a list of host records in a text file to check.
 
 # Installation
 
@@ -61,3 +61,6 @@ uv run ruff check
 ```bash
 uv run ruff format
 ```
+
+## Packaging Versions
+[![Packaging status](https://repology.org/badge/vertical-allrepos/dnsrecon.svg)](https://repology.org/project/dnsrecon/versions)
