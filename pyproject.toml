@@ -14,7 +14,7 @@ classifiers = [
 ]
 dynamic = ["version"]
 dependencies = [
-    "dnspython>=2.7.0",
+    "dnspython>=2.8.0",
     "netaddr",
     "lxml",
     "requests",
@@ -31,7 +31,7 @@ dependencies = [
 dev = [
     "pytest==8.4.2",
     "pytest-asyncio==1.1.0",
-    "ruff==0.12.12",
+    "ruff==0.13.0",
     "setuptools",
     "pyupgrade",
     "types-ujson==5.10.0.20250822"
@@ -116,7 +116,7 @@ select = ["E4",
     "RUF",
     "PT",
     ]
-ignore = ["E721", "F403", "F405", "F811", "UP030", "UP038"]
+ignore = ["E721", "F403", "F405", "F811", "UP030", "RUF059"]
 
 # Allow fix for all enabled rules (when `--fix`) is provided.
 fixable = ["ALL"]
