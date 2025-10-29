@@ -40,6 +40,7 @@ import dns.resolver
 import dns.reversename
 import dns.zone
 import netaddr
+import ipaddress
 import requests
 from dns.dnssec import algorithm_to_text
 from loguru import logger
@@ -645,48 +646,134 @@ def get_whois_nets_iplist(ip_list):
     return [seen.setdefault(idfun(e), e) for e in found_nets if idfun(e) not in seen]
 
 
+def _parse_range_token(tok: str):
+    """
+    Accepts:
+        * '192.0.2.0/24'
+        * '192.0.2.0-192.0.2.255'
+    Returns a tuple of (start, end) strings.
+    Raises ValueError if the token is malformed.
+    """
+    if '/' in tok:
+        net = ipaddress.ip_network(tok, strict=False)
+        return str(net.network_address), str(net.broadcast_address)
+    if '-' in tok:
+        parts = tok.split('-')
+        if len(parts) != 2:
+            raise ValueError(f'Invalid range token: {tok}')
+        return parts[0].strip(), parts[1].strip()
+    raise ValueError(f'Not a range token: {tok}')
+
+
 def whois_ips(res, ip_list):
     """
-    This function will process the results of the whois lookups and present the
-    user with the list of net ranges found and ask the user if he wishes to perform
-    a reverse lookup on any of the ranges or all the ranges.
+    Process the results of the WHOIS lookups and present the user
+    with the list of net ranges found.  The user may choose to
+    perform a reverse lookup on any of the ranges, on all ranges,
+    or skip reverse lookups entirely.  User input can also be a
+    CIDR / dash‑separated range specification.
+
+    Parameters
+    ----------
+    res      : DNSResolver (or whatever object is used by brute_reverse)
+    ip_list  : list of IPs returned by the WHOIS queries
+
+    Returns
+    -------
+    list of reverse‑lookup results
     """
     found_records = []
+
     logger.info('Performing Whois lookup against records found.')
     list_whois = get_whois_nets_iplist(unique(ip_list))
-    if len(list_whois) > 0:
-        logger.info('The following IP Ranges were found:')
-        for i in range(len(list_whois)):
+
+    if not list_whois:
+        logger.error('No IP Ranges were found in the Whois query results')
+        return found_records
+
+    # ---- Display the discovered ranges ----
+    logger.info('The following IP Ranges were found:')
+    for i, net in enumerate(list_whois):
+        logger.info(
+            '\t{0}) {1}-{2} {3}'.format(
+                i,
+                net['start'],
+                net['end'],
+                net.get('orgname', 'Unknown org')
+            )
+        )
+
+    # ---- Ask the user which ranges to reverse‑lookup ----
+    logger.info('What Range do you wish to do a Reverse Lookup for?')
+    logger.info('number, comma separated list, a for all or n for none')
+    val = sys.stdin.readline().rstrip('\n')
+    answer = [token.strip() for token in val.split(',') if token.strip()]
+
+    # ---- Fast paths: all / none ----------------------------------
+    if 'a' in answer:
+        for net in list_whois:
             logger.info(
-                '\t {} {}-{} {}'.format(
-                    str(i) + ')',
-                    list_whois[i]['start'],
-                    list_whois[i]['end'],
-                    list_whois[i]['orgname'],
+                'Performing Reverse Lookup of range {0}-{1}'.format(
+                    net['start'], net['end']
                 )
             )
-        logger.info('What Range do you wish to do a Reverse Lookup for?')
-        logger.info('number, comma separated list, a for all or n for none')
-        val = sys.stdin.readline()[:-1]
-        answer = str(val).split(',')
+            found_records.append(
+                brute_reverse(res, expand_range(net['start'], net['end']))
+            )
+        return found_records
 
-        if 'a' in answer:
-            for i in range(len(list_whois)):
-                logger.info('Performing Reverse Lookup of range {}-{}'.format(list_whois[i]['start'], list_whois[i]['end']))
-                found_records.append(brute_reverse(res, expand_range(list_whois[i]['start'], list_whois[i]['end'])))
+    if 'n' in answer:
+        logger.info('No Reverse Lookups will be performed.')
+        return found_records
 
-        elif 'n' in answer:
-            logger.info('No Reverse Lookups will be performed.')
-        else:
-            for a in answer:
-                net_selected = list_whois[int(a)]
-                logger.info(net_selected['orgname'])
-                logger.info('Performing Reverse Lookup of range {}-{}'.format(net_selected['start'], net_selected['end']))
-                found_records.append(brute_reverse(res, expand_range(net_selected['start'], net_selected['end'])))
-    else:
-        logger.error('No IP Ranges were found in the Whois query results')
+    # ---- Normal case: indices + optional explicit ranges -------
+    for token in answer:
+        # ----- Token is an explicit range (CIDR or dash) -----
+        if '-' in token or '/' in token:
+            try:
+                start, end = _parse_range_token(token)
+            except ValueError as exc:
+                logger.warning(f'Skipping bad range token: {exc}')
+                continue
+
+            # Validate both endpoints
+            if not valid_ipv4(start) or not valid_ipv4(end):
+                logger.warning(
+                    f'Skipping range with invalid IP(s): {start}-{end}'
+                )
+                continue
+
+            logger.info(f'Performing Reverse Lookup of range {start}-{end}')
+            found_records.append(
+                brute_reverse(res, expand_range(start, end))
+            )
+            continue
+
+        # ----- Token is an integer index pointing into list_whois -----
+        try:
+            idx = int(token)
+        except ValueError:
+            logger.warning(
+                f'Skipping malformed token (not an index or range): {token}'
+            )
+            continue
+
+        if idx < 0 or idx >= len(list_whois):
+            logger.warning(f'Index {idx} is out of bounds – ignoring')
+            continue
+
+        net_selected = list_whois[idx]
+        logger.info(net_selected.get('orgname', 'Unknown org'))
+        logger.info(
+            f'Performing Reverse Lookup of range {net_selected["start"]}'
+            f'-{net_selected["end"]}'
+        )
+        found_records.append(
+            brute_reverse(res, expand_range(net_selected['start'], net_selected['end']))
+        )
 
     return found_records
+
 
 
 def prettify(elem):
