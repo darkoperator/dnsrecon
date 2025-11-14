@@ -20,7 +20,7 @@ dependencies = [
     "requests",
     "httpx==0.28.1",
     "loguru",
-    "fastapi==0.120.1",
+    "fastapi==0.121.2",
     "uvicorn[standard]==0.38.0",
     "slowapi==0.1.9",
     "stamina==25.1.0",
