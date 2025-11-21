@@ -22,23 +22,28 @@ __name__ = 'whois.py'
 WHOIS_PORT_NUMBER = 43
 WHOIS_RECEIVE_BUFFER_SIZE = 4096
 
-
 def get_whois(ip_addrs):
     """
     Function that returns what whois server is the one to be queried for
-    registration information, returns whois.arin.net if not in database, returns
+    registration information, returns whois.arin.net is not in database, returns
     None if private.
     """
     whois_server = None
-    try:
-        ip = ipaddress.ip_address(ip_addrs)
-        if isinstance(ip, ipaddress.IPv4Address) and not ip.is_private:
-            whois_server = 'whois.arin.net'
-    except ValueError:
-        whois_server = None
+    if not valid_ipv4(ip_addrs):
+        return whois_server
+
+    ip = IPAddress(ip_addrs)
+    info_of_ip = ip.info
+    if ip.version == 4:
+        if ip.is_ipv4_private_use() is False:
+            for i in info_of_ip['IPv4']:
+                whois_server = i['whois']
+                if len(whois_server) == 0 and i['status'] != 'Reserved':
+                    whois_server = 'whois.arin.net'
+                elif len(whois_server) == 0:
+                    whois_server = None
 
     return whois_server
-
 
 def whois(target, whois_srv):
     """
