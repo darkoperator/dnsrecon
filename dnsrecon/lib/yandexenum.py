@@ -17,18 +17,11 @@
 
 import re
 import time
-import urllib
-import urllib.request
 
+import httpx
 from loguru import logger
 
 __name__ = 'yandexenum'
-url_opener = urllib.request.FancyURLopener
-
-
-class AppURLopener(url_opener):
-    version = """Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36
-                     (KHTML, like Gecko) Chrome/42.0.2311.135 Safari/537.36 Edge/12.246"""
 
 
 def scrape_yandex(dom):
@@ -37,25 +30,33 @@ def scrape_yandex(dom):
     """
     results = []
     searches = ['1', '2', '3', '4', '5', '10', '20', '30']
-    urllib._urlopener = AppURLopener()
 
-    for _ in searches:
-        url = 'https://yandex.com/search/?text=site%3A' + dom
-        try:
-            sock = urllib.request.urlopen(url, timeout=10)
-            data = sock.read().decode('utf-8')
-            sock.close()
-        except Exception as e:
-            logger.error(e)
-            return []
+    headers = {
+        'User-Agent': (
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
+            'AppleWebKit/537.36 (KHTML, like Gecko) '
+            'Chrome/42.0.2311.135 Safari/537.36 Edge/12.246'
+        )
+    }
 
-        if re.search('enter_captcha_value', data):
-            logger.error("Yandex has detected the search as 'bot activity, stopping search...")
-            return unique(results)
+    with httpx.Client(headers=headers) as client:
+        for _ in searches:
+            url = 'https://yandex.com/search/?text=site%3A' + dom
+            try:
+                response = client.get(url, timeout=10.0)
+                data = response.text
+            except Exception as e:
+                logger.error(e)
+                return []
 
-        results.extend(re.findall(r'([a-zA-Z0-9\-\.]+' + dom + ')/?', data))
+            if re.search('enter_captcha_value', data):
+                logger.error("Yandex has detected the search as 'bot activity, stopping search...")
+                return unique(results)
 
-        time.sleep(10)
+            safe_dom = re.escape(dom)
+            results.extend(re.findall(r'([a-zA-Z0-9\-\.]+' + safe_dom + ')/?', data))
+
+            time.sleep(10)
 
     return unique(results)
 
