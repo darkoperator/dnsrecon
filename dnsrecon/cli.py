@@ -39,8 +39,8 @@ import dns.rdatatype
 import dns.resolver
 import dns.reversename
 import dns.zone
-import netaddr
 import httpx
+import netaddr
 from dns.dnssec import algorithm_to_text
 from loguru import logger
 
