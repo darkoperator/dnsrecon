@@ -40,7 +40,7 @@ import dns.resolver
 import dns.reversename
 import dns.zone
 import netaddr
-import requests
+import httpx
 from dns.dnssec import algorithm_to_text
 from loguru import logger
 
@@ -50,7 +50,7 @@ from dnsrecon.lib.dnshelper import DnsHelper
 from dnsrecon.lib.whois import *
 from dnsrecon.lib.yandexenum import *
 
-__version__ = '1.5.1'
+__version__ = '1.5.2'
 __author__ = 'Carlos Perez, Carlos_Perez@darkoperator.com'
 __name__ = 'cli'
 
@@ -250,8 +250,8 @@ def brute_tlds(res, domain, verbose=False, thread_num=None):
 
     total_tlds = []
     try:
-        tlds_list = requests.get(
-            'https://raw.githubusercontent.com/publicsuffix/list/master/public_suffix_list.dat', timeout=30
+        tlds_list = httpx.get(
+            'https://raw.githubusercontent.com/publicsuffix/list/master/public_suffix_list.dat', timeout=30.0
         ).text
     except Exception as e:
         tlds_list = ''

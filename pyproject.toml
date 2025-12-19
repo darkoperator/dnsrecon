@@ -9,6 +9,7 @@ classifiers = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "License :: OSI Approved :: GNU General Public License v2 (GPLv2)",
     "Operating System :: OS Independent",
 ]
@@ -17,7 +18,6 @@ dependencies = [
     "dnspython>=2.8.0",
     "netaddr",
     "lxml",
-    "requests",
     "httpx==0.28.1",
     "loguru",
     "fastapi==0.123.9",
