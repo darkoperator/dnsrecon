@@ -23,7 +23,7 @@ dependencies = [
     "fastapi==0.125.0",
     "uvicorn[standard]==0.38.0",
     "slowapi==0.1.9",
-    "stamina==25.1.0",
+    "stamina==25.2.0",
     "ujson==5.11.0"
 ]
 
