@@ -19,6 +19,7 @@
 import random
 import socket
 
+import dns.flags
 import dns.message
 import dns.query
 import dns.resolver
@@ -39,13 +40,17 @@ def strip_last_dot(addr_):
 
 
 class DnsHelper:
-    def __init__(self, domain, ns_server=None, request_timeout=3.0, proto='tcp'):
+    def __init__(self, domain, ns_server=None, request_timeout=3.0, proto='tcp', recursion_desired=True):
         self._domain = domain
         self._proto = proto
         self._is_tcp = proto == 'tcp'
+        self._recursion_desired = recursion_desired
 
         configure = not ns_server
         self._res = dns.resolver.Resolver(configure=configure)
+
+        if not recursion_desired:
+            self._res.flags = 0
 
         if ns_server:
             if isinstance(ns_server, str):
@@ -98,6 +103,9 @@ class DnsHelper:
         """
         configure = not ns
         res = dns.resolver.Resolver(configure=configure)
+        if not self._recursion_desired:
+            res.flags = 0
+
         if ns:
             res.nameservers = [ns]
 
@@ -250,7 +258,8 @@ class DnsHelper:
         queryfunc = dns.query.tcp if self._is_tcp else dns.query.udp
 
         try:
-            querymsg = dns.message.make_query(self._domain, dns.rdatatype.SOA)
+            flags = dns.flags.RD if self._recursion_desired else 0
+            querymsg = dns.message.make_query(self._domain, dns.rdatatype.SOA, flags=flags)
             response = queryfunc(querymsg, self._res.nameservers[0], self._res.timeout)
         except (
             OSError,

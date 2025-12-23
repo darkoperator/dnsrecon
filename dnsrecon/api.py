@@ -242,6 +242,7 @@ async def general_enumeration(
     zw: bool = Query(False, description='Perform zone walking'),
     request_timeout: int = Query(3, description='Request timeout in seconds'),
     thread_num: int = Query(10, description='Number of threads to use'),
+    recursion_desired: bool = Query(True, description='Enable recursion desired flag in queries'),
 ) -> Response:
     """
     Endpoint for general DNS enumeration.
@@ -260,7 +261,7 @@ async def general_enumeration(
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Domain must be at least 3 characters long')
 
         # Create DNS resolver
-        res = DnsHelper(domain)
+        res = DnsHelper(domain, recursion_desired=recursion_desired)
 
         # Perform general enumeration
         results = general_enum(
@@ -338,6 +339,7 @@ async def brute_force_domain(
     wordlist: str = Query('', description='Path to wordlist file (optional)'),
     filter_wildcards: bool = Query(True, description='Filter wildcard responses'),
     thread_num: int = Query(10, description='Number of threads to use'),
+    recursion_desired: bool = Query(True, description='Enable recursion desired flag in queries'),
 ) -> Response:
     """
     Endpoint for domain brute forcing.
@@ -356,7 +358,7 @@ async def brute_force_domain(
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Domain must be at least 3 characters long')
 
         # Create a DNS resolver
-        res = DnsHelper(domain)
+        res = DnsHelper(domain, recursion_desired=recursion_desired)
 
         # Use default wordlist if none provided
         safe_root = os.path.join(os.path.dirname(__file__), 'data')
@@ -428,6 +430,7 @@ async def brute_force_reverse(
     user_agent: str = Header(None),
     ip_range: str = Query(..., description='IP range to perform reverse DNS lookup (e.g., 192.168.1.1-192.168.1.254)'),
     thread_num: int = Query(10, description='Number of threads to use'),
+    recursion_desired: bool = Query(True, description='Enable recursion desired flag in queries'),
 ) -> Response:
     """
     Endpoint for reverse DNS brute forcing.
@@ -454,7 +457,7 @@ async def brute_force_reverse(
         else:
             ip_list = [ip_range]
 
-        res = DnsHelper('example.com')  # Domain not used for reverse lookups
+        res = DnsHelper('example.com', recursion_desired=recursion_desired)  # Domain not used for reverse lookups
 
         # Perform reverse brute force
         results = brute_reverse(res=res, ip_list=ip_list, verbose=False, thread_num=thread_num)
@@ -565,6 +568,7 @@ async def brute_force_srv(
     user_agent: str = Header(None),
     domain: str = Query(..., description='Domain to enumerate SRV records for'),
     thread_num: int = Query(10, description='Number of threads to use'),
+    recursion_desired: bool = Query(True, description='Enable recursion desired flag in queries'),
 ) -> Response:
     """
     Endpoint for SRV record enumeration.
@@ -582,7 +586,7 @@ async def brute_force_srv(
         if not domain or len(domain) < 3:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Domain must be at least 3 characters long')
 
-        res = DnsHelper(domain)
+        res = DnsHelper(domain, recursion_desired=recursion_desired)
 
         # Perform SRV enumeration
         results = brute_srv(res=res, domain=domain, verbose=False, thread_num=thread_num)
@@ -638,6 +642,7 @@ async def brute_force_tlds(
     user_agent: str = Header(None),
     domain: str = Query(..., description='Base domain to test against different TLDs'),
     thread_num: int = Query(10, description='Number of threads to use'),
+    recursion_desired: bool = Query(True, description='Enable recursion desired flag in queries'),
 ) -> Response:
     """
     Endpoint for TLD enumeration.
@@ -655,7 +660,7 @@ async def brute_force_tlds(
         if not domain or len(domain) < 3:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Domain must be at least 3 characters long')
 
-        res = DnsHelper(domain)
+        res = DnsHelper(domain, recursion_desired=recursion_desired)
 
         # Perform TLD enumeration
         results = brute_tlds(res=res, domain=domain, verbose=False, thread_num=thread_num)

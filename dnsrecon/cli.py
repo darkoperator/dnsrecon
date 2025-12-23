@@ -50,7 +50,7 @@ from dnsrecon.lib.dnshelper import DnsHelper
 from dnsrecon.lib.whois import *
 from dnsrecon.lib.yandexenum import *
 
-__version__ = '1.5.2'
+__version__ = '1.5.3'
 __author__ = 'Carlos Perez, Carlos_Perez@darkoperator.com'
 __name__ = 'cli'
 
@@ -956,7 +956,8 @@ def check_bindversion(res, ns_server, timeout):
     version = ''
 
     if not CONFIG or not CONFIG.get('disable_check_bindversion', False):
-        request = dns.message.make_query('version.bind', 'txt', 'ch')
+        flags = dns.flags.RD if res._recursion_desired else 0
+        request = dns.message.make_query('version.bind', 'txt', 'ch', flags=flags)
         try:
             response = res.query(request, ns_server, timeout=timeout, one_rr_per_rrset=True)
             if len(response.answer) > 0:
@@ -1243,7 +1244,8 @@ def query_ds(res, target, ns, timeout=5.0):
     happens.
     """
     try:
-        query = dns.message.make_query(target, dns.rdatatype.DS, dns.rdataclass.IN)
+        flags = dns.flags.RD if res._recursion_desired else 0
+        query = dns.message.make_query(target, dns.rdatatype.DS, dns.rdataclass.IN, flags=flags)
         query.flags += dns.flags.CD
         query.use_edns(edns=True, payload=4096)
         query.want_dnssec(True)
@@ -1290,7 +1292,7 @@ def lookup_next(target, res):
     """
     Try to get the most accurate information for the record found.
     """
-    DnsHelper(target)
+    DnsHelper(target, recursion_desired=res._recursion_desired)
     returned_records = []
 
     if re.search(r'^_[A-Za-z0-9_-]*._[A-Za-z0-9_-]*.', target, re.I):
@@ -1347,7 +1349,8 @@ def lookup_next(target, res):
 
 
 def get_a_answer(res, target, ns, timeout):
-    query = dns.message.make_query(target, dns.rdatatype.A, dns.rdataclass.IN)
+    flags = dns.flags.RD if res._recursion_desired else 0
+    query = dns.message.make_query(target, dns.rdatatype.A, dns.rdataclass.IN, flags=flags)
     query.flags += dns.flags.CD
     query.use_edns(edns=True, payload=4096)
     query.want_dnssec(True)
@@ -1383,7 +1386,7 @@ def ds_zone_walk(res, domain, request_timeout):
                 nameserver = first_ns[2]
                 if nameserver:
                     logger.info(f'Name Server {nameserver} will be used')
-                    res = DnsHelper(domain, nameserver, request_timeout)
+                    res = DnsHelper(domain, nameserver, request_timeout, recursion_desired=res._recursion_desired)
 
         if not nameserver:
             logger.error('This zone appears to be misconfigured, no SOA record found.')
@@ -1642,6 +1645,11 @@ def main():
             action='store_true',
         )
         parser.add_argument(
+            '--disable_recurs',
+            help='Disable recursion desired flag in queries.',
+            action='store_true',
+        )
+        parser.add_argument(
             '--disable_check_bindversion',
             help='Disables check for BIND version on name servers',
             action='store_true',
@@ -1859,7 +1867,7 @@ Possible types:
         logger.info(f'Starting enumeration for domain: {domain}')
 
         # Initialize the resolver for the current domain
-        res = DnsHelper(domain, ns_server, request_timeout, proto)
+        res = DnsHelper(domain, ns_server, request_timeout, proto, recursion_desired=not arguments.disable_recurs)
 
         scan_info = [' '.join(sys.argv), str(datetime.datetime.now())]
 
