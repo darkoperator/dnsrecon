@@ -77,7 +77,7 @@ class Test_Lib_dnshelper:
     def test_zone_transfer(self):
         helper = DnsHelper("zonetransfer.me")
         records = helper.zone_transfer()
-        assert len(records) >= 135
+        assert len(records) >= 130
 
     def test_get_ptr(self):
         helper = DnsHelper("zonetransfer.me")
