@@ -19,7 +19,6 @@ import random
 import httpx
 import stamina
 from loguru import logger
-from lxml import etree
 
 __name__ = 'crtenum'
 
@@ -47,24 +46,30 @@ def is_transient_error(e: Exception) -> bool:
 @stamina.retry(on=is_transient_error, attempts=RETRY_ATTEMPTS, wait_max=WAIT_MAX)
 def scrape_crtsh(dom):
     """
-    Function for enumerating subdomains by scraping crt.sh.
+    Function for enumerating subdomains by querying crt.sh JSON API.
     """
     results = []
     headers = {'User-Agent': random.choice(COMMON_USER_AGENTS)}
-    url = f'https://crt.sh/?q=%25.{dom}'
+    url = f'https://crt.sh/?q=%25.{dom}&output=json'
 
     resp = httpx.get(url, headers=headers, timeout=30)
     resp.raise_for_status()
-    data = resp.text
 
-    root = etree.HTML(data)
-    tbl = root.xpath('//table/tr/td/table/tr/td[5]')
-    if len(tbl) < 1:
+    try:
+        data = resp.json()
+    except Exception as e:
+        logger.error(f'Error parsing JSON from crt.sh: {e}')
+        return results
+
+    if not data:
         logger.error('Certificates for subdomains not found')
         return results
 
-    for ent in tbl:
-        sub_dom = ent.text
+    for entry in data:
+        sub_dom = entry.get('common_name')
+        if not sub_dom:
+            continue
+
         if not sub_dom.endswith('.' + dom):
             continue
         if sub_dom.startswith('*.'):

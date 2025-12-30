@@ -1,4 +1,3 @@
-import textwrap
 from unittest.mock import patch
 
 import httpx
@@ -7,53 +6,12 @@ from dnsrecon.lib.crtenum import is_transient_error, scrape_crtsh
 
 def test_scrape_crtsh():
     with patch('dnsrecon.lib.crtenum.httpx.get') as mock_get:
-        mock_get.return_value.text = textwrap.dedent('''\
-            <html>
-                <body>
-                    <table>
-                        <tr>
-                            <td>
-                                <table>
-                                    <tr>
-                                        <td></td>
-                                        <td></td>
-                                        <td></td>
-                                        <td></td>
-                                        <td>subdomain1.example.com</td>
-                                    </tr>
-                                </table>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>
-                                <table>
-                                    <tr>
-                                        <td></td>
-                                        <td></td>
-                                        <td></td>
-                                        <td></td>
-                                        <td>subdomain2.example.com</td>
-                                    </tr>
-                                </table>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>
-                                <table>
-                                    <tr>
-                                        <td></td>
-                                        <td></td>
-                                        <td></td>
-                                        <td></td>
-                                        <td>*.example.com</td>
-                                    </tr>
-                                </table>
-                            </td>
-                        </tr>
-                    </table>
-                </body>
-            </html>
-            ''')
+        mock_get.return_value.json.return_value = [
+            {'common_name': 'subdomain1.example.com'},
+            {'common_name': 'subdomain2.example.com'},
+            {'common_name': '*.example.com'},
+            {'common_name': 'another.com'},
+        ]
         result = scrape_crtsh('example.com')
         assert result == ['subdomain1.example.com', 'subdomain2.example.com']
 

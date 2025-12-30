@@ -10,7 +10,7 @@
 #    This program is distributed in the hope that it will be useful,
 #    but WITHOUT ANY WARRANTY; without even the implied warranty of
 #    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-#    See the GNU General Public License for more details.
+#    See the GNU General Public License for more details.XML
 #
 #    You should have received a copy of the GNU General Public License
 #    along with this program; if not, write to the Free Software
@@ -702,7 +702,7 @@ def prettify(elem):
 
 def dns_record_from_dict(record_dict_list, scan_info, domains):
     """
-    Saves DNS Records to XML Given a list of dictionaries each representing
+    Saves DNS Records to XML Given a list of dictionaries, each representing
     a record to be saved, returns the XML Document formatted.
     """
     xml_doc = Element('dnsrecon')
