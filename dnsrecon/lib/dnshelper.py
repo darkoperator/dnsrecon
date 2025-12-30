@@ -19,12 +19,20 @@
 import random
 import socket
 
+import dns.exception
 import dns.flags
 import dns.message
+import dns.name
 import dns.query
+import dns.rdata
+import dns.rdatatype
+import dns.rdtypes
+import dns.rdtypes.ANY
+import dns.rdtypes.ANY.SOA
 import dns.resolver
 import dns.reversename
 from dns.dnssec import algorithm_to_text
+from dns.resolver import Answer
 from dns.zone import *
 from loguru import logger
 
@@ -32,7 +40,7 @@ DNS_PORT_NUMBER = 53
 DNS_QUERY_TIMEOUT = 4.0
 
 
-def strip_last_dot(addr_):
+def strip_last_dot(addr_: str):
     """
     Util function that strips the last dot from an address (if any)
     """
@@ -40,7 +48,9 @@ def strip_last_dot(addr_):
 
 
 class DnsHelper:
-    def __init__(self, domain, ns_server=None, request_timeout=3.0, proto='tcp', recursion_desired=True):
+    def __init__(
+        self, domain, ns_server=None, request_timeout: float = 3.0, proto: str = 'tcp', recursion_desired: bool = True
+    ) -> None:
         self._domain = domain
         self._proto = proto
         self._is_tcp = proto == 'tcp'
@@ -63,7 +73,7 @@ class DnsHelper:
         self._res.timeout = request_timeout
         self._res.lifetime = request_timeout
 
-    def check_tcp_dns(self, address):
+    def check_tcp_dns(self, address) -> bool:
         """
         Function to check if a server is listening at port 53 TCP. This will aid
         in IDS/IPS detection since a AXFR will not be tried if port 53 is found to
@@ -97,7 +107,7 @@ class DnsHelper:
         ):
             return None
 
-    def resolve(self, target, type_, ns=None):
+    def resolve(self, target, type_, ns=None) -> Answer:
         """
         Function for performing general resolution types returning the RDATA
         """
@@ -109,16 +119,15 @@ class DnsHelper:
         if ns:
             res.nameservers = [ns]
 
-        answers = res.query(target, type_, tcp=self._is_tcp)
+        answers = res.resolve(target, type_, tcp=self._is_tcp)
         return answers
 
     def query(
         self,
         q,
         where,
-        timeout=DNS_QUERY_TIMEOUT,
-        port=53,
-        af=None,
+        timeout: float = DNS_QUERY_TIMEOUT,
+        port: int = 53,
         source=None,
         source_port=0,
         one_rr_per_rrset=False,
@@ -135,10 +144,9 @@ class DnsHelper:
                 target_server,
                 timeout,
                 port,
-                af,
-                source,
-                source_port,
-                one_rr_per_rrset,
+                source=source,
+                source_port=source_port,
+                one_rr_per_rrset=one_rr_per_rrset,
             )
         else:
             return dns.query.udp(
@@ -146,11 +154,10 @@ class DnsHelper:
                 target_server,
                 timeout,
                 port,
-                af,
-                source,
-                source_port,
-                False,
-                one_rr_per_rrset,
+                source=source,
+                source_port=source_port,
+                ignore_errors=False,
+                one_rr_per_rrset=one_rr_per_rrset,
             )
 
     def get_a(self, host_trg):
@@ -260,7 +267,7 @@ class DnsHelper:
         try:
             flags = dns.flags.RD if self._recursion_desired else 0
             querymsg = dns.message.make_query(self._domain, dns.rdatatype.SOA, flags=flags)
-            response = queryfunc(querymsg, self._res.nameservers[0], self._res.timeout)
+            response = queryfunc(querymsg, self._res.nameservers[0], self._res.timeout)  # ty:ignore[invalid-argument-type]
         except (
             OSError,
             dns.exception.Timeout,
@@ -410,7 +417,7 @@ class DnsHelper:
 
         return result
 
-    def get_nsec(self, host):
+    def get_nsec(self, host) -> Answer | None:
         """
         Function for querying for a NSEC record and retrieving the rdata object.
         This function is used mostly for performing a Zone Walk against a zone.
@@ -468,12 +475,10 @@ class DnsHelper:
                 ns_records.append(addr_)
         except Exception:
             logger.error('Could not obtain the domains SOA Record.')
-            return
 
         # Find NS for Domain
         logger.info('Resolving NS Records')
         try:
-            ns_srvs = []
             ns_srvs = self.get_ns()
             logger.info('NS Servers found:')
             for type_, name_, addr_ in ns_srvs:
@@ -521,9 +526,9 @@ class DnsHelper:
 
                 for name, rdataset in zone.iterate_rdatasets(dns.rdatatype.NS):
                     for rdata in rdataset:
-                        # Check if target is only the host name or a full FQDN.
+                        # Check if the target is only the host name or a full FQDN.
                         # If only a hostname we will append the domain name of the
-                        # Zone being transfered.
+                        # Zone being transferred.
                         target = rdata.target.to_text()
                         if target.count('.') == 0:
                             target = target + '.' + self._domain

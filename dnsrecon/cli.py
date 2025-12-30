@@ -31,10 +31,12 @@ from xml.dom import minidom
 from xml.etree import ElementTree
 from xml.etree.ElementTree import Element
 
+import dns.exception
 import dns.flags
 import dns.message
 import dns.query
 import dns.rdata
+import dns.rdataclass
 import dns.rdatatype
 import dns.resolver
 import dns.reversename

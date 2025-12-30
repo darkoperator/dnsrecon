@@ -4,6 +4,7 @@ from dnsrecon.lib.dnshelper import DnsHelper
 import dns.resolver
 import dns.message
 import dns.rdatatype
+import dns.flags
 
 
 def test_dnshelper_recursion_default():
