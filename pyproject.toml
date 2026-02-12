@@ -19,7 +19,7 @@ dependencies = [
     "netaddr",
     "httpx==0.28.1",
     "loguru",
-    "fastapi==0.128.6",
+    "fastapi==0.128.8",
     "uvicorn[standard]==0.40.0",
     "slowapi==0.1.9",
     "stamina==25.2.0",
