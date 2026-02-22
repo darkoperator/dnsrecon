@@ -34,6 +34,33 @@ def test_brute_domain():
     assert isinstance(result, list)
 
 
+def test_brute_domain_uses_provided_dictionary_path(tmp_path):
+    dict_file = tmp_path / "my_wordlist.txt"
+    dict_file.write_text("www\n")
+
+    mock_resolver = MagicMock()
+    mock_resolver.get_ip.return_value = []
+
+    with patch('dnsrecon.cli.check_wildcard', return_value=set()):
+        result = cli.brute_domain(mock_resolver, str(dict_file), "example.com", thread_num=1)
+
+    assert result == []
+    mock_resolver.get_ip.assert_called_once_with("www.example.com")
+
+
+def test_brute_domain_logs_missing_dictionary_file(tmp_path):
+    missing_dict = tmp_path / "missing.txt"
+    mock_resolver = MagicMock()
+
+    with patch('dnsrecon.cli.check_wildcard', return_value=set()), \
+            patch.object(cli.logger, 'error') as mock_logger_error:
+        result = cli.brute_domain(mock_resolver, str(missing_dict), "example.com", thread_num=1)
+
+    assert result == []
+    mock_resolver.get_ip.assert_not_called()
+    assert any("Dictionary file not found:" in str(call.args[0]) for call in mock_logger_error.call_args_list)
+
+
 def test_general_enum():
     with patch('dnsrecon.lib.dnshelper.DnsHelper') as mock_dns_helper:
         mock_instance = mock_dns_helper.return_value

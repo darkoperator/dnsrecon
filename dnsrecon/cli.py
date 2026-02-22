@@ -489,46 +489,49 @@ def brute_domain(
 
     found_hosts = []
 
-    # Define a safe root directory for dictionary files
-    safe_root = os.path.join(os.path.dirname(__file__), 'data')
-    dictfile = os.path.normpath(os.path.join(safe_root, dictfile))
-    if not dictfile.startswith(safe_root):
-        logger.error('Invalid dictionary file path.')
-        return None
+    dictfile = os.path.abspath(os.path.expanduser(dictfile))
 
     # Check if the Dictionary file exists
-    if os.path.isfile(dictfile):
+    if not os.path.isfile(dictfile):
+        logger.error(f'Dictionary file not found: {dictfile}')
+        return []
+
+    try:
         with open(dictfile) as fd:
             targets = [f'{line.strip()}.{dom.strip()}' for line in fd]
             if verbose:
                 for target in targets:
                     logger.info(f'Trying {target}')
-        with futures.ThreadPoolExecutor(max_workers=thread_num) as executor:
-            future_results = {executor.submit(res.get_ip, target): target for target in targets}
-            # Display logs as soon as a thread is finished
-            for future in futures.as_completed(future_results):
-                result = future.result()
-                for type_, name_, address_or_target_ in result:
-                    print_and_append = False
-                    found_dict = {'type': type_, 'name': name_}
-                    if type_ in ['A', 'AAAA']:
-                        # Filter Records if filtering was enabled
-                        if filter_:
-                            if not wildcard_set or address_or_target_ not in wildcard_set:
-                                print_and_append = True
-                                found_dict['address'] = address_or_target_
-                        else:
+    except OSError as e:
+        logger.error(f'Failed to read dictionary file {dictfile}: {e}')
+        return []
+
+    with futures.ThreadPoolExecutor(max_workers=thread_num) as executor:
+        future_results = {executor.submit(res.get_ip, target): target for target in targets}
+        # Display logs as soon as a thread is finished
+        for future in futures.as_completed(future_results):
+            result = future.result()
+            for type_, name_, address_or_target_ in result:
+                print_and_append = False
+                found_dict = {'type': type_, 'name': name_}
+                if type_ in ['A', 'AAAA']:
+                    # Filter Records if filtering was enabled
+                    if filter_:
+                        if not wildcard_set or address_or_target_ not in wildcard_set:
                             print_and_append = True
                             found_dict['address'] = address_or_target_
-                    elif type_ == 'CNAME':
+                    else:
                         print_and_append = True
-                        found_dict['target'] = address_or_target_
+                        found_dict['address'] = address_or_target_
+                elif type_ == 'CNAME':
+                    print_and_append = True
+                    found_dict['target'] = address_or_target_
 
-                    if print_and_append:
-                        logger.info(f'\t {type_} {name_} {address_or_target_}')
-                        found_hosts.append(found_dict)
+                if print_and_append:
+                    logger.info(f'\t {type_} {name_} {address_or_target_}')
+                    found_hosts.append(found_dict)
 
-                brtdata.append(res)
+            brtdata.append(res)
 
     logger.info(f'{len(found_hosts)} Records Found')
     return found_hosts
