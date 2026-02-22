@@ -309,7 +309,7 @@ def shodan_expand_netranges(
                 if match_org:
                     found_record['org'] = match_org
 
-                logger.info(f"\t SHODAN {hostname} {shodan_ip} ({cidr})")
+                logger.info(f'\t SHODAN {hostname} {shodan_ip} ({cidr})')
                 found_records.append(found_record)
 
     return found_records
