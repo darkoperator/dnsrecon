@@ -190,7 +190,7 @@ async def get_capabilities(request: Request) -> Response:
     """
     try:
         capabilities = [
-            'general_enum - General DNS enumeration with multiple sources',
+            'general_enum - General DNS enumeration with multiple sources (supports do_shodan, shodan_active, X-Shodan-Api-Key header)',
             'brute_domain - Domain brute forcing',
             'brute_srv - SRV record brute forcing',
             'brute_tlds - TLD brute forcing',
@@ -231,7 +231,12 @@ async def get_capabilities(request: Request) -> Response:
 @limiter.limit(API_RATE_LIMIT)
 async def general_enumeration(
     request: Request,
-    user_agent: str = Header(None),
+    user_agent: str | None = Header(None),
+    shodan_api_key_header: str | None = Header(
+        None,
+        alias='X-Shodan-Api-Key',
+        description='Optional Shodan API key header for Shodan-backed netblock expansion',
+    ),
     domain: str = Query(..., description='Domain to enumerate'),
     do_axfr: bool = Query(False, description='Perform zone transfer'),
     do_bing: bool = Query(False, description='Use Bing search'),
@@ -239,6 +244,8 @@ async def general_enumeration(
     do_spf: bool = Query(False, description='Check SPF records'),
     do_whois: bool = Query(False, description='Perform WHOIS lookup'),
     do_crt: bool = Query(False, description='Check certificate transparency'),
+    do_shodan: bool = Query(False, description='Use Shodan to expand SPF/Whois-discovered netblocks'),
+    shodan_active: bool = Query(False, description='Actively validate Shodan-discovered hosts using DNS resolution'),
     zw: bool = Query(False, description='Perform zone walking'),
     request_timeout: int = Query(3, description='Request timeout in seconds'),
     thread_num: int = Query(10, description='Number of threads to use'),
@@ -263,6 +270,8 @@ async def general_enumeration(
         # Create DNS resolver
         res = DnsHelper(domain, recursion_desired=recursion_desired)
 
+        shodan_api_key = shodan_api_key_header or os.getenv('SHODAN_API_KEY')
+
         # Perform general enumeration
         results = general_enum(
             res=res,
@@ -273,6 +282,9 @@ async def general_enumeration(
             do_spf=do_spf,
             do_whois=do_whois,
             do_crt=do_crt,
+            do_shodan=do_shodan,
+            shodan_api_key=shodan_api_key,
+            shodan_active=shodan_active,
             zw=zw,
             request_timeout=request_timeout,
             thread_num=thread_num,

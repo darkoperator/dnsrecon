@@ -62,5 +62,54 @@ uv run ruff check
 uv run ruff format
 ```
 
+## Shodan Netblock Expansion
+
+DNSRecon can use Shodan to expand netblocks discovered during standard enumeration from SPF (`-s`) and/or WHOIS (`-w`) data.
+
+### CLI examples
+
+Passive Shodan enrichment (uses SPF + WHOIS netblocks):
+
+```bash
+uv run dnsrecon -d example.com -t std -s -w --shodan --shodan-key "$SHODAN_API_KEY"
+```
+
+Active validation of Shodan results (re-resolves hosts and confirms they still match the queried netblock):
+
+```bash
+uv run dnsrecon -d example.com -t std -s -w --shodan --shodan-active --shodan-key "$SHODAN_API_KEY"
+```
+
+You can also set the API key via environment variable instead of `--shodan-key`:
+
+```bash
+export SHODAN_API_KEY="your-shodan-api-key"
+uv run dnsrecon -d example.com -t std -s -w --shodan
+```
+
+### REST API examples
+
+Start the REST API:
+
+```bash
+uv run restdnsrecon
+```
+
+Call `/general_enum` with Shodan expansion enabled:
+
+```bash
+curl -s \
+  -H "X-Shodan-Api-Key: $SHODAN_API_KEY" \
+  "http://127.0.0.1:5000/general_enum?domain=example.com&do_spf=true&do_whois=true&do_shodan=true"
+```
+
+Enable active validation in the API:
+
+```bash
+curl -s \
+  -H "X-Shodan-Api-Key: $SHODAN_API_KEY" \
+  "http://127.0.0.1:5000/general_enum?domain=example.com&do_spf=true&do_whois=true&do_shodan=true&shodan_active=true"
+```
+
 ## Packaging Versions
 [![Packaging status](https://repology.org/badge/vertical-allrepos/dnsrecon.svg)](https://repology.org/project/dnsrecon/versions)

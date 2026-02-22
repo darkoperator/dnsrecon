@@ -16,6 +16,7 @@
 #    along with this program; if not, write to the Free Software
 #    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 import datetime
+import ipaddress
 import json
 import os
 import re
@@ -27,6 +28,7 @@ from concurrent import futures
 from pathlib import Path
 from random import SystemRandom
 from string import ascii_letters, digits
+from typing import Any
 from xml.dom import minidom
 from xml.etree import ElementTree
 from xml.etree.ElementTree import Element
@@ -49,6 +51,7 @@ from loguru import logger
 from dnsrecon.lib.bingenum import *
 from dnsrecon.lib.crtenum import scrape_crtsh
 from dnsrecon.lib.dnshelper import DnsHelper
+from dnsrecon.lib.shodan import ShodanClientError, make_shodan_client
 from dnsrecon.lib.whois import *
 from dnsrecon.lib.yandexenum import *
 
@@ -135,6 +138,181 @@ def process_spf_data(res, data):
 
     # Return a list of IP Addresses
     return [str(ip) for ip in ip_list]
+
+
+def get_spf_networks(res, data, processed_includes=None):
+    """
+    Extract ip4/ip6 netblocks from SPF/TXT data (including nested include values)
+    without expanding them to individual IP addresses. Returns unique networks.
+    """
+    if processed_includes is None:
+        processed_includes = set()
+
+    if not re.search(r'v=spf', data):
+        return []
+
+    networks = []
+    seen_networks = set()
+    record_data = ''.join(data)
+
+    for network in re.findall(r'ip[46]:(\S+)', record_data):
+        if network not in seen_networks:
+            seen_networks.add(network)
+            networks.append(network)
+
+    for include_name in re.findall(r'include:(\S+)', record_data):
+        if include_name in processed_includes:
+            continue
+
+        processed_includes.add(include_name)
+        for txt_record in res.get_txt(include_name):
+            if len(txt_record) < 3:
+                continue
+
+            for network in get_spf_networks(res, txt_record[2], processed_includes):
+                if network not in seen_networks:
+                    seen_networks.add(network)
+                    networks.append(network)
+
+    return networks
+
+
+def whois_netranges_to_cidrs(netranges):
+    """
+    Convert Whois start/end net ranges into a de-duplicated list of CIDR strings.
+    """
+    cidrs = []
+    seen_cidrs = set()
+
+    for netrange in netranges:
+        start = netrange.get('start')
+        end = netrange.get('end')
+        if not start or not end:
+            continue
+
+        try:
+            for cidr in netaddr.iprange_to_cidrs(start, end):
+                cidr_str = str(cidr)
+                if cidr_str not in seen_cidrs:
+                    seen_cidrs.add(cidr_str)
+                    cidrs.append(cidr_str)
+        except (netaddr.AddrFormatError, TypeError, ValueError) as e:
+            logger.error(f'Could not convert Whois range {start}-{end} to CIDR: {e!s}')
+
+    return cidrs
+
+
+def shodan_search_net(api_key: str, cidr: str, timeout: float = 5.0) -> list[dict[str, Any]]:
+    """
+    Perform a Shodan host search for a single netblock and return match entries.
+    """
+    try:
+        return make_shodan_client(api_key, backend='httpx').search_net(cidr, timeout=timeout)
+    except ShodanClientError as e:
+        logger.error(f'{e!s}')
+        return []
+
+
+def shodan_active_record_matches(res, hostname: str, shodan_ip: str, cidr: str) -> bool:
+    """
+    Actively validate a Shodan-discovered hostname by resolving it and ensuring the
+    returned address still matches the Shodan IP (or at least remains in the same net).
+    """
+    try:
+        expected_ip = ipaddress.ip_address(shodan_ip)
+        network = ipaddress.ip_network(cidr, strict=False)
+    except ValueError:
+        return False
+
+    try:
+        resolved_records = res.get_ip(hostname)
+    except Exception:
+        return False
+
+    resolved_ips = []
+    for record in resolved_records:
+        if len(record) < 3:
+            continue
+        if record[0] not in ['A', 'AAAA']:
+            continue
+        try:
+            resolved_ips.append(ipaddress.ip_address(record[2]))
+        except ValueError:
+            continue
+
+    if not resolved_ips:
+        return False
+
+    if expected_ip in resolved_ips:
+        return True
+
+    return any(ip in network for ip in resolved_ips)
+
+
+def shodan_expand_netranges(
+    res,
+    domain: str,
+    cidrs: list[str],
+    api_key: str,
+    active_check: bool = False,
+    timeout: float = 5.0,
+):
+    """
+    Query Shodan for hostnames/domains in the supplied netblocks and return records
+    that fit dnsrecon's output format. Results are constrained to the target domain
+    and its subdomains to keep the output aligned with dnsrecon's domain-centric flow.
+    """
+    found_records = []
+    seen_records = set()
+
+    for cidr in cidrs:
+        logger.info(f'Querying Shodan for net:{cidr}')
+        matches = shodan_search_net(api_key, cidr, timeout=timeout)
+        for match in matches:
+            shodan_ip = str(match.get('ip_str', '')).strip()
+            if not shodan_ip:
+                continue
+
+            match_org = str(match.get('org', '')).strip()
+            candidates = []
+            for key in ['hostnames', 'domains']:
+                values = match.get(key, [])
+                if not isinstance(values, list):
+                    continue
+                for value in values:
+                    if isinstance(value, str):
+                        hostname = value.strip().rstrip('.')
+                        if hostname:
+                            candidates.append(hostname)
+
+            for hostname in candidates:
+                if hostname != domain and not hostname.endswith(f'.{domain}'):
+                    continue
+
+                if active_check and not shodan_active_record_matches(res, hostname, shodan_ip, cidr):
+                    continue
+
+                dedupe_key = (hostname, shodan_ip, cidr)
+                if dedupe_key in seen_records:
+                    continue
+                seen_records.add(dedupe_key)
+
+                found_record = {
+                    'domain': domain,
+                    'type': 'A',
+                    'name': hostname,
+                    'address': shodan_ip,
+                    'source': 'shodan',
+                    'source_mode': 'active' if active_check else 'passive',
+                    'netblock': cidr,
+                }
+                if match_org:
+                    found_record['org'] = match_org
+
+                logger.info(f"\t SHODAN {hostname} {shodan_ip} ({cidr})")
+                found_records.append(found_record)
+
+    return found_records
 
 
 def expand_cidr(cidr_to_expand):
@@ -650,7 +828,7 @@ def get_whois_nets_iplist(ip_list):
     return [seen.setdefault(idfun(e), e) for e in found_nets if idfun(e) not in seen]
 
 
-def whois_ips(res, ip_list):
+def whois_ips(res, ip_list, whois_ranges=None):
     """
     This function will process the results of the whois lookups and present the
     user with the list of net ranges found and ask the user if he wishes to perform
@@ -658,7 +836,7 @@ def whois_ips(res, ip_list):
     """
     found_records = []
     logger.info('Performing Whois lookup against records found.')
-    list_whois = get_whois_nets_iplist(unique(ip_list))
+    list_whois = whois_ranges if whois_ranges is not None else get_whois_nets_iplist(unique(ip_list))
     if len(list_whois) > 0:
         logger.info('The following IP Ranges were found:')
         for i in range(len(list_whois)):
@@ -1009,6 +1187,9 @@ def general_enum(
     zw,
     request_timeout,
     thread_num=None,
+    do_shodan=False,
+    shodan_api_key=None,
+    shodan_active=False,
 ):
     """
     Function for performing general enumeration of a domain. It gets SOA, NS, MX
@@ -1022,6 +1203,8 @@ def general_enum(
 
     # Var to hold the IP Addresses that will be queried in Whois
     ip_for_whois = []
+    shodan_cidrs = []
+    whois_ranges = None
 
     # Check if wildcards are enabled on the target domain
     check_wildcard(res, domain)
@@ -1174,6 +1357,8 @@ def general_enum(
             processed_spf_data = process_spf_data(res, text_data)
             if processed_spf_data is not None:
                 found_spf_ranges.extend(processed_spf_data)
+            if do_shodan:
+                shodan_cidrs.extend(get_spf_networks(res, text_data))
             if len(found_spf_ranges) > 0:
                 logger.info('Performing Reverse Look-up of SPF Ranges')
                 returned_records.extend(brute_reverse(res, unique(found_spf_ranges)))
@@ -1228,8 +1413,33 @@ def general_enum(
                         ip_for_whois.append(r['address'])
                 returned_records.extend(crt_rcd)
 
+        if do_shodan and do_whois:
+            whois_ranges = get_whois_nets_iplist(unique(ip_for_whois))
+            shodan_cidrs.extend(whois_netranges_to_cidrs(whois_ranges))
+
+        if do_shodan:
+            if shodan_api_key:
+                shodan_nets = unique(shodan_cidrs)
+                if shodan_nets:
+                    mode = 'active' if shodan_active else 'passive'
+                    logger.info(f'Performing Shodan {mode} netblock search against {len(shodan_nets)} discovered networks')
+                    returned_records.extend(
+                        shodan_expand_netranges(
+                            res=res,
+                            domain=domain,
+                            cidrs=shodan_nets,
+                            api_key=shodan_api_key,
+                            active_check=shodan_active,
+                            timeout=request_timeout,
+                        )
+                    )
+                else:
+                    logger.info('No SPF/Whois netblocks available for Shodan expansion')
+            else:
+                logger.error('Shodan expansion requested but no API key was provided. Use --shodan-key or SHODAN_API_KEY.')
+
         if do_whois:
-            whois_rcd = whois_ips(res, ip_for_whois)
+            whois_rcd = whois_ips(res, ip_for_whois, whois_ranges=whois_ranges)
             if whois_rcd:
                 for r in whois_rcd:
                     returned_records.extend(r)
@@ -1513,6 +1723,9 @@ def main():
     spf_enum = False
     do_whois = False
     do_crt = False
+    do_shodan = False
+    shodan_active = False
+    shodan_api_key = None
 
     # By default, thread_num will be None
     thread_num = None
@@ -1592,6 +1805,22 @@ def main():
             '-w',
             help='Perform deep whois record analysis and reverse lookup of IP ranges found through Whois when doing a standard enumeration.',
             action='store_true',
+        )
+        parser.add_argument(
+            '--shodan',
+            help='Use Shodan to query netblocks discovered via SPF (-s) and/or Whois (-w) during standard enumeration.',
+            action='store_true',
+        )
+        parser.add_argument(
+            '--shodan-active',
+            help='Actively validate Shodan-discovered names by resolving them and confirming they still match the queried netblock.',
+            action='store_true',
+        )
+        parser.add_argument(
+            '--shodan-key',
+            type=str,
+            dest='shodan_key',
+            help='Shodan API key. If omitted, SHODAN_API_KEY environment variable is used.',
         )
         parser.add_argument(
             '-z',
@@ -1858,11 +2087,20 @@ Possible types:
     yandex = arguments.y
     do_crt = arguments.k
     do_whois = arguments.w
+    do_shodan = arguments.shodan
+    shodan_active = arguments.shodan_active
+    shodan_api_key = arguments.shodan_key or os.getenv('SHODAN_API_KEY')
     zonewalk = arguments.z
     spf_enum = arguments.s
     wildcard_filter = arguments.f
     proto = 'tcp' if arguments.tcp else 'udp'
     ns_server = arguments.ns_server.split(',') if arguments.ns_server else []
+
+    if shodan_active and not do_shodan:
+        logger.info('--shodan-active was provided without --shodan; active validation will not run.')
+
+    if do_shodan and not (spf_enum or do_whois):
+        logger.info('--shodan was provided but neither -s nor -w is enabled; no netblocks may be available for Shodan expansion.')
 
     # Initialize an empty list to hold all records
     all_returned_records = []
@@ -1905,6 +2143,9 @@ Possible types:
                         zonewalk,
                         request_timeout,
                         thread_num=thread_num,
+                        do_shodan=do_shodan,
+                        shodan_api_key=shodan_api_key,
+                        shodan_active=shodan_active,
                     )
                     if do_output and std_enum_records:
                         all_returned_records.extend(std_enum_records)

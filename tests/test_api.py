@@ -97,6 +97,25 @@ class TestDNSReconAPI:
         assert "subdomains" in data
         assert "ips" in data
         assert isinstance(data["records"], list)
+
+    @patch('dnsrecon.api.general_enum')
+    @patch('dnsrecon.api.DnsHelper')
+    def test_general_enum_endpoint_passes_shodan_options(self, mock_dns_helper, mock_general_enum, client):
+        """Test Shodan-related options are forwarded to general_enum."""
+        mock_dns_helper.return_value = MagicMock()
+        mock_general_enum.return_value = []
+
+        response = client.get(
+            "/general_enum?domain=example.com&do_shodan=true&shodan_active=true&do_spf=true&do_whois=true",
+            headers={"X-Shodan-Api-Key": "test-shodan-key"},
+        )
+
+        assert response.status_code == 200
+
+        kwargs = mock_general_enum.call_args.kwargs
+        assert kwargs["do_shodan"] is True
+        assert kwargs["shodan_active"] is True
+        assert kwargs["shodan_api_key"] == "test-shodan-key"
     
     def test_general_enum_invalid_domain(self, client):
         """Test general enumeration with an invalid domain"""

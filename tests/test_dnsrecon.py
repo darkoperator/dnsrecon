@@ -116,6 +116,65 @@ def test_se_result_process():
         assert results[1]['domain'] == 'zonetransfer.me'
         assert results[1]['target'] == 'some.domain.com'
 
+
+def test_get_spf_networks_recurses_includes_and_dedupes():
+    mock_resolver = MagicMock()
+    mock_resolver.get_txt.side_effect = [
+        [('TXT', 'spf1.example.com', 'v=spf1 ip4:198.51.100.0/24 ip4:198.51.100.0/24 -all')],
+        [('TXT', 'spf2.example.com', 'v=spf1 ip6:2001:db8::/32 -all')],
+    ]
+
+    data = 'v=spf1 ip4:192.0.2.0/24 include:spf1.example.com include:spf2.example.com -all'
+    networks = cli.get_spf_networks(mock_resolver, data)
+
+    assert networks == ['192.0.2.0/24', '198.51.100.0/24', '2001:db8::/32']
+
+
+def test_whois_netranges_to_cidrs_converts_ranges():
+    cidrs = cli.whois_netranges_to_cidrs([{'start': '192.0.2.0', 'end': '192.0.2.3', 'orgname': 'Example'}])
+    assert cidrs == ['192.0.2.0/30']
+
+
+def test_shodan_expand_netranges_passive_and_active_filtering():
+    mock_resolver = MagicMock()
+    mock_resolver.get_ip.side_effect = [
+        [('A', 'app.example.com', '192.0.2.10')],  # active validation success
+        [('A', 'stale.example.com', '203.0.113.44')],  # active validation fails
+    ]
+
+    shodan_matches = [
+        {
+            'ip_str': '192.0.2.10',
+            'hostnames': ['app.example.com', 'ignored.other.tld'],
+            'domains': ['example.com'],
+            'org': 'Example Org',
+        },
+        {
+            'ip_str': '192.0.2.20',
+            'hostnames': ['stale.example.com'],
+            'domains': [],
+            'org': 'Example Org',
+        },
+    ]
+
+    with patch('dnsrecon.cli.shodan_search_net', return_value=shodan_matches):
+        passive_records = cli.shodan_expand_netranges(
+            mock_resolver, 'example.com', ['192.0.2.0/24'], 'test-key', active_check=False
+        )
+        active_records = cli.shodan_expand_netranges(
+            mock_resolver, 'example.com', ['192.0.2.0/24'], 'test-key', active_check=True
+        )
+
+    passive_names = {(record['name'], record['address']) for record in passive_records}
+    active_names = {(record['name'], record['address']) for record in active_records}
+
+    assert ('app.example.com', '192.0.2.10') in passive_names
+    assert ('example.com', '192.0.2.10') in passive_names
+    assert all(name.endswith('example.com') for name, _ in passive_names)
+    assert ('app.example.com', '192.0.2.10') in active_names
+    assert ('stale.example.com', '192.0.2.20') not in active_names
+
+
 def test_write_db():
     with patch('sqlite3.connect') as mock_sqlite3_connect:
         cursor = MagicMock()
