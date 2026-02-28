@@ -3,7 +3,7 @@ import traceback
 
 from fastapi import FastAPI, Header, HTTPException, Query, Request, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, RedirectResponse, Response, UJSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 from pydantic import BaseModel, Field
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
@@ -165,7 +165,7 @@ async def bot() -> Response:
 
     Returns a message when accessed by suspicious user agents.
     """
-    return UJSONResponse({'bot': 'These are not the DNS records you are looking for'})
+    return JSONResponse({'bot': 'These are not the DNS records you are looking for'})
 
 
 class CapabilitiesResponse(BaseModel):
@@ -204,12 +204,12 @@ async def get_capabilities(request: Request) -> Response:
             'cache_snoop - DNS cache snooping',
             'nxdomain_hijack - NXDOMAIN hijacking check',
         ]
-        return UJSONResponse({'capabilities': capabilities})
+        return JSONResponse({'capabilities': capabilities})
     except Exception as e:
         error_traceback = traceback.format_exc()
         print(f'Error in get_capabilities endpoint: {e!s}\n{error_traceback}')
 
-        return UJSONResponse(
+        return JSONResponse(
             {
                 'detail': f'An error occurred while retrieving capabilities: {e!s}',
                 'error_type': type(e).__name__,
@@ -309,7 +309,7 @@ async def general_enumeration(
                     if name and name != domain:
                         subdomains.append(name)
 
-        return UJSONResponse(
+        return JSONResponse(
             {
                 'domain': domain,
                 'records': [record.model_dump() for record in records],
@@ -324,7 +324,7 @@ async def general_enumeration(
         error_traceback = traceback.format_exc()
         print(f'Error in general_enumeration endpoint: {e!s}\n{error_traceback}')
 
-        return UJSONResponse(
+        return JSONResponse(
             {
                 'detail': f'An error occurred while processing your request: {e!s}',
                 'error_type': type(e).__name__,
@@ -407,7 +407,7 @@ async def brute_force_domain(
                     if name:
                         subdomains.append(name)
 
-        return UJSONResponse(
+        return JSONResponse(
             {'domain': domain, 'subdomains': list(set(subdomains)), 'records': [record.model_dump() for record in records]}
         )
 
@@ -417,7 +417,7 @@ async def brute_force_domain(
         error_traceback = traceback.format_exc()
         print(f'Error in brute_force_domain endpoint: {e!s}\n{error_traceback}')
 
-        return UJSONResponse(
+        return JSONResponse(
             {
                 'detail': f'An error occurred while processing your request: {e!s}',
                 'error_type': type(e).__name__,
@@ -485,7 +485,7 @@ async def brute_force_reverse(
 
                     records.append(DnsRecord(name=name, type='PTR', address=address))
 
-        return UJSONResponse({'ip_range': ip_range, 'records': [record.model_dump() for record in records]})
+        return JSONResponse({'ip_range': ip_range, 'records': [record.model_dump() for record in records]})
 
     except HTTPException as e:
         raise e
@@ -493,7 +493,7 @@ async def brute_force_reverse(
         error_traceback = traceback.format_exc()
         print(f'Error in brute_force_reverse endpoint: {e!s}\n{error_traceback}')
 
-        return UJSONResponse(
+        return JSONResponse(
             {
                 'detail': f'An error occurred while processing your request: {e!s}',
                 'error_type': type(e).__name__,
@@ -542,7 +542,7 @@ async def wildcard_check(
         if not wildcard_ips:
             wildcard_ips = []
 
-        return UJSONResponse({'domain': domain, 'wildcard_enabled': wildcard_enabled, 'wildcard_ips': wildcard_ips})
+        return JSONResponse({'domain': domain, 'wildcard_enabled': wildcard_enabled, 'wildcard_ips': wildcard_ips})
 
     except HTTPException as e:
         raise e
@@ -550,7 +550,7 @@ async def wildcard_check(
         error_traceback = traceback.format_exc()
         print(f'Error in wildcard_check endpoint: {e!s}\n{error_traceback}')
 
-        return UJSONResponse(
+        return JSONResponse(
             {
                 'detail': f'An error occurred while processing your request: {e!s}',
                 'error_type': type(e).__name__,
@@ -616,7 +616,7 @@ async def brute_force_srv(
 
                     srv_records.append(DnsRecord(name=name, type=record_type, address=address, target=target, port=port))
 
-        return UJSONResponse({'domain': domain, 'srv_records': [record.model_dump() for record in srv_records]})
+        return JSONResponse({'domain': domain, 'srv_records': [record.model_dump() for record in srv_records]})
 
     except HTTPException as e:
         raise e
@@ -624,7 +624,7 @@ async def brute_force_srv(
         error_traceback = traceback.format_exc()
         print(f'Error in brute_force_srv endpoint: {e!s}\n{error_traceback}')
 
-        return UJSONResponse(
+        return JSONResponse(
             {
                 'detail': f'An error occurred while processing your request: {e!s}',
                 'error_type': type(e).__name__,
@@ -688,7 +688,7 @@ async def brute_force_tlds(
 
                     tld_records.append(DnsRecord(name=name, type=record_type, address=address))
 
-        return UJSONResponse({'domain': domain, 'tld_records': [record.model_dump() for record in tld_records]})
+        return JSONResponse({'domain': domain, 'tld_records': [record.model_dump() for record in tld_records]})
 
     except HTTPException as e:
         raise e
@@ -696,7 +696,7 @@ async def brute_force_tlds(
         error_traceback = traceback.format_exc()
         print(f'Error in brute_force_tlds endpoint: {e!s}\n{error_traceback}')
 
-        return UJSONResponse(
+        return JSONResponse(
             {
                 'detail': f'An error occurred while processing your request: {e!s}',
                 'error_type': type(e).__name__,
@@ -763,7 +763,7 @@ async def axfr_test(
 
                     records.append(DnsRecord(name=name, type=record_type, address=address, target=target))
 
-        return UJSONResponse(
+        return JSONResponse(
             {
                 'domain': domain,
                 'zone_transfer_successful': zone_transfer_successful,
@@ -777,7 +777,7 @@ async def axfr_test(
         error_traceback = traceback.format_exc()
         print(f'Error in axfr_test endpoint: {e!s}\n{error_traceback}')
 
-        return UJSONResponse(
+        return JSONResponse(
             {
                 'detail': f'An error occurred while processing your request: {e!s}',
                 'error_type': type(e).__name__,
@@ -836,7 +836,7 @@ async def caa_records(
 
                     caa_records_list.append(DnsRecord(name=name, type=record_type, address=value))
 
-        return UJSONResponse({'domain': domain, 'caa_records': [record.model_dump() for record in caa_records_list]})
+        return JSONResponse({'domain': domain, 'caa_records': [record.model_dump() for record in caa_records_list]})
 
     except HTTPException as e:
         raise e
@@ -844,7 +844,7 @@ async def caa_records(
         error_traceback = traceback.format_exc()
         print(f'Error in caa_records endpoint: {e!s}\n{error_traceback}')
 
-        return UJSONResponse(
+        return JSONResponse(
             {
                 'detail': f'An error occurred while processing your request: {e!s}',
                 'error_type': type(e).__name__,
@@ -921,7 +921,7 @@ async def cache_snoop(
 
                     cached_records.append(DnsRecord(name=name, type=record_type, address=address))
 
-        return UJSONResponse({'nameserver': nameserver, 'cached_records': [record.model_dump() for record in cached_records]})
+        return JSONResponse({'nameserver': nameserver, 'cached_records': [record.model_dump() for record in cached_records]})
 
     except HTTPException as e:
         raise e
@@ -929,7 +929,7 @@ async def cache_snoop(
         error_traceback = traceback.format_exc()
         print(f'Error in cache_snoop endpoint: {e!s}\n{error_traceback}')
 
-        return UJSONResponse(
+        return JSONResponse(
             {
                 'detail': f'An error occurred while processing your request: {e!s}',
                 'error_type': type(e).__name__,
@@ -993,7 +993,7 @@ async def zone_walk(
 
                     zone_walk_records.append(DnsRecord(name=name, type=record_type, address=address, target=target))
 
-        return UJSONResponse({'domain': domain, 'zone_walk_records': [record.model_dump() for record in zone_walk_records]})
+        return JSONResponse({'domain': domain, 'zone_walk_records': [record.model_dump() for record in zone_walk_records]})
 
     except HTTPException as e:
         raise e
@@ -1001,7 +1001,7 @@ async def zone_walk(
         error_traceback = traceback.format_exc()
         print(f'Error in zone_walk endpoint: {e!s}\n{error_traceback}')
 
-        return UJSONResponse(
+        return JSONResponse(
             {
                 'detail': f'An error occurred while processing your request: {e!s}',
                 'error_type': type(e).__name__,
@@ -1057,7 +1057,7 @@ async def bind_version(
         version_detected = bool(version_info)
         bind_version = version_info if version_info else 'Version not detected'
 
-        return UJSONResponse({'nameserver': nameserver, 'bind_version': bind_version, 'version_detected': version_detected})
+        return JSONResponse({'nameserver': nameserver, 'bind_version': bind_version, 'version_detected': version_detected})
 
     except HTTPException as e:
         raise e
@@ -1065,7 +1065,7 @@ async def bind_version(
         error_traceback = traceback.format_exc()
         print(f'Error in bind_version endpoint: {e!s}\n{error_traceback}')
 
-        return UJSONResponse(
+        return JSONResponse(
             {
                 'detail': f'An error occurred while processing your request: {e!s}',
                 'error_type': type(e).__name__,
@@ -1121,7 +1121,7 @@ async def recursive_check(
         recursive_enabled = bool(recursion_result)
         test_result = recursion_result if recursion_result else 'Recursion not enabled or test failed'
 
-        return UJSONResponse({'nameserver': nameserver, 'recursive_enabled': recursive_enabled, 'test_result': test_result})
+        return JSONResponse({'nameserver': nameserver, 'recursive_enabled': recursive_enabled, 'test_result': test_result})
 
     except HTTPException as e:
         raise e
@@ -1129,7 +1129,7 @@ async def recursive_check(
         error_traceback = traceback.format_exc()
         print(f'Error in recursive_check endpoint: {e!s}\n{error_traceback}')
 
-        return UJSONResponse(
+        return JSONResponse(
             {
                 'detail': f'An error occurred while processing your request: {e!s}',
                 'error_type': type(e).__name__,
@@ -1181,7 +1181,7 @@ async def nxdomain_hijack(
         hijack_detected = bool(hijack_result)
         hijack_details = hijack_result if hijack_result else 'No NXDOMAIN hijacking detected'
 
-        return UJSONResponse({'nameserver': nameserver, 'hijack_detected': hijack_detected, 'hijack_details': hijack_details})
+        return JSONResponse({'nameserver': nameserver, 'hijack_detected': hijack_detected, 'hijack_details': hijack_details})
 
     except HTTPException as e:
         raise e
@@ -1189,7 +1189,7 @@ async def nxdomain_hijack(
         error_traceback = traceback.format_exc()
         print(f'Error in nxdomain_hijack endpoint: {e!s}\n{error_traceback}')
 
-        return UJSONResponse(
+        return JSONResponse(
             {
                 'detail': f'An error occurred while processing your request: {e!s}',
                 'error_type': type(e).__name__,
