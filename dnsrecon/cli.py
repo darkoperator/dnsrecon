@@ -55,7 +55,7 @@ from dnsrecon.lib.shodan import ShodanClientError, make_shodan_client
 from dnsrecon.lib.whois import *
 from dnsrecon.lib.yandexenum import *
 
-__version__ = '1.5.3'
+__version__ = '1.6.0'
 __author__ = 'Carlos Perez, Carlos_Perez@darkoperator.com'
 __name__ = 'cli'
 

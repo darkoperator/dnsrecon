@@ -1,5 +1,27 @@
 # Changelog
 
+## [1.6.0] - 2026-02-28
+
+### Added
+- Added Shodan support for netblock expansion during DNS enumeration and API enhancements to leverage it (Fixes #104). ([12a5b15](https://github.com/darkoperator/dnsrecon/commit/12a5b15))
+
+### Changed
+- Bumped DNSRecon version to `1.6.0`.
+- Updated FastAPI to 0.134.0 and replaced `UJSONResponse` with `JSONResponse` for compatibility. ([8360ec0](https://github.com/darkoperator/dnsrecon/commit/8360ec0))
+- Bumped `fastapi` from 0.129.2 to 0.133.1. ([8476e35](https://github.com/darkoperator/dnsrecon/commit/8476e35))
+- Bumped `ruff` from 0.15.2 to 0.15.4. ([0c8bc7e](https://github.com/darkoperator/dnsrecon/commit/0c8bc7e))
+- Applied Ruff fixes and formatting. ([56c9c35](https://github.com/darkoperator/dnsrecon/commit/56c9c35))
+- Updated dependencies. ([5db0595](https://github.com/darkoperator/dnsrecon/commit/5db0595))
+- Bumped `uvicorn[standard]` from 0.40.0 to 0.41.0. ([78137d2](https://github.com/darkoperator/dnsrecon/commit/78137d2))
+- Bumped `ruff` from 0.15.1 to 0.15.2. ([5fecb97](https://github.com/darkoperator/dnsrecon/commit/5fecb97))
+- Updated dependencies. ([1cad9df](https://github.com/darkoperator/dnsrecon/commit/1cad9df))
+- Updated dependencies. ([506d8d3](https://github.com/darkoperator/dnsrecon/commit/506d8d3))
+- Bumped `fastapi` from 0.128.5 to 0.128.6. ([ed58132](https://github.com/darkoperator/dnsrecon/commit/ed58132))
+- Bumped `fastapi` from 0.128.2 to 0.128.5. ([08c6dc4](https://github.com/darkoperator/dnsrecon/commit/08c6dc4))
+- Merged pull request #454. ([1b90c5a](https://github.com/darkoperator/dnsrecon/commit/1b90c5a))
+- Bumped `fastapi` from 0.128.0 to 0.128.2. ([09b5f09](https://github.com/darkoperator/dnsrecon/commit/09b5f09))
+- Applied fix related to issue #453. ([32d2382](https://github.com/darkoperator/dnsrecon/commit/32d2382))
+
 ## [1.5.3] - 2025-12-30
 
 ### Removed
@@ -35,6 +57,6 @@
 ### Fixed
 - Resolved issue #432 to actually fix python 3.14 support. ([880e76b](https://github.com/darkoperator/dnsrecon/commit/880e76b))
 
-[1.5.4]: https://github.com/darkoperator/dnsrecon/compare/1.5.3...1.5.4
+[1.6.0]: https://github.com/darkoperator/dnsrecon/compare/1.5.3...1.6.0
 [1.5.3]: https://github.com/darkoperator/dnsrecon/compare/1.5.2...1.5.3
 [1.5.2]: https://github.com/darkoperator/dnsrecon/compare/1.5.1...1.5.2
