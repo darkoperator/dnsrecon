@@ -1,4 +1,4 @@
-FROM python:alpine@sha256:faee120f7885a06fcc9677922331391fa690d911c020abb9e8025ff3d908e510
+FROM python:alpine@sha256:6f873e340e6786787a632c919ecfb1d2301eb33ccfbe9f0d0add16cbc0892116
 RUN apk add --no-cache build-base libffi-dev libxml2-dev libxslt-dev
 WORKDIR /app
 COPY . /app
