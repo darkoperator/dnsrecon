@@ -1387,7 +1387,12 @@ def general_enum(
         # Do Bing Search enumeration if selected
         if do_bing:
             logger.info('Performing Bing Search Enumeration')
-            bing_rcd = se_result_process(res, domain, scrape_bing(domain))
+            try:
+                bing_names = scrape_bing(domain)
+            except httpx.HTTPError as e:
+                logger.error(f'Bing enumeration failed: {e!s} — skipping')
+                bing_names = []
+            bing_rcd = se_result_process(res, domain, bing_names) if bing_names else []
             if bing_rcd:
                 for r in bing_rcd:
                     if 'address' in bing_rcd:
@@ -1397,7 +1402,12 @@ def general_enum(
         # Do Yandex Search enumeration if selected
         if do_yandex:
             logger.info('Performing Yandex Search Enumeration')
-            yandex_rcd = se_result_process(res, domain, scrape_bing(domain))
+            try:
+                yandex_names = scrape_bing(domain)
+            except httpx.HTTPError as e:
+                logger.error(f'Yandex enumeration failed: {e!s} — skipping')
+                yandex_names = []
+            yandex_rcd = se_result_process(res, domain, yandex_names) if yandex_names else []
             if yandex_rcd:
                 for r in yandex_rcd:
                     if 'address' in yandex_rcd:
@@ -1406,7 +1416,12 @@ def general_enum(
 
         if do_crt:
             logger.info('Performing Crt.sh Search Enumeration')
-            crt_rcd = se_result_process(res, domain, scrape_crtsh(domain))
+            try:
+                crt_names = scrape_crtsh(domain)
+            except httpx.HTTPError as e:
+                logger.error(f'crt.sh enumeration failed after retries: {e!s} — skipping')
+                crt_names = []
+            crt_rcd = se_result_process(res, domain, crt_names) if crt_names else []
             if crt_rcd:
                 for r in crt_rcd:
                     if 'address' in crt_rcd:
@@ -1439,7 +1454,11 @@ def general_enum(
                 logger.error('Shodan expansion requested but no API key was provided. Use --shodan-key or SHODAN_API_KEY.')
 
         if do_whois:
-            whois_rcd = whois_ips(res, ip_for_whois, whois_ranges=whois_ranges)
+            try:
+                whois_rcd = whois_ips(res, ip_for_whois, whois_ranges=whois_ranges)
+            except Exception as e:
+                logger.error(f'WHOIS enumeration failed: {e!s} — skipping')
+                whois_rcd = None
             if whois_rcd:
                 for r in whois_rcd:
                     returned_records.extend(r)
@@ -2251,6 +2270,10 @@ Please make sure you can reach the target DNS Servers directly and requests are 
 Increase the timeout from {request_timeout} seconds to a higher number with --lifetime <time> option."""
                 )
                 continue  # Continue with the next domain
+
+            except httpx.HTTPError as e:
+                logger.error(f'{type_}: external source request failed: {e!s} — continuing to next scan type')
+                continue  # Continue with the next scan type
 
         logger.info(f'Completed enumeration for domain: {domain}\n')
 
