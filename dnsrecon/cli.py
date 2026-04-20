@@ -832,7 +832,9 @@ def whois_ips(res, ip_list, whois_ranges=None):
     """
     This function will process the results of the whois lookups and present the
     user with the list of net ranges found and ask the user if he wishes to perform
-    a reverse lookup on any of the ranges or all the ranges.
+    a reverse lookup on any of the ranges or all the ranges. When stdin is not
+    attached to a TTY (pipelines, CI, REST API, containers without -it), the
+    prompt is skipped and all discovered ranges are reverse-looked-up by default.
     """
     found_records = []
     logger.info('Performing Whois lookup against records found.')
@@ -848,10 +850,14 @@ def whois_ips(res, ip_list, whois_ranges=None):
                     list_whois[i]['orgname'],
                 )
             )
-        logger.info('What Range do you wish to do a Reverse Lookup for?')
-        logger.info('number, comma separated list, a for all or n for none')
-        val = sys.stdin.readline()[:-1]
-        answer = str(val).split(',')
+        if sys.stdin.isatty():
+            logger.info('What Range do you wish to do a Reverse Lookup for?')
+            logger.info('number, comma separated list, a for all or n for none')
+            val = sys.stdin.readline()[:-1]
+            answer = str(val).split(',')
+        else:
+            logger.warning('Non-interactive stdin detected; defaulting to reverse lookup of all discovered ranges.')
+            answer = ['a']
 
         if 'a' in answer:
             for i in range(len(list_whois)):
