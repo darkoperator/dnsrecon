@@ -2,6 +2,65 @@ from unittest.mock import patch, MagicMock
 from dnsrecon import cli
 
 
+def _stub_resolver_minimal():
+    """MagicMock resolver with all DnsHelper methods stubbed to return empty/None."""
+    res = MagicMock()
+    res.get_soa.return_value = []
+    res.get_ns.return_value = []
+    res.get_mx.return_value = []
+    res.get_ip.return_value = []
+    res.get_spf.return_value = None
+    res.get_txt.return_value = []
+    res.zone_transfer.return_value = None
+    return res
+
+
+def test_general_enum_yandex_branch_calls_scrape_yandex():
+    """Yandex enumeration must call scrape_yandex(), not scrape_bing() (issue #505)."""
+    res = _stub_resolver_minimal()
+    with patch('dnsrecon.cli.check_wildcard', return_value=set()), \
+            patch('dnsrecon.cli.dns_sec_check'), \
+            patch('dnsrecon.cli.brute_srv', return_value=[]), \
+            patch('dnsrecon.cli.scrape_yandex', return_value=[]) as mock_yandex, \
+            patch('dnsrecon.cli.scrape_bing') as mock_bing:
+        cli.general_enum(
+            res=res, domain='example.com',
+            do_axfr=False, do_bing=False, do_yandex=True, do_spf=False,
+            do_whois=False, do_crt=False, zw=False, request_timeout=3.0,
+        )
+
+    mock_yandex.assert_called_once_with('example.com')
+    mock_bing.assert_not_called()
+
+
+def test_general_enum_bing_addresses_feed_whois(monkeypatch):
+    """Addresses discovered via Bing must be forwarded to WHOIS (issue #506)."""
+    res = _stub_resolver_minimal()
+    bing_records = [
+        {'type': 'A', 'name': 'a.example.com', 'address': '192.0.2.1', 'domain': 'example.com'},
+        {'type': 'CNAME', 'name': 'b.example.com', 'target': 'a.example.com', 'domain': 'example.com'},
+    ]
+    seen_ips = []
+
+    def fake_whois_ips(res_arg, ip_list, whois_ranges=None):
+        seen_ips.extend(ip_list)
+        return None
+
+    with patch('dnsrecon.cli.check_wildcard', return_value=set()), \
+            patch('dnsrecon.cli.dns_sec_check'), \
+            patch('dnsrecon.cli.brute_srv', return_value=[]), \
+            patch('dnsrecon.cli.scrape_bing', return_value=['a.example.com', 'b.example.com']), \
+            patch('dnsrecon.cli.se_result_process', return_value=bing_records), \
+            patch('dnsrecon.cli.whois_ips', side_effect=fake_whois_ips):
+        cli.general_enum(
+            res=res, domain='example.com',
+            do_axfr=False, do_bing=True, do_yandex=False, do_spf=False,
+            do_whois=True, do_crt=False, zw=False, request_timeout=3.0,
+        )
+
+    assert '192.0.2.1' in seen_ips, f'Bing address not propagated to WHOIS: {seen_ips!r}'
+
+
 def test_check_wildcard():
     with patch('dnsrecon.lib.dnshelper.DnsHelper') as mock_dns_helper:
         mock_instance = mock_dns_helper.return_value
