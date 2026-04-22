@@ -208,3 +208,54 @@ def test_write_db():
         assert cursor.execute.call_args_list[9][0][0] == 'insert into data( domain, type, text) values( "zonetransfer.me", "SPF", "spf.zonetransfer.me" )'
         assert cursor.execute.call_args_list[10][0][0] == 'insert into data( domain, type, name, address ) values( "zonetransfer.me", "PTR", "zonetransfer.me", "192.0.2.1" )'
         assert cursor.execute.call_args_list[11][0][0] == 'insert into data( domain, type, text ) values ("%(domain)", \'OTHER\', \'domain=zonetransfer.me,name=zonetransfer.me,strings=spf.zonetransfer.me,\')'
+
+
+def _sample_whois_ranges():
+    return [
+        {'start': '192.0.2.0', 'end': '192.0.2.3', 'orgname': 'TEST-NET-1'},
+        {'start': '198.51.100.0', 'end': '198.51.100.3', 'orgname': 'TEST-NET-2'},
+    ]
+
+
+def test_whois_ips_non_interactive_stdin_defaults_to_all():
+    mock_resolver = MagicMock()
+    whois_ranges = _sample_whois_ranges()
+
+    with patch('dnsrecon.cli.sys.stdin') as mock_stdin, \
+            patch('dnsrecon.cli.brute_reverse', return_value=['record']) as mock_reverse, \
+            patch.object(cli.logger, 'warning') as mock_warning:
+        mock_stdin.isatty.return_value = False
+        result = cli.whois_ips(mock_resolver, ['192.0.2.1'], whois_ranges=whois_ranges)
+
+    assert mock_reverse.call_count == len(whois_ranges)
+    assert result == [['record'], ['record']]
+    mock_stdin.readline.assert_not_called()
+    assert any('Non-interactive stdin detected' in str(call.args[0]) for call in mock_warning.call_args_list)
+
+
+def test_whois_ips_interactive_stdin_reads_selection():
+    mock_resolver = MagicMock()
+    whois_ranges = _sample_whois_ranges()
+
+    with patch('dnsrecon.cli.sys.stdin') as mock_stdin, \
+            patch('dnsrecon.cli.brute_reverse') as mock_reverse:
+        mock_stdin.isatty.return_value = True
+        mock_stdin.readline.return_value = 'n\n'
+        result = cli.whois_ips(mock_resolver, ['192.0.2.1'], whois_ranges=whois_ranges)
+
+    mock_reverse.assert_not_called()
+    assert result == []
+    mock_stdin.readline.assert_called_once()
+
+
+def test_whois_ips_empty_ranges_returns_empty():
+    mock_resolver = MagicMock()
+
+    with patch('dnsrecon.cli.sys.stdin') as mock_stdin, \
+            patch('dnsrecon.cli.brute_reverse') as mock_reverse:
+        mock_stdin.isatty.return_value = False
+        result = cli.whois_ips(mock_resolver, [], whois_ranges=[])
+
+    assert result == []
+    mock_reverse.assert_not_called()
+    mock_stdin.isatty.assert_not_called()
