@@ -120,7 +120,7 @@ requires-dist = [
     { name = "pyupgrade", marker = "extra == 'dev'", specifier = "==3.21.2" },
     { name = "ruff", marker = "extra == 'dev'", specifier = "==0.15.9" },
     { name = "slowapi", specifier = "==0.1.9" },
-    { name = "stamina", specifier = "==25.2.0" },
+    { name = "stamina", specifier = "==26.1.0" },
     { name = "types-ujson", marker = "extra == 'dev'", specifier = "==5.10.0.20250822" },
     { name = "ujson", specifier = "==5.12.0" },
     { name = "uvicorn", extras = ["standard"], specifier = "==0.44.0" },
@@ -511,14 +511,14 @@ wheels = [
 
 [[package]]
 name = "stamina"
-version = "25.2.0"
+version = "26.1.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "tenacity" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/58/b7/8064b246b3d684720080ee8ffbf1dde5caabe852eb9cb53655eb97992af2/stamina-25.2.0.tar.gz", hash = "sha256:fdff938789e8a0c4c496e1ee8a08ee3c7c3351239f235b53e60d4f5964d07e19", size = 565737, upload-time = "2025-12-11T09:16:59.195Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/80/bd/b2f71ae14368a066f103d182f25bbc6c3bf4aa695889f3ed3cba026d6f36/stamina-26.1.0.tar.gz", hash = "sha256:0214d05fdf5102c518194a4aac7520ce53cf660550ae3b940701aad88cf50c17", size = 568171, upload-time = "2026-04-13T17:44:31.012Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/8f/81/c525760353dff91ae2e4c42c3f3d9bf0bfeecbb6165cc393e86915f1717d/stamina-25.2.0-py3-none-any.whl", hash = "sha256:7f0de7dba735464c256a31e6372c01b8bb51fb6efd649e6773f4ce804462feea", size = 18791, upload-time = "2025-12-11T09:16:57.235Z" },
+    { url = "https://files.pythonhosted.org/packages/1d/f0/1ff90a1d1dd02de23feafdf9dffaecef3958348be5c192df56670ccb4f86/stamina-26.1.0-py3-none-any.whl", hash = "sha256:62e06829bec87c06d4cafde520b32a6097d1017c378a9eb63253c5bf5ebbbb88", size = 18508, upload-time = "2026-04-13T17:44:29.545Z" },
 ]
 
 [[package]]
