@@ -1390,7 +1390,7 @@ def general_enum(
             bing_rcd = se_result_process(res, domain, scrape_bing(domain))
             if bing_rcd:
                 for r in bing_rcd:
-                    if 'address' in bing_rcd:
+                    if 'address' in r:
                         ip_for_whois.append(r['address'])
                 returned_records.extend(bing_rcd)
 
@@ -1400,7 +1400,7 @@ def general_enum(
             yandex_rcd = se_result_process(res, domain, scrape_bing(domain))
             if yandex_rcd:
                 for r in yandex_rcd:
-                    if 'address' in yandex_rcd:
+                    if 'address' in r:
                         ip_for_whois.append(r['address'])
                 returned_records.extend(yandex_rcd)
 
@@ -1409,7 +1409,7 @@ def general_enum(
             crt_rcd = se_result_process(res, domain, scrape_crtsh(domain))
             if crt_rcd:
                 for r in crt_rcd:
-                    if 'address' in crt_rcd:
+                    if 'address' in r:
                         ip_for_whois.append(r['address'])
                 returned_records.extend(crt_rcd)
 
