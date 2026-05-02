@@ -1397,7 +1397,7 @@ def general_enum(
         # Do Yandex Search enumeration if selected
         if do_yandex:
             logger.info('Performing Yandex Search Enumeration')
-            yandex_rcd = se_result_process(res, domain, scrape_bing(domain))
+            yandex_rcd = se_result_process(res, domain, scrape_yandex(domain))
             if yandex_rcd:
                 for r in yandex_rcd:
                     if 'address' in yandex_rcd:
