@@ -848,10 +848,21 @@ def whois_ips(res, ip_list, whois_ranges=None):
                     list_whois[i]['orgname'],
                 )
             )
-        logger.info('What Range do you wish to do a Reverse Lookup for?')
-        logger.info('number, comma separated list, a for all or n for none')
-        val = sys.stdin.readline()[:-1]
-        answer = str(val).split(',')
+        # If stdin is not an interactive terminal (REST API call, CI pipeline,
+        # piped input, container without -it, …) blocking on
+        # sys.stdin.readline() either hangs forever or silently returns an
+        # empty string. Default to "all" in that case, which matches the
+        # most-useful behavior for automated scans (issue #508). Users who
+        # want a different non-interactive default can pass whois_ranges
+        # directly from a wrapper.
+        if not sys.stdin.isatty():
+            logger.info('Non-interactive stdin detected; defaulting WHOIS reverse-lookup to all ranges')
+            answer = ['a']
+        else:
+            logger.info('What Range do you wish to do a Reverse Lookup for?')
+            logger.info('number, comma separated list, a for all or n for none')
+            val = sys.stdin.readline()[:-1]
+            answer = str(val).split(',')
 
         if 'a' in answer:
             for i in range(len(list_whois)):
