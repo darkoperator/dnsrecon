@@ -1406,7 +1406,17 @@ def general_enum(
 
         if do_crt:
             logger.info('Performing Crt.sh Search Enumeration')
-            crt_rcd = se_result_process(res, domain, scrape_crtsh(domain))
+            # crt.sh has a habit of returning 502/503 in bursts. After
+            # stamina.retry exhausts its attempts inside scrape_crtsh, an
+            # httpx.HTTPStatusError propagates out and would otherwise abort
+            # the entire scan, discarding everything collected so far. Treat
+            # any third-party HTTP failure as "no records from this source"
+            # and keep going (issue #503).
+            crt_rcd = None
+            try:
+                crt_rcd = se_result_process(res, domain, scrape_crtsh(domain))
+            except httpx.HTTPError as e:
+                logger.warning(f'crt.sh enumeration failed, continuing without it: {e}')
             if crt_rcd:
                 for r in crt_rcd:
                     if 'address' in crt_rcd:
@@ -2198,7 +2208,13 @@ Possible types:
 
                 elif type_ == 'crt':
                     logger.info(f'{type_}: Performing Crt.sh Search Enumeration against {domain}...')
-                    crt_enum_records = se_result_process(res, domain, scrape_crtsh(domain))
+                    # See issue #503 — crt.sh outages would otherwise crash
+                    # the entire scan after retries are exhausted.
+                    crt_enum_records = None
+                    try:
+                        crt_enum_records = se_result_process(res, domain, scrape_crtsh(domain))
+                    except httpx.HTTPError as e:
+                        logger.warning(f'crt.sh enumeration failed: {e}')
                     if crt_enum_records is not None and do_output:
                         all_returned_records.extend(crt_enum_records)
                     else:
