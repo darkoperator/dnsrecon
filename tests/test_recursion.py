@@ -1,6 +1,7 @@
 import pytest
 from unittest.mock import patch, MagicMock
 from dnsrecon.lib.dnshelper import DnsHelper
+from dnsrecon import cli
 import dns.resolver
 import dns.message
 import dns.rdatatype
@@ -44,3 +45,21 @@ def test_get_soa_recursion_disabled(mock_get_answers, mock_udp, mock_make_query)
     # Check if make_query was called with flags=0
     args, kwargs = mock_make_query.call_args
     assert kwargs.get('flags') == 0
+
+
+def test_check_recursive_returns_false_without_ra_flag():
+    helper = MagicMock()
+    response = MagicMock()
+    response.flags = dns.flags.QR
+    helper.query.return_value = response
+
+    assert cli.check_recursive(helper, '192.0.2.53', 3.0) is False
+
+
+def test_check_recursive_returns_true_with_ra_flag():
+    helper = MagicMock()
+    response = MagicMock()
+    response.flags = dns.flags.QR | dns.flags.RA
+    helper.query.return_value = response
+
+    assert cli.check_recursive(helper, '192.0.2.53', 3.0) is True

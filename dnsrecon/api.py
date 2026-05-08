@@ -1,5 +1,7 @@
+import ipaddress
 import os
 import traceback
+from pathlib import Path
 
 from fastapi import FastAPI, Header, HTTPException, Query, Request, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -21,10 +23,58 @@ from dnsrecon.cli import (
     ds_zone_walk,
     general_enum,
     in_cache,
+    process_range,
 )
 from dnsrecon.lib.dnshelper import DnsHelper
 
 API_RATE_LIMIT = os.getenv('API_RATE_LIMIT', '5/minute')
+API_MAX_THREADS = 100
+DATA_DIR = Path(__file__).parent / 'data'
+
+
+def _bad_request(detail: str) -> HTTPException:
+    return HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=detail)
+
+
+def validate_thread_num(thread_num: int) -> int:
+    if thread_num < 1 or thread_num > API_MAX_THREADS:
+        raise _bad_request(f'thread_num must be between 1 and {API_MAX_THREADS}')
+    return thread_num
+
+
+def wordlist_roots() -> list[Path]:
+    roots = [DATA_DIR.resolve()]
+    for root in os.getenv('DNSRECON_WORDLIST_DIRS', '').split(os.pathsep):
+        if root:
+            roots.append(Path(root).expanduser().resolve())
+    return roots
+
+
+def resolve_wordlist_path(wordlist: str, default_filename: str) -> str:
+    candidate = DATA_DIR / default_filename if not wordlist else Path(wordlist).expanduser()
+    allowed_roots = wordlist_roots()
+
+    if wordlist and not candidate.is_absolute():
+        relative_candidates = [root / candidate for root in allowed_roots]
+    else:
+        relative_candidates = [candidate]
+
+    matched_allowed_root = False
+    for possible_path in relative_candidates:
+        resolved = possible_path.resolve()
+        for root in allowed_roots:
+            try:
+                resolved.relative_to(root)
+            except ValueError:
+                continue
+            matched_allowed_root = True
+            if not resolved.is_file():
+                continue
+            return str(resolved)
+
+    if matched_allowed_root:
+        raise _bad_request('Wordlist file not found')
+    raise _bad_request('Invalid wordlist path')
 
 
 # Define Pydantic models for request and response validation
@@ -267,6 +317,8 @@ async def general_enumeration(
         if not domain or len(domain) < 3:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Domain must be at least 3 characters long')
 
+        thread_num = validate_thread_num(thread_num)
+
         # Create DNS resolver
         res = DnsHelper(domain, recursion_desired=recursion_desired)
 
@@ -369,17 +421,12 @@ async def brute_force_domain(
         if not domain or len(domain) < 3:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Domain must be at least 3 characters long')
 
+        thread_num = validate_thread_num(thread_num)
+
         # Create a DNS resolver
         res = DnsHelper(domain, recursion_desired=recursion_desired)
 
-        # Use default wordlist if none provided
-        safe_root = os.path.join(os.path.dirname(__file__), 'data')
-        if not wordlist:
-            wordlist = os.path.join(safe_root, 'subdomains-top1mil-5000.txt')
-        else:
-            wordlist = os.path.normpath(os.path.join(safe_root, wordlist))
-            if not wordlist.startswith(safe_root):
-                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Invalid wordlist path')
+        wordlist = resolve_wordlist_path(wordlist, 'subdomains-top1mil-5000.txt')
 
         results = brute_domain(
             res=res,
@@ -460,14 +507,18 @@ async def brute_force_reverse(
         if not ip_range:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='IP range is required')
 
-        # Parse IP range
-        if '-' in ip_range:
-            start_ip, end_ip = ip_range.split('-', 1)
-            ip_list = [
-                f'{start_ip.rsplit(".", 1)[0]}.{i}' for i in range(int(start_ip.split('.')[-1]), int(end_ip.split('.')[-1]) + 1)
-            ]
+        thread_num = validate_thread_num(thread_num)
+
+        if '-' in ip_range or '/' in ip_range:
+            ip_list = process_range(ip_range)
         else:
-            ip_list = [ip_range]
+            try:
+                ip_list = [ipaddress.ip_address(ip_range)]
+            except ValueError as e:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Invalid IP range') from e
+
+        if not ip_list:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Invalid IP range')
 
         res = DnsHelper('example.com', recursion_desired=recursion_desired)  # Domain not used for reverse lookups
 
@@ -598,6 +649,7 @@ async def brute_force_srv(
         if not domain or len(domain) < 3:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Domain must be at least 3 characters long')
 
+        thread_num = validate_thread_num(thread_num)
         res = DnsHelper(domain, recursion_desired=recursion_desired)
 
         # Perform SRV enumeration
@@ -672,6 +724,7 @@ async def brute_force_tlds(
         if not domain or len(domain) < 3:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Domain must be at least 3 characters long')
 
+        thread_num = validate_thread_num(thread_num)
         res = DnsHelper(domain, recursion_desired=recursion_desired)
 
         # Perform TLD enumeration
@@ -751,7 +804,9 @@ async def axfr_test(
 
         # Process results
         records = []
-        zone_transfer_successful = bool(results)
+        zone_transfer_successful = any(
+            isinstance(result, dict) and result.get('zone_transfer') == 'success' for result in results or []
+        )
 
         if results:
             for result in results:
@@ -891,19 +946,7 @@ async def cache_snoop(
         if not nameserver:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Name server is required')
 
-        # Use default wordlist if none provided
-        if not wordlist:
-            wordlist = os.path.join(os.path.dirname(__file__), 'data', 'namelist.txt')
-        else:
-            # Only allow wordlists within the data directory
-            data_dir = os.path.join(os.path.dirname(__file__), 'data')
-            requested_path = os.path.normpath(os.path.join(data_dir, wordlist))
-            if not requested_path.startswith(data_dir):
-                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Invalid wordlist path')
-            wordlist = requested_path
-
-        if not os.path.exists(wordlist):
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Wordlist file not found')
+        wordlist = resolve_wordlist_path(wordlist, 'namelist.txt')
 
         res = DnsHelper('example.com')  # Domain not critical for cache snooping
 

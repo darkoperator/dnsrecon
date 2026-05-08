@@ -607,6 +607,10 @@ def brute_reverse(res, ip_list, verbose=False, thread_num=None):
         else:
             expanded_ips.append(entry)
 
+    if not expanded_ips:
+        logger.error('No IP addresses provided for reverse lookup')
+        return []
+
     start_ip = expanded_ips[0]
     end_ip = expanded_ips[-1]
     logger.info(f'Performing Reverse Lookup from {start_ip} to {end_ip}')
@@ -1037,64 +1041,54 @@ def write_db(db, data):
 
     # Normalize the dictionary data
     for n in data:
-        if re.match(r'PTR|^[A]$|AAAA', n['type']):
-            query = (
-                'insert into data( domain, type, name, address ) '
-                + 'values( "{domain}", "{type}", "{name}", "{address}" )'.format(**n)
-            )
+        record_type = n['type']
+        domain = n.get('domain', '')
 
-        elif re.match(r'NS$', n['type']):
-            query = (
-                'insert into data( domain, type, name, address ) '
-                + 'values( "{domain}", "{type}", "{target}", "{address}" )'.format(**n)
-            )
+        if re.match(r'PTR|^[A]$|AAAA', record_type):
+            query = 'insert into data( domain, type, name, address ) values( ?, ?, ?, ? )'
+            params = (domain, record_type, n.get('name', ''), n.get('address', ''))
 
-        elif re.match(r'SOA', n['type']):
-            query = (
-                'insert into data( domain, type, name, address ) '
-                + 'values( "{domain}", "{type}", "{mname}", "{address}" )'.format(**n)
-            )
+        elif re.match(r'NS$', record_type):
+            query = 'insert into data( domain, type, name, address ) values( ?, ?, ?, ? )'
+            params = (domain, record_type, n.get('target', ''), n.get('address', ''))
 
-        elif re.match(r'MX', n['type']):
-            query = (
-                'insert into data( domain, type, name, address ) '
-                + 'values( "{domain}", "{type}", "{exchange}", "{address}" )'.format(**n)
-            )
+        elif re.match(r'SOA', record_type):
+            query = 'insert into data( domain, type, name, address ) values( ?, ?, ?, ? )'
+            params = (domain, record_type, n.get('mname', ''), n.get('address', ''))
 
-        elif re.match(r'TXT', n['type']):
-            query = 'insert into data( domain, type, text) ' + 'values( "{domain}", "{type}", "{strings}" )'.format(**n)
+        elif re.match(r'MX', record_type):
+            query = 'insert into data( domain, type, name, address ) values( ?, ?, ?, ? )'
+            params = (domain, record_type, n.get('exchange', ''), n.get('address', ''))
 
-        elif re.match(r'SPF', n['type']):
-            query = 'insert into data( domain, type, text) ' + 'values( "{domain}", "{type}", "{strings}" )'.format(**n)
+        elif re.match(r'TXT', record_type):
+            query = 'insert into data( domain, type, text) values( ?, ?, ? )'
+            params = (domain, record_type, n.get('strings', ''))
 
-        elif re.match(r'SRV', n['type']):
-            query = (
-                'insert into data( domain, type, name, target, address, port ) '
-                + 'values( "{domain}", "{type}", "{name}", "{target}", "{address}", "{port}" )'.format(**n)
-            )
+        elif re.match(r'SPF', record_type):
+            query = 'insert into data( domain, type, text) values( ?, ?, ? )'
+            params = (domain, record_type, n.get('strings', ''))
 
-        elif re.match(r'CNAME', n['type']):
-            query = (
-                'insert into data( domain, type, name, target ) '
-                + 'values( "{domain}", "{type}", "{name}", "{target}" )'.format(**n)
-            )
-        elif re.match(r'CAA', n['type']):
+        elif re.match(r'SRV', record_type):
+            query = 'insert into data( domain, type, name, target, address, port ) values( ?, ?, ?, ?, ?, ? )'
+            params = (domain, record_type, n.get('name', ''), n.get('target', ''), n.get('address', ''), n.get('port', ''))
+
+        elif re.match(r'CNAME', record_type):
+            query = 'insert into data( domain, type, name, target ) values( ?, ?, ?, ? )'
+            params = (domain, record_type, n.get('name', ''), n.get('target', ''))
+        elif re.match(r'CAA', record_type):
             # Preserve some of the previous behavior when writing CAA records to the database would fall into the else clause
             text = ','.join([f'{key}={value}' for key, value in n.items() if key != 'type'])
-            query = "insert into data( domain, type, name, target, address, text ) values ('{domain}', '{type}', '{name}', '{target}', '{address}', '{text}')".format(
-                **n, text=text
-            )
+            query = 'insert into data( domain, type, name, target, address, text ) values (?, ?, ?, ?, ?, ?)'
+            params = (domain, record_type, n.get('name', ''), n.get('target', ''), n.get('address', ''), text)
 
         else:
             # Handle not common records
-            t = n['type']
-            del n['type']
-            record_data = ''.join([f'{key}={value},' for key, value in n.items()])
-            records = [t, record_data]
-            query = 'insert into data( domain, type, text ) values ("%(domain)", \'' + records[0] + "', '" + records[1] + "')"
+            record_data = ''.join([f'{key}={value},' for key, value in n.items() if key != 'type'])
+            query = 'insert into data( domain, type, text ) values (?, ?, ?)'
+            params = (domain, record_type, record_data)
 
         # Execute Query and commit
-        cur.execute(query)
+        cur.execute(query, params)
         con.commit()
 
 
@@ -1174,7 +1168,7 @@ def check_recursive(res, ns_server, timeout):
             result = re.findall(recursion_flag_pattern, flags)
             if result:
                 logger.error(f'\t Recursion enabled on NS Server {ns_server}')
-            is_recursive = True
+                is_recursive = True
         except (OSError, dns.exception.Timeout):
             pass
 

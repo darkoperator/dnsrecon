@@ -111,5 +111,11 @@ curl -s \
   "http://127.0.0.1:5000/general_enum?domain=example.com&do_spf=true&do_whois=true&do_shodan=true&shodan_active=true"
 ```
 
+REST API `thread_num` values are limited to `1..100`. API `wordlist` parameters may reference bundled files in `dnsrecon/data` or files under directories listed in `DNSRECON_WORDLIST_DIRS` using the platform path separator, for example:
+
+```bash
+export DNSRECON_WORDLIST_DIRS="/opt/dnsrecon-wordlists:/srv/shared-wordlists"
+```
+
 ## Packaging Versions
 [![Packaging status](https://repology.org/badge/vertical-allrepos/dnsrecon.svg)](https://repology.org/project/dnsrecon/versions)

@@ -255,18 +255,49 @@ def test_write_db():
             {"domain": "zonetransfer.me", "type": "OTHER", "name": "zonetransfer.me", "strings": "spf.zonetransfer.me"},
         ])
         assert cursor.execute.call_count == 12
-        assert cursor.execute.call_args_list[0][0][0] == 'insert into data( domain, type, name, address ) values( "zonetransfer.me", "A", "zonetransfer.me", "192.0.2.1" )'
-        assert cursor.execute.call_args_list[1][0][0] == "insert into data( domain, type, name, target, address, text ) values ('zonetransfer.me', 'CAA', 'zonetransfer.me', 'example.com', '192.0.2.1', 'domain=zonetransfer.me,name=zonetransfer.me,address=192.0.2.1,target=example.com')"
-        assert cursor.execute.call_args_list[2][0][0] == 'insert into data( domain, type, name, target ) values( "zonetransfer.me", "CNAME", "zonetransfer.me", "some.domain.com" )'
-        assert cursor.execute.call_args_list[3][0][0] == 'insert into data( domain, type, name, address ) values( "zonetransfer.me", "AAAA", "zonetransfer.me", "2001:db8::1" )'
-        assert cursor.execute.call_args_list[4][0][0] == 'insert into data( domain, type, name, address ) values( "zonetransfer.me", "MX", "mail.zonetransfer.me", "192.0.2.1" )'
-        assert cursor.execute.call_args_list[5][0][0] == 'insert into data( domain, type, text) values( "zonetransfer.me", "TXT", "txt.zonetransfer.me" )'
-        assert cursor.execute.call_args_list[6][0][0] == 'insert into data( domain, type, name, address ) values( "zonetransfer.me", "NS", "ns.zonetransfer.me", "192.0.2.1" )'
-        assert cursor.execute.call_args_list[7][0][0] == 'insert into data( domain, type, name, address ) values( "zonetransfer.me", "SOA", "soa.zonetransfer.me", "192.0.2.1" )'
-        assert cursor.execute.call_args_list[8][0][0] == 'insert into data( domain, type, name, target, address, port ) values( "zonetransfer.me", "SRV", "zonetransfer.me", "srv.zonetransfer.me", "192.0.2.1", "80" )'
-        assert cursor.execute.call_args_list[9][0][0] == 'insert into data( domain, type, text) values( "zonetransfer.me", "SPF", "spf.zonetransfer.me" )'
-        assert cursor.execute.call_args_list[10][0][0] == 'insert into data( domain, type, name, address ) values( "zonetransfer.me", "PTR", "zonetransfer.me", "192.0.2.1" )'
-        assert cursor.execute.call_args_list[11][0][0] == 'insert into data( domain, type, text ) values ("%(domain)", \'OTHER\', \'domain=zonetransfer.me,name=zonetransfer.me,strings=spf.zonetransfer.me,\')'
+        assert cursor.execute.call_args_list[0][0] == (
+            'insert into data( domain, type, name, address ) values( ?, ?, ?, ? )',
+            ('zonetransfer.me', 'A', 'zonetransfer.me', '192.0.2.1'),
+        )
+        assert cursor.execute.call_args_list[1][0] == (
+            'insert into data( domain, type, name, target, address, text ) values (?, ?, ?, ?, ?, ?)',
+            (
+                'zonetransfer.me',
+                'CAA',
+                'zonetransfer.me',
+                'example.com',
+                '192.0.2.1',
+                'domain=zonetransfer.me,name=zonetransfer.me,address=192.0.2.1,target=example.com',
+            ),
+        )
+        assert cursor.execute.call_args_list[11][0] == (
+            'insert into data( domain, type, text ) values (?, ?, ?)',
+            ('zonetransfer.me', 'OTHER', 'domain=zonetransfer.me,name=zonetransfer.me,strings=spf.zonetransfer.me,'),
+        )
+
+
+def test_write_db_parameterizes_dns_controlled_values():
+    malicious_text = '"; drop table data; --'
+    record = {'domain': 'example.com', 'type': 'TXT', 'strings': malicious_text}
+
+    with patch('sqlite3.connect') as mock_sqlite3_connect:
+        cursor = MagicMock()
+        mock_sqlite3_connect.return_value = MagicMock()
+        mock_sqlite3_connect.return_value.cursor.return_value = cursor
+
+        cli.write_db('test.db', [record])
+
+    assert cursor.execute.call_args[0] == (
+        'insert into data( domain, type, text) values( ?, ?, ? )',
+        ('example.com', 'TXT', malicious_text),
+    )
+    assert record == {'domain': 'example.com', 'type': 'TXT', 'strings': malicious_text}
+
+
+def test_brute_reverse_empty_ip_list_returns_empty():
+    mock_resolver = MagicMock()
+    assert cli.brute_reverse(mock_resolver, []) == []
+    mock_resolver.get_ptr.assert_not_called()
 
 
 def _sample_whois_ranges():

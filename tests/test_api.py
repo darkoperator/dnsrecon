@@ -146,6 +146,48 @@ class TestDNSReconAPI:
         assert "subdomains" in data
         assert "records" in data
         assert isinstance(data["records"], list)
+
+    @patch('dnsrecon.api.brute_domain')
+    @patch('dnsrecon.api.DnsHelper')
+    def test_brute_domain_accepts_configured_wordlist_dir(self, mock_dns_helper, mock_brute_domain, client, tmp_path, monkeypatch):
+        """Wordlists may live outside bundled data when explicitly configured."""
+        wordlist = tmp_path / "custom.txt"
+        wordlist.write_text("www\n")
+        monkeypatch.setenv("DNSRECON_WORDLIST_DIRS", str(tmp_path))
+        mock_dns_helper.return_value = MagicMock()
+        mock_brute_domain.return_value = []
+
+        response = client.get(f"/brute_domain?domain=example.com&wordlist={wordlist}")
+
+        assert response.status_code == 200
+        assert mock_brute_domain.call_args.kwargs["dictfile"] == str(wordlist.resolve())
+
+    def test_brute_domain_rejects_unconfigured_absolute_wordlist(self, client, tmp_path, monkeypatch):
+        wordlist = tmp_path / "custom.txt"
+        wordlist.write_text("www\n")
+        monkeypatch.delenv("DNSRECON_WORDLIST_DIRS", raising=False)
+
+        response = client.get(f"/brute_domain?domain=example.com&wordlist={wordlist}")
+
+        assert response.status_code == 400
+
+    def test_brute_domain_rejects_symlink_escape(self, client, tmp_path, monkeypatch):
+        allowed = tmp_path / "allowed"
+        outside = tmp_path / "outside"
+        allowed.mkdir()
+        outside.mkdir()
+        real_wordlist = outside / "custom.txt"
+        real_wordlist.write_text("www\n")
+        symlink = allowed / "link.txt"
+        try:
+            symlink.symlink_to(real_wordlist)
+        except OSError:
+            pytest.skip("symlinks are not supported on this platform")
+
+        monkeypatch.setenv("DNSRECON_WORDLIST_DIRS", str(allowed))
+        response = client.get("/brute_domain?domain=example.com&wordlist=link.txt")
+
+        assert response.status_code == 400
     
     @patch('dnsrecon.api.brute_reverse')
     @patch('dnsrecon.api.DnsHelper')
@@ -166,6 +208,26 @@ class TestDNSReconAPI:
         assert "ip_range" in data
         assert "records" in data
         assert isinstance(data["records"], list)
+
+    @patch('dnsrecon.api.brute_reverse')
+    @patch('dnsrecon.api.DnsHelper')
+    def test_brute_reverse_accepts_cross_subnet_range(self, mock_dns_helper, mock_brute_reverse, client):
+        mock_dns_helper.return_value = MagicMock()
+        mock_brute_reverse.return_value = []
+
+        response = client.get("/brute_reverse?ip_range=192.0.2.254-192.0.3.1")
+
+        assert response.status_code == 200
+        ip_list = mock_brute_reverse.call_args.kwargs["ip_list"]
+        assert [str(ip) for ip in ip_list] == ["192.0.2.254", "192.0.2.255", "192.0.3.0", "192.0.3.1"]
+
+    def test_brute_reverse_invalid_ip_range_returns_400(self, client):
+        response = client.get("/brute_reverse?ip_range=not-an-ip")
+        assert response.status_code == 400
+
+    def test_brute_reverse_rejects_excessive_thread_count(self, client):
+        response = client.get("/brute_reverse?ip_range=192.0.2.1&thread_num=101")
+        assert response.status_code == 400
     
     def test_brute_reverse_missing_ip_range(self, client):
         """Test reverse DNS brute force with missing IP range"""
@@ -253,6 +315,32 @@ class TestDNSReconAPI:
         assert "zone_transfer_successful" in data
         assert "records" in data
         assert isinstance(data["records"], list)
+
+    @patch('dnsrecon.api.DnsHelper')
+    def test_axfr_test_failure_info_is_not_success(self, mock_dns_helper, client):
+        mock_instance = MagicMock()
+        mock_dns_helper.return_value = mock_instance
+        mock_instance.zone_transfer.return_value = [
+            {'type': 'info', 'zone_transfer': 'failed', 'ns_server': '192.0.2.53'}
+        ]
+
+        response = client.get("/axfr_test?domain=example.com")
+
+        assert response.status_code == 200
+        assert response.json()["zone_transfer_successful"] is False
+
+    @patch('dnsrecon.api.DnsHelper')
+    def test_axfr_test_success_info_is_success(self, mock_dns_helper, client):
+        mock_instance = MagicMock()
+        mock_dns_helper.return_value = mock_instance
+        mock_instance.zone_transfer.return_value = [
+            {'type': 'info', 'zone_transfer': 'success', 'ns_server': '192.0.2.53'}
+        ]
+
+        response = client.get("/axfr_test?domain=example.com")
+
+        assert response.status_code == 200
+        assert response.json()["zone_transfer_successful"] is True
     
     @patch('dnsrecon.lib.dnshelper.DnsHelper.get_caa')
     @patch('dnsrecon.api.DnsHelper')
@@ -293,6 +381,20 @@ class TestDNSReconAPI:
         assert data["nameserver"] == "8.8.8.8"
         assert "cached_records" in data
         assert isinstance(data["cached_records"], list)
+
+    @patch('dnsrecon.api.in_cache')
+    @patch('dnsrecon.api.DnsHelper')
+    def test_cache_snoop_accepts_configured_wordlist_dir(self, mock_dns_helper, mock_in_cache, client, tmp_path, monkeypatch):
+        wordlist = tmp_path / "cache.txt"
+        wordlist.write_text("example.com\n")
+        monkeypatch.setenv("DNSRECON_WORDLIST_DIRS", str(tmp_path))
+        mock_dns_helper.return_value = MagicMock()
+        mock_in_cache.return_value = []
+
+        response = client.get(f"/cache_snoop?nameserver=8.8.8.8&wordlist={wordlist}")
+
+        assert response.status_code == 200
+        assert mock_in_cache.call_args.kwargs["dict_file"] == str(wordlist.resolve())
     
     def test_cache_snoop_missing_nameserver(self, client):
         """Test cache snooping with missing nameserver"""
