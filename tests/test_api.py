@@ -157,7 +157,7 @@ class TestDNSReconAPI:
         mock_dns_helper.return_value = MagicMock()
         mock_brute_domain.return_value = []
 
-        response = client.get(f"/brute_domain?domain=example.com&wordlist={wordlist}")
+        response = client.get("/brute_domain", params={"domain": "example.com", "wordlist": str(wordlist)})
 
         assert response.status_code == 200
         assert mock_brute_domain.call_args.kwargs["dictfile"] == str(wordlist.resolve())
@@ -167,7 +167,7 @@ class TestDNSReconAPI:
         wordlist.write_text("www\n")
         monkeypatch.delenv("DNSRECON_WORDLIST_DIRS", raising=False)
 
-        response = client.get(f"/brute_domain?domain=example.com&wordlist={wordlist}")
+        response = client.get("/brute_domain", params={"domain": "example.com", "wordlist": str(wordlist)})
 
         assert response.status_code == 400
 
@@ -391,7 +391,7 @@ class TestDNSReconAPI:
         mock_dns_helper.return_value = MagicMock()
         mock_in_cache.return_value = []
 
-        response = client.get(f"/cache_snoop?nameserver=8.8.8.8&wordlist={wordlist}")
+        response = client.get("/cache_snoop", params={"nameserver": "8.8.8.8", "wordlist": str(wordlist)})
 
         assert response.status_code == 200
         assert mock_in_cache.call_args.kwargs["dict_file"] == str(wordlist.resolve())

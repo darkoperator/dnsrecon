@@ -51,15 +51,7 @@ def wordlist_roots() -> list[Path]:
 
 
 def resolve_wordlist_path(wordlist: str, default_filename: str) -> str:
-    if not wordlist:
-        candidate = DATA_DIR / default_filename
-    else:
-        # Accept only a simple filename from user input to avoid path traversal
-        # or absolute/relative path injection.
-        if wordlist != os.path.basename(wordlist) or any(sep in wordlist for sep in ('/', '\\')) or '..' in wordlist:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Invalid wordlist path')
-        candidate = DATA_DIR / wordlist
-
+    candidate = DATA_DIR / default_filename if not wordlist else Path(wordlist).expanduser()
     allowed_roots = wordlist_roots()
 
     if wordlist and not candidate.is_absolute():

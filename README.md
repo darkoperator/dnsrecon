@@ -111,7 +111,7 @@ curl -s \
   "http://127.0.0.1:5000/general_enum?domain=example.com&do_spf=true&do_whois=true&do_shodan=true&shodan_active=true"
 ```
 
-REST API `thread_num` values are limited to `1..100`. API `wordlist` parameters may reference bundled files in `dnsrecon/data` or files under directories listed in `DNSRECON_WORDLIST_DIRS` using the platform path separator, for example:
+REST API `thread_num` values are limited to `1..100`. API `wordlist` parameters may reference bundled files in `dnsrecon/data` or files under directories listed in `DNSRECON_WORDLIST_DIRS` using the platform path separator. Configure only dedicated wordlist directories; do not point `DNSRECON_WORDLIST_DIRS` at broad paths such as `/`, a home directory, or other locations containing sensitive files.
 
 ```bash
 export DNSRECON_WORDLIST_DIRS="/opt/dnsrecon-wordlists:/srv/shared-wordlists"
