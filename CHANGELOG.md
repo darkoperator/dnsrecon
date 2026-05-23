@@ -1,5 +1,25 @@
 # Changelog
 
+## [1.6.1] - 2026-05-23
+
+### Security
+- Hardened REST API wordlist handling so requests can only use bundled wordlists or files under directories configured with `DNSRECON_WORDLIST_DIRS`. ([b7d8452](https://github.com/darkoperator/dnsrecon/commit/b7d8452))
+- Parameterized SQLite output writes and capped REST API `thread_num` values to reduce injection and resource-exhaustion risk. ([b7d8452](https://github.com/darkoperator/dnsrecon/commit/b7d8452))
+- Hardened GitHub Actions workflows and added dependency review and Scorecard coverage. ([e1b9d65](https://github.com/darkoperator/dnsrecon/commit/e1b9d65))
+
+### Changed
+- Bumped DNSRecon version to `1.6.1`. ([8df618d](https://github.com/darkoperator/dnsrecon/commit/8df618d))
+- Updated runtime dependencies including `fastapi` to 0.136.1, `uvicorn[standard]` to 0.47.0, `stamina` to 26.1.0, `ujson` to 5.12.1, and `idna` to 3.15.
+- Updated development, Docker, and CI dependencies including `ruff` to 0.15.14, `pytest` to 9.0.3, `setuptools` to `>=82.0.1`, the Python Docker base image, CodeQL, setup-uv, Docker actions, and harden-runner.
+- Regenerated `uv.lock` for the 1.6.1 dependency set. ([1a8f575](https://github.com/darkoperator/dnsrecon/commit/1a8f575))
+
+### Fixed
+- Corrected general enumeration to use Yandex scraping for Yandex results and to guard optional `address` fields before collecting WHOIS IPs. ([91b8999](https://github.com/darkoperator/dnsrecon/commit/91b8999))
+- Made WHOIS reverse lookup selection safe for non-interactive runs by defaulting to all discovered ranges when stdin is not a TTY. ([982aef8](https://github.com/darkoperator/dnsrecon/commit/982aef8))
+- Made crt.sh, Bing, Yandex, and WHOIS enumeration log external-source failures and continue instead of aborting the scan. ([ec3ec7e](https://github.com/darkoperator/dnsrecon/commit/ec3ec7e))
+- Corrected REST API reverse-range parsing, AXFR success reporting, recursion checks, empty reverse lookups, and related validation behavior. ([b7d8452](https://github.com/darkoperator/dnsrecon/commit/b7d8452))
+- Removed stray XML text from the license header. ([214a96c](https://github.com/darkoperator/dnsrecon/commit/214a96c))
+
 ## [1.6.0] - 2026-02-28
 
 ### Added
@@ -57,6 +77,7 @@
 ### Fixed
 - Resolved issue #432 to actually fix python 3.14 support. ([880e76b](https://github.com/darkoperator/dnsrecon/commit/880e76b))
 
+[1.6.1]: https://github.com/darkoperator/dnsrecon/compare/1.6.0...1.6.1
 [1.6.0]: https://github.com/darkoperator/dnsrecon/compare/1.5.3...1.6.0
 [1.5.3]: https://github.com/darkoperator/dnsrecon/compare/1.5.2...1.5.3
 [1.5.2]: https://github.com/darkoperator/dnsrecon/compare/1.5.1...1.5.2
