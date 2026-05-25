@@ -20,7 +20,7 @@ dependencies = [
     "httpx==0.28.1",
     "loguru",
     "fastapi==0.136.1",
-    "uvicorn[standard]==0.47.0",
+    "uvicorn[standard]==0.48.0",
     "slowapi==0.1.9",
     "stamina==26.1.0",
     "ujson==5.12.1",
