@@ -23,7 +23,7 @@ dependencies = [
     "uvicorn[standard]==0.49.0",
     "slowapi==0.1.10",
     "stamina==26.1.0",
-    "ujson==5.12.1",
+    "ujson==5.13.0",
 ]
 
 [project.optional-dependencies]
