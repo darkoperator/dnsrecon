@@ -55,7 +55,7 @@ from dnsrecon.lib.shodan import ShodanClientError, make_shodan_client
 from dnsrecon.lib.whois import *
 from dnsrecon.lib.yandexenum import *
 
-__version__ = '1.6.1'
+__version__ = '1.6.2'
 __author__ = 'Carlos Perez, Carlos_Perez@darkoperator.com'
 __name__ = 'cli'
 
@@ -99,12 +99,15 @@ def process_range(arg):
     return ip_list
 
 
-def process_spf_data(res, data):
+def process_spf_data(res, data, processed_includes=None, max_addresses=65536):
     """
     This function will take the text info of a TXT or SPF record, extract the
     IPv4, IPv6 addresses and ranges, a request process includes records and returns
     a list of IP Addresses for the records specified in the SPF Record.
     """
+    if processed_includes is None:
+        processed_includes = set()
+
     # Declare lists that will be used in the function.
     ipv4 = []
     ipv6 = []
@@ -119,25 +122,46 @@ def process_spf_data(res, data):
     ipv4.extend(re.findall(r'ip4:(\S*)', ''.join(data)))
     ipv6.extend(re.findall(r'ip6:(\S*)', ''.join(data)))
 
-    # Create a list of IPNetwork objects.
-    for ip in ipv4:
-        for i in netaddr.IPNetwork(ip):
-            ip_list.append(i)
+    def append_network_addresses(networks):
+        for network in networks:
+            try:
+                for ip in netaddr.IPNetwork(network):
+                    if len(ip_list) >= max_addresses:
+                        logger.error(f'SPF address expansion reached the maximum of {max_addresses} addresses')
+                        return
+                    ip_list.append(str(ip))
+            except (netaddr.AddrFormatError, TypeError, ValueError) as e:
+                logger.error(f'Could not process SPF network {network}: {e!s}')
 
-    for ip in ipv6:
-        for i in netaddr.IPNetwork(ip):
-            ip_list.append(i)
+    # Create a list of IP addresses from SPF network objects.
+    append_network_addresses(ipv4)
+    append_network_addresses(ipv6)
 
     # Extract and process include values.
     includes.extend(re.findall(r'include:(\S*)', ''.join(data)))
     for inc_ranges in includes:
+        if len(ip_list) >= max_addresses:
+            break
+        if inc_ranges in processed_includes:
+            continue
+        processed_includes.add(inc_ranges)
         for spr_rec in res.get_txt(inc_ranges):
-            spf_data = process_spf_data(res, spr_rec[2])
+            if len(spr_rec) < 3:
+                continue
+            remaining_addresses = max_addresses - len(ip_list)
+            spf_data = process_spf_data(
+                res,
+                spr_rec[2],
+                processed_includes=processed_includes,
+                max_addresses=remaining_addresses,
+            )
             if spf_data is not None:
                 ip_list.extend(spf_data)
+            if len(ip_list) >= max_addresses:
+                break
 
     # Return a list of IP Addresses
-    return [str(ip) for ip in ip_list]
+    return ip_list
 
 
 def get_spf_networks(res, data, processed_includes=None):
@@ -1210,18 +1234,22 @@ def general_enum(
     check_wildcard(res, domain)
 
     # To identify when the records come from a Zone Transfer
-    from_zt = None
+    from_zt = False
 
     # Perform test for Zone Transfer against all NS servers of a Domain
     if do_axfr:
         zonerecs = res.zone_transfer()
-        if zonerecs is not None:
-            returned_records.extend(res.zone_transfer())
-            if len(returned_records) == 0:
-                from_zt = True
+        if zonerecs:
+            returned_records.extend(zonerecs)
+            from_zt = any(
+                isinstance(record, dict) and record.get('zone_transfer') == 'success' for record in zonerecs
+            )
+
+    if from_zt:
+        return returned_records
 
     # If a Zone Transfer was possible there is no need to enumerate the rest
-    if from_zt is None:
+    if not from_zt:
         # Check if DNSSEC is configured
         dns_sec_check(domain, res)
 

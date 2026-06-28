@@ -19,6 +19,8 @@
 #    along with this program; if not, write to the Free Software
 #    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
+from unittest.mock import MagicMock, patch
+
 from dnsrecon.lib.dnshelper import DnsHelper
 from netaddr import IPAddress
 from re import match
@@ -97,3 +99,15 @@ class Test_Lib_dnshelper:
         records = helper.get_caa()
         for record in records:
             assert record[0] in ["CAA", "CNAME"]
+
+    def test_check_tcp_dns_closes_successful_socket(self):
+        helper = DnsHelper("example.com")
+        connection = MagicMock()
+
+        with patch('dnsrecon.lib.dnshelper.socket.create_connection', return_value=connection) as mock_create_connection:
+            result = helper.check_tcp_dns("192.0.2.53")
+
+        assert result is True
+        mock_create_connection.assert_called_once_with(("192.0.2.53", 53), timeout=4.0)
+        connection.__enter__.assert_called_once()
+        connection.__exit__.assert_called_once()

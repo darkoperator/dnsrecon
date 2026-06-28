@@ -165,6 +165,64 @@ def test_general_enum_survives_whois_failure():
     mock_whois.assert_called_once()
 
 
+def test_general_enum_axfr_success_calls_zone_transfer_once_and_skips_fallback():
+    res = _stub_resolver_minimal()
+    axfr_records = [{'type': 'info', 'zone_transfer': 'success', 'ns_server': '192.0.2.53'}]
+    res.zone_transfer.return_value = axfr_records
+
+    with patch('dnsrecon.cli.check_wildcard', return_value=set()), \
+            patch('dnsrecon.cli.dns_sec_check') as mock_dns_sec_check, \
+            patch('dnsrecon.cli.brute_srv', return_value=[]) as mock_brute_srv:
+        result = cli.general_enum(
+            res=res,
+            domain='example.com',
+            do_axfr=True,
+            do_bing=False,
+            do_yandex=False,
+            do_spf=False,
+            do_whois=False,
+            do_crt=False,
+            zw=False,
+            request_timeout=3.0,
+        )
+
+    assert result == axfr_records
+    res.zone_transfer.assert_called_once()
+    res.get_soa.assert_not_called()
+    res.get_ns.assert_not_called()
+    res.get_mx.assert_not_called()
+    mock_dns_sec_check.assert_not_called()
+    mock_brute_srv.assert_not_called()
+
+
+def test_general_enum_axfr_failure_falls_back_to_normal_enum():
+    res = _stub_resolver_minimal()
+    axfr_records = [{'type': 'info', 'zone_transfer': 'failed', 'ns_server': '192.0.2.53'}]
+    res.zone_transfer.return_value = axfr_records
+
+    with patch('dnsrecon.cli.check_wildcard', return_value=set()), \
+            patch('dnsrecon.cli.dns_sec_check'), \
+            patch('dnsrecon.cli.brute_srv', return_value=[]):
+        result = cli.general_enum(
+            res=res,
+            domain='example.com',
+            do_axfr=True,
+            do_bing=False,
+            do_yandex=False,
+            do_spf=False,
+            do_whois=False,
+            do_crt=False,
+            zw=False,
+            request_timeout=3.0,
+        )
+
+    assert result == axfr_records
+    res.zone_transfer.assert_called_once()
+    res.get_soa.assert_called_once()
+    res.get_ns.assert_called_once()
+    res.get_mx.assert_called_once()
+
+
 def test_check_wildcard():
     with patch('dnsrecon.lib.dnshelper.DnsHelper') as mock_dns_helper:
         mock_instance = mock_dns_helper.return_value
@@ -241,8 +299,9 @@ def test_general_enum():
         mock_instance.get_ds.return_value = ["ds.zonetransfer.me"]
         mock_instance.get_dnskey.return_value = ["dnskey.zonetransfer.me"]
         mock_instance.get_rrsig.return_value = ["rrsig.zonetransfer.me"]
+        mock_instance.zone_transfer.return_value = [{'type': 'info', 'zone_transfer': 'success'}]
         result = cli.general_enum(mock_instance, "zonetransfer.me", True, True, True, True, True, True, True, 5.0)
-        assert result is None  # The function doesn't return anything
+        assert result == [{'type': 'info', 'zone_transfer': 'success'}]
 
 
 def test_get_nsec_type():
@@ -291,6 +350,24 @@ def test_get_spf_networks_recurses_includes_and_dedupes():
     networks = cli.get_spf_networks(mock_resolver, data)
 
     assert networks == ['192.0.2.0/24', '198.51.100.0/24', '2001:db8::/32']
+
+
+def test_process_spf_data_skips_cyclic_includes():
+    mock_resolver = MagicMock()
+    mock_resolver.get_txt.return_value = [
+        ('TXT', 'loop.example', 'v=spf1 include:loop.example ip4:192.0.2.1/32 -all')
+    ]
+
+    records = cli.process_spf_data(mock_resolver, 'v=spf1 include:loop.example -all')
+
+    assert records == ['192.0.2.1']
+    mock_resolver.get_txt.assert_called_once_with('loop.example')
+
+
+def test_process_spf_data_respects_max_addresses():
+    records = cli.process_spf_data(MagicMock(), 'v=spf1 ip4:192.0.2.0/24 -all', max_addresses=3)
+
+    assert records == ['192.0.2.0', '192.0.2.1', '192.0.2.2']
 
 
 def test_whois_netranges_to_cidrs_converts_ranges():

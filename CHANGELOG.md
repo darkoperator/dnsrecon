@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.6.2] - 2026-06-28
+
+### Changed
+- Bumped DNSRecon version to `1.6.2`.
+
+### Fixed
+- Corrected AXFR enumeration to call zone transfer once, return successful transfer records immediately, and only fall back to normal enumeration when the transfer does not succeed.
+- Ensured successful TCP DNS connectivity checks close their sockets.
+- Added SPF expansion safeguards for cyclic includes, malformed SPF networks, malformed TXT responses, and large address expansions.
+
 ## [1.6.1] - 2026-05-23
 
 ### Security
@@ -77,6 +87,7 @@
 ### Fixed
 - Resolved issue #432 to actually fix python 3.14 support. ([880e76b](https://github.com/darkoperator/dnsrecon/commit/880e76b))
 
+[1.6.2]: https://github.com/darkoperator/dnsrecon/compare/1.6.1...1.6.2
 [1.6.1]: https://github.com/darkoperator/dnsrecon/compare/1.6.0...1.6.1
 [1.6.0]: https://github.com/darkoperator/dnsrecon/compare/1.5.3...1.6.0
 [1.5.3]: https://github.com/darkoperator/dnsrecon/compare/1.5.2...1.5.3

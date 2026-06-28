@@ -80,13 +80,10 @@ class DnsHelper:
         be closed.
         """
         try:
-            sock = socket.socket()
-            sock.settimeout(DNS_QUERY_TIMEOUT)
-            sock.connect((address, DNS_PORT_NUMBER))
+            with socket.create_connection((address, DNS_PORT_NUMBER), timeout=DNS_QUERY_TIMEOUT):
+                return True
         except Exception:
             return False
-
-        return True
 
     def get_answers(self, type_, addr_):
         """
