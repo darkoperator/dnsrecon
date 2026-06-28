@@ -4,6 +4,8 @@ multi-ecosystem-groups:
     schedule:
       interval: daily
       timezone: Europe/London
+    open-pull-requests-limit: 10
+    target-branch: master
 updates:
 - package-ecosystem: github-actions
   directory: "/"
@@ -23,8 +25,6 @@ updates:
     default-days: 5
   patterns: ["*"]
   multi-ecosystem-group: all-dependencies
-  open-pull-requests-limit: 10
-  target-branch: master
   allow:
   - dependency-type: direct
   - dependency-type: indirect
