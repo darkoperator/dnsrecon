@@ -1241,9 +1241,7 @@ def general_enum(
         zonerecs = res.zone_transfer()
         if zonerecs:
             returned_records.extend(zonerecs)
-            from_zt = any(
-                isinstance(record, dict) and record.get('zone_transfer') == 'success' for record in zonerecs
-            )
+            from_zt = any(isinstance(record, dict) and record.get('zone_transfer') == 'success' for record in zonerecs)
 
     if from_zt:
         return returned_records
