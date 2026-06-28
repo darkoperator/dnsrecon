@@ -1,6 +1,8 @@
+import time
 from unittest.mock import patch, MagicMock
 
 import httpx
+import pytest
 
 from dnsrecon import cli
 
@@ -16,6 +18,41 @@ def _stub_resolver_minimal():
     res.get_txt.return_value = []
     res.zone_transfer.return_value = None
     return res
+
+
+def test_parse_scan_types_accepts_valid_comma_separated_values():
+    valid_types = {'std': {}, 'brt': {}, 'zonewalk': {}}
+
+    assert set(cli.parse_scan_types('STD,brt', valid_types)) == {'std', 'brt'}
+
+
+def test_parse_scan_types_rejects_unknown_values():
+    valid_types = {'std': {}, 'brt': {}}
+
+    with pytest.raises(cli.UnknownScanTypeError) as error:
+        cli.parse_scan_types('std,nope', valid_types)
+
+    assert error.value.scan_types == ['nope']
+
+
+@pytest.mark.parametrize('type_arg', ['std,,brt', 'std,', ',std', 'std, brt', 'std!'])
+def test_parse_scan_types_rejects_malformed_values(type_arg):
+    valid_types = {'std': {}, 'brt': {}}
+
+    with pytest.raises(cli.ScanTypeSyntaxError):
+        cli.parse_scan_types(type_arg, valid_types)
+
+
+def test_parse_scan_types_rejects_long_malformed_values_quickly():
+    valid_types = {'std': {}, 'brt': {}}
+    type_arg = ('a' * 50_000) + '!'
+
+    start = time.perf_counter()
+    with pytest.raises(cli.ScanTypeSyntaxError):
+        cli.parse_scan_types(type_arg, valid_types)
+    elapsed = time.perf_counter() - start
+
+    assert elapsed < 0.1
 
 
 def test_general_enum_yandex_branch_calls_scrape_yandex():

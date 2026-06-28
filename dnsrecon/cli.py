@@ -55,7 +55,7 @@ from dnsrecon.lib.shodan import ShodanClientError, make_shodan_client
 from dnsrecon.lib.whois import *
 from dnsrecon.lib.yandexenum import *
 
-__version__ = '1.6.2'
+__version__ = '1.6.3'
 __author__ = 'Carlos Perez, Carlos_Perez@darkoperator.com'
 __name__ = 'cli'
 
@@ -71,6 +71,31 @@ brtdata = []
 
 CONFIG = {'disable_check_recursion': False, 'disable_check_bindversion': False}
 DATA_DIR = Path(__file__).parent / 'data'
+
+
+class ScanTypeSyntaxError(ValueError):
+    pass
+
+
+class UnknownScanTypeError(ValueError):
+    def __init__(self, scan_types):
+        self.scan_types = scan_types
+        super().__init__(','.join(scan_types))
+
+
+def parse_scan_types(type_arg, valid_types):
+    if not type_arg:
+        return []
+
+    scan_types = type_arg.lower().strip().split(',')
+    if any(not scan_type or not scan_type.isalpha() for scan_type in scan_types):
+        raise ScanTypeSyntaxError
+
+    incorrect_types = [scan_type for scan_type in scan_types if scan_type not in valid_types]
+    if incorrect_types:
+        raise UnknownScanTypeError(incorrect_types)
+
+    return list(set(scan_types))
 
 
 def process_range(arg):
@@ -2008,32 +2033,14 @@ Possible types:
         logger.info(f'DNSRecon version {__version__} https://www.darkoperator.com')
         sys.exit(0)
 
-    # validating type param which is in the form: type1,type2,...,typeN
-    # if the pattern is not correct or if there is an unknown type we exit
-    type_arg = arguments.type
-    types = []
-    if type_arg:
-        type_arg = type_arg.lower().strip()
-
-        # we create a dynamic regex specifying min and max type length
-        # and max number of possible scan types
-        min_type_len = len(min(valid_types, key=len))
-        max_type_len = len(max(valid_types, key=len))
-        type_len = len(valid_types)
-        dynamic_regex = f'^([a-z]{{{min_type_len},{max_type_len}}},?){{,{type_len}}}$'
-
-        type_match = re.match(dynamic_regex, type_arg)
-        if not type_match:
-            logger.error('This type of scan is not valid')
-            sys.exit(1)
-
-        incorrect_types = [t for t in type_arg.split(',') if t not in valid_types]
-        if incorrect_types:
-            incorrect_types_str = ','.join(incorrect_types)
-            logger.error(f'This type of scan is not in the list: {incorrect_types_str}')
-            sys.exit(1)
-
-        types = list(set(type_arg.split(',')))
+    try:
+        types = parse_scan_types(arguments.type, valid_types)
+    except ScanTypeSyntaxError:
+        logger.error('This type of scan is not valid')
+        sys.exit(1)
+    except UnknownScanTypeError as e:
+        logger.error(f'This type of scan is not in the list: {e!s}')
+        sys.exit(1)
 
     # validating range
     rvl_ip_list = []

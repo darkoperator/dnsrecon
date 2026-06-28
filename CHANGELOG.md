@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.6.3] - 2026-06-29
+
+### Changed
+- Bumped DNSRecon version to `1.6.3`.
+
+### Security
+- Replaced backtracking-prone `-t/--type` scan validation with deterministic parsing to prevent ReDoS on malformed type input.
+
 ## [1.6.2] - 2026-06-28
 
 ### Changed
@@ -87,6 +95,7 @@
 ### Fixed
 - Resolved issue #432 to actually fix python 3.14 support. ([880e76b](https://github.com/darkoperator/dnsrecon/commit/880e76b))
 
+[1.6.3]: https://github.com/darkoperator/dnsrecon/compare/1.6.2...1.6.3
 [1.6.2]: https://github.com/darkoperator/dnsrecon/compare/1.6.1...1.6.2
 [1.6.1]: https://github.com/darkoperator/dnsrecon/compare/1.6.0...1.6.1
 [1.6.0]: https://github.com/darkoperator/dnsrecon/compare/1.5.3...1.6.0
