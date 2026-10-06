@@ -756,7 +756,6 @@ class DnsHelper:
 
                 for name, rdataset in zone.iterate_rdatasets(dns.rdatatype.RT):
                     for rdata in rdataset:
-                        addr_ = rdata.address
                         exchange = strip_last_dot(rdata.exchange.to_text())
                         pref_ = str(rdata.preference)
 
@@ -764,8 +763,8 @@ class DnsHelper:
                         zone_records.append(
                             {
                                 'zone_server': ns_srv,
-                                'type': 'X25',
-                                'address': addr_,
+                                'type': 'RT',
+                                'address': exchange,
                                 'preference': pref_,
                             }
                         )
