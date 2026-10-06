@@ -689,7 +689,7 @@ class DnsHelper:
                 for name, rdataset in zone.iterate_rdatasets(dns.rdatatype.WKS):
                     for rdata in rdataset:
                         addr_ = rdata.address
-                        bitmap_ = rdata.bitmap
+                        bitmap_ = dns.rdata._hexify(rdata.bitmap)
                         proto_ = rdata.protocol
                         logger.info(f'\t WKS {addr_} {bitmap_} {proto_}')
                         zone_records.append(
@@ -744,13 +744,13 @@ class DnsHelper:
 
                 for name, rdataset in zone.iterate_rdatasets(dns.rdatatype.X25):
                     for rdata in rdataset:
-                        addr_ = rdata.address
+                        addr_ = rdata.address.decode()
                         logger.info(f'\t X25 {addr_}')
                         zone_records.append({'zone_server': ns_srv, 'type': 'X25', 'address': addr_})
 
                 for name, rdataset in zone.iterate_rdatasets(dns.rdatatype.ISDN):
                     for rdata in rdataset:
-                        addr_ = rdata.address
+                        addr_ = rdata.address.decode()
                         logger.info(f'\t ISDN {addr_}')
                         zone_records.append({'zone_server': ns_srv, 'type': 'ISDN', 'address': addr_})
 
@@ -771,7 +771,7 @@ class DnsHelper:
 
                 for name, rdataset in zone.iterate_rdatasets(dns.rdatatype.NSAP):
                     for rdata in rdataset:
-                        addr_ = rdata.address
+                        addr_ = dns.rdata._hexify(rdata.address)
                         logger.info(f'\t NSAP {addr_}')
                         zone_records.append({'zone_server': ns_srv, 'type': 'NSAP', 'address': addr_})
 
@@ -800,7 +800,7 @@ class DnsHelper:
                 for name, rdataset in zone.iterate_rdatasets(dns.rdatatype.CERT):
                     for rdata in rdataset:
                         algo_ = algorithm_to_text(rdata.algorithm)
-                        cert_ = rdata.certificate
+                        cert_ = dns.rdata._hexify(rdata.certificate)
                         cert_type_ = rdata.certificate_type
                         key_tag_ = rdata.key_tag
 
@@ -824,7 +824,7 @@ class DnsHelper:
                         key_tag_ = rdata.key_tag
                         labels_ = rdata.labels
                         original_ttl_ = rdata.original_ttl
-                        signature_ = rdata.signature
+                        signature_ = dns.rdata._hexify(rdata.signature)
                         signer_ = str(rdata.signer)
                         type_covered_ = rdata.type_covered
 
@@ -855,7 +855,7 @@ class DnsHelper:
                         key_tag_ = rdata.key_tag
                         labels_ = rdata.labels
                         original_ttl_ = rdata.original_ttl
-                        signature_ = rdata.signature
+                        signature_ = dns.rdata._hexify(rdata.signature)
                         signer_ = str(rdata.signer)
                         type_covered_ = rdata.type_covered
 
