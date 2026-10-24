@@ -109,11 +109,11 @@ def process_range(arg):
     ranges_raw_list = list(set(arg.strip().split(',')))
     for entry in ranges_raw_list:
         try:
-            if re.match(r'\S*/\S*', entry):
+            if '/' in entry:
                 # If CIDR, expand to individual IPs
                 ip_list.extend(list(netaddr.IPNetwork(entry)))
 
-            elif re.match(r'\S*-\S*', entry):
+            elif '-' in entry:
                 # If range, expand to individual IPs
                 start, end = entry.split('-')
                 ip_list.extend(list(netaddr.iter_iprange(start, end)))
