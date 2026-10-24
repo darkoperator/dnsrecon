@@ -8,9 +8,15 @@ on:
   pull_request:
     branches:
     - '*'
+
+permissions:
+  contents: read
+
 jobs:
   Python:
     runs-on: ${{ matrix.os }}
+    permissions:
+      contents: write # pushes ruff fixes back to the branch
     strategy:
       max-parallel: 8
       matrix:
