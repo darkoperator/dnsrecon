@@ -7,6 +7,7 @@
 - Included AAAA answers in search-engine result processing (`se_result_process`), matching the documented A/AAAA resolution behavior.
 - Improved crt.sh enumeration to parse SAN `name_value` fields, accept the apex domain, and de-star wildcard names instead of discarding them.
 - Fixed Yandex enumeration pagination so each request uses a distinct `p=` page parameter instead of repeating the same URL.
+- Fixed `DnsHelper.get_a`/`get_aaaa` so CNAME and address rows report the owner of the answering RRset instead of assuming the answer section lists the alias chain in order.
 
 ## [1.6.3] - 2026-06-29
 

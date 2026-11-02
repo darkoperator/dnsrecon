@@ -168,14 +168,14 @@ class DnsHelper:
 
         result = []
         for answer in answers.response.answer:
+            name_ = strip_last_dot(answer.name.to_text())
             for rdata in answer:
                 if rdata.rdtype == 5:
                     target_ = strip_last_dot(rdata.target.to_text())
-                    result.append(['CNAME', host_trg, target_])
-                    host_trg = target_
+                    result.append(['CNAME', name_, target_])
 
                 else:
-                    result.append(['A', host_trg, rdata.address])
+                    result.append(['A', name_, rdata.address])
 
         return result
 
@@ -190,14 +190,14 @@ class DnsHelper:
 
         result = []
         for answer in answers.response.answer:
+            name_ = strip_last_dot(answer.name.to_text())
             for rdata in answer:
                 if rdata.rdtype == 5:
                     target_ = strip_last_dot(rdata.target.to_text())
-                    result.append(['CNAME', host_trg, target_])
-                    host_trg = target_
+                    result.append(['CNAME', name_, target_])
 
                 else:
-                    result.append(['AAAA', host_trg, rdata.address])
+                    result.append(['AAAA', name_, rdata.address])
 
         return result
 
