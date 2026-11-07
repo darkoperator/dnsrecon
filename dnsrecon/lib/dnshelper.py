@@ -14,6 +14,10 @@
 #    You should have received a copy of the GNU General Public License
 #    along with this program; if not, write to the Free Software
 #    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+#
+#    Modified 2026-11-06: zone_transfer() now tags every returned record with the domain
+#    it was transferred for. Notice added under GNU GPL version 2, section 2(a); the
+#    original copyright and licence above are unchanged.
 
 
 import random
@@ -983,5 +987,11 @@ class DnsHelper:
             except Exception as e:
                 logger.error(f'Zone Transfer Failed ({e})')
                 zone_records.append({'type': 'info', 'zone_transfer': 'failed', 'ns_server': ns_srv})
+
+        # Single producer pass: associate every produced row with the domain the transfer
+        # was attempted for. The XML exporter keeps only rows whose ``domain`` matches the
+        # requested domain, so without this key every zone-transfer row is discarded.
+        for record in zone_records:
+            record['domain'] = self._domain
 
         return zone_records
