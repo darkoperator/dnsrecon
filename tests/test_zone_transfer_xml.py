@@ -22,6 +22,7 @@ import dns.rdatatype
 import dns.rrset
 import dns.zone
 import pytest
+
 from dnsrecon.cli import dns_record_from_dict
 from dnsrecon.lib.dnshelper import DnsHelper
 
@@ -63,8 +64,10 @@ SCAN_INFO = (['-d', 'example.com', '--axfr', '--xml', 'out.xml'], '2026-11-06 20
 
 
 def _constructed_zones():
-    return {origin: dns.zone.from_text(text, origin=dns.name.from_text(origin), relativize=False)
-            for origin, text in ZONE_TEXT.items()}
+    return {
+        origin: dns.zone.from_text(text, origin=dns.name.from_text(origin), relativize=False)
+        for origin, text in ZONE_TEXT.items()
+    }
 
 
 ZONES = _constructed_zones()
@@ -100,27 +103,27 @@ class Transport:
         self.resolver_error = None
         self.xfr_calls = []
 
-    def xfr(self, where, domain, **kwargs):  # noqa: ANN001 - mirrors dns.query.xfr
+    def xfr(self, where, domain, **kwargs):
         self.xfr_calls.append((str(where), str(domain)))
         if self.xfr_error is not None:
             raise self.xfr_error
         origin = str(domain).rstrip('.') + '.'
         return iter(_xfr_stream(origin))
 
-    def check_tcp_dns(self, address):  # noqa: ANN001
+    def check_tcp_dns(self, address):
         return self.tcp_open
 
-    def get_soa(self, helper):  # noqa: ANN001 - receives the DnsHelper instance
+    def get_soa(self, helper):
         if self.resolver_error is not None:
             raise self.resolver_error
         return [['SOA', 'ns1.' + helper._domain, NS_IP]]
 
-    def get_ns(self, helper):  # noqa: ANN001
+    def get_ns(self, helper):
         if self.resolver_error is not None:
             raise self.resolver_error
         return [['NS', 'ns1.' + helper._domain, NS_IP]]
 
-    def get_ip(self, helper, hostname):  # noqa: ANN001
+    def get_ip(self, helper, hostname):
         return [['A', str(hostname), address] for address in A_MAP.get(str(hostname), [NS_IP])]
 
 
@@ -168,7 +171,8 @@ def test_transferred_rows_are_associated_and_reach_the_xml(transport):
         assert {row['domain'] for row in rows} == {domain}
         # A successful transfer is reported, and the status row carries the provenance too.
         successes = [r for r in rows if r.get('zone_transfer') == 'success']
-        assert successes and successes[0]['domain'] == domain
+        assert successes
+        assert successes[0]['domain'] == domain
 
     # Records stay with the zone they came from: no address crosses over.
     for domain, rows in per_domain.items():
@@ -182,8 +186,7 @@ def test_transferred_rows_are_associated_and_reach_the_xml(transport):
         assert len(records_by_domain[domain]) == len(per_domain[domain])
         # The exporter renders every non-domain key as an attribute, so the produced rows
         # and the XML record elements must agree field for field.
-        produced = sorted(tuple(sorted((k, str(v)) for k, v in row.items() if k != 'domain'))
-                          for row in per_domain[domain])
+        produced = sorted(tuple(sorted((k, str(v)) for k, v in row.items() if k != 'domain')) for row in per_domain[domain])
         exported = sorted(tuple(sorted(record.items())) for record in records_by_domain[domain])
         assert produced == exported
 
@@ -198,8 +201,9 @@ def test_failed_tcp_and_failed_transfer_status_rows_remain_attributed(transport)
     assert [r['zone_transfer'] for r in filtered] == ['failed']
     assert filtered[0]['ns_server'] == NS_IP
     assert filtered[0].get('domain') == 'example.com'
-    assert _domain_records(dns_record_from_dict(filtered, SCAN_INFO, ['example.com']))[
-        'example.com'] == [{'type': 'info', 'zone_transfer': 'failed', 'ns_server': NS_IP}]
+    assert _domain_records(dns_record_from_dict(filtered, SCAN_INFO, ['example.com']))['example.com'] == [
+        {'type': 'info', 'zone_transfer': 'failed', 'ns_server': NS_IP}
+    ]
 
     transport.tcp_open = True
     transport.xfr_error = RuntimeError('transfer refused')
