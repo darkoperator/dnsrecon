@@ -1782,6 +1782,181 @@ def ds_zone_walk(res, domain, request_timeout):
     return records
 
 
+def build_parser() -> ArgumentParser:
+    """Build the dnsrecon command line parser.
+
+    Also used by tools/generate_manpage.py to keep man/dnsrecon.1 in sync with the CLI.
+    """
+    parser = ArgumentParser(formatter_class=RawTextHelpFormatter)
+    parser.add_argument('-d', '--domain', type=str, dest='domain', help='Target domain.')
+    parser.add_argument(
+        '-iL',
+        '--input-list',
+        type=str,
+        dest='input_list',
+        help='File containing a list of domains to perform DNS enumeration on, one per line.',
+    )
+    parser.add_argument(
+        '-n',
+        '--name_server',
+        type=str,
+        dest='ns_server',
+        help='Domain server to use. If none is given, the SOA of the target will be used. Multiple servers can be specified using a comma separated list.',
+    )
+    parser.add_argument(
+        '-r',
+        '--range',
+        type=str,
+        dest='range',
+        help='IP range for reverse lookup brute force in formats (first-last) or in (range/bitmask).',
+    )
+    parser.add_argument(
+        '-D',
+        '--dictionary',
+        type=str,
+        dest='dictionary',
+        help='Dictionary file of subdomain and hostnames to use for brute force.',
+    )
+    parser.add_argument(
+        '-f',
+        help='Filter out of brute force domain lookup, records that resolve to the wildcard defined IP address when saving records.',
+        action='store_true',
+    )
+    parser.add_argument('-a', help='Perform AXFR with standard enumeration.', action='store_true')
+    parser.add_argument(
+        '-s',
+        help='Perform a reverse lookup of IPv4 ranges in the SPF record with standard enumeration.',
+        action='store_true',
+    )
+    parser.add_argument(
+        '-b',
+        help='Perform Bing enumeration with standard enumeration.',
+        action='store_true',
+    )
+    parser.add_argument(
+        '-y',
+        help='Perform Yandex enumeration with standard enumeration.',
+        action='store_true',
+    )
+    parser.add_argument(
+        '-k',
+        help='Perform crt.sh enumeration with standard enumeration.',
+        action='store_true',
+    )
+    parser.add_argument(
+        '-w',
+        help='Perform deep whois record analysis and reverse lookup of IP ranges found through Whois when doing a standard enumeration.',
+        action='store_true',
+    )
+    parser.add_argument(
+        '--shodan',
+        help='Use Shodan to query netblocks discovered via SPF (-s) and/or Whois (-w) during standard enumeration.',
+        action='store_true',
+    )
+    parser.add_argument(
+        '--shodan-active',
+        help='Actively validate Shodan-discovered names by resolving them and confirming they still match the queried netblock.',
+        action='store_true',
+    )
+    parser.add_argument(
+        '--shodan-key',
+        type=str,
+        dest='shodan_key',
+        help='Shodan API key. If omitted, SHODAN_API_KEY environment variable is used.',
+    )
+    parser.add_argument(
+        '-z',
+        help='Performs a DNSSEC zone walk with standard enumeration.',
+        action='store_true',
+    )
+    parser.add_argument(
+        '--threads',
+        type=int,
+        dest='threads',
+        help='Number of threads to use in reverse lookups, forward lookups, brute force and SRV record enumeration.',
+    )
+    parser.add_argument(
+        '--lifetime',
+        type=float,
+        dest='lifetime',
+        default=3.0,
+        help='Time to wait for a server to respond to a query. default is 3.0',
+    )
+
+    parser.add_argument(
+        '--loglevel',
+        type=str,
+        choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'],
+        default='INFO',
+        help='Log level to use. default is INFO',
+    )
+
+    parser.add_argument(
+        '--tcp',
+        dest='tcp',
+        help='Use TCP protocol to make queries.',
+        action='store_true',
+    )
+    parser.add_argument('--db', type=str, dest='db', help='SQLite 3 file to save found records.')
+    parser.add_argument('-x', '--xml', type=str, dest='xml', help='XML file to save found records.')
+    parser.add_argument(
+        '-c',
+        '--csv',
+        type=str,
+        dest='csv',
+        help='Save output to a comma separated value file.',
+    )
+    parser.add_argument('-j', '--json', type=str, dest='json', help='save output to a JSON file.')
+    parser.add_argument(
+        '--iw',
+        help='Continue brute forcing a domain even if a wildcard record is discovered.',
+        action='store_true',
+    )
+    parser.add_argument(
+        '--disable_check_nxdomain', help='Disables check for NXDOMAIN hijacking on name servers.', action='store_true'
+    )
+    parser.add_argument(
+        '--disable_check_recursion',
+        help='Disables check for recursion on name servers',
+        action='store_true',
+    )
+    parser.add_argument(
+        '--disable_recurs',
+        help='Disable recursion desired flag in queries.',
+        action='store_true',
+    )
+    parser.add_argument(
+        '--disable_check_bindversion',
+        help='Disables check for BIND version on name servers',
+        action='store_true',
+    )
+    parser.add_argument('-V', '--version', help='DNSrecon version', action='store_true')
+    parser.add_argument('-v', '--verbose', help='Enable verbosity', action='store_true')
+    parser.add_argument(
+        '-t',
+        '--type',
+        type=str,
+        dest='type',
+        help="""Type of enumeration to perform.
+Possible types:
+    std:      SOA, NS, A, AAAA, MX and SRV.
+    rvl:      Reverse lookup of a given CIDR or IP range.
+    brt:      Brute force domains and hosts using a given dictionary.
+    srv:      SRV records.
+    axfr:     Test all NS servers for a zone transfer.
+    bing:     Perform Bing search for subdomains and hosts.
+    yand:     Perform Yandex search for subdomains and hosts.
+    crt:      Perform crt.sh search for subdomains and hosts.
+    caa:      CAA records.
+    snoop:    Perform cache snooping against all NS servers for a given domain, testing
+              all with file containing the domains, file given with -D option.
+
+    tld:      Remove the TLD of given domain and test against all TLDs registered in IANA.
+    zonewalk: Perform a DNSSEC zone walk using NSEC records.""",
+    )
+    return parser
+
+
 def main():
     #
     # Option Variables
@@ -1815,174 +1990,8 @@ def main():
     #
     # Define options
     #
-    parser = ArgumentParser(formatter_class=RawTextHelpFormatter)
+    parser = build_parser()
     try:
-        parser.add_argument('-d', '--domain', type=str, dest='domain', help='Target domain.')
-        parser.add_argument(
-            '-iL',
-            '--input-list',
-            type=str,
-            dest='input_list',
-            help='File containing a list of domains to perform DNS enumeration on, one per line.',
-        )
-        parser.add_argument(
-            '-n',
-            '--name_server',
-            type=str,
-            dest='ns_server',
-            help='Domain server to use. If none is given, the SOA of the target will be used. Multiple servers can be specified using a comma separated list.',
-        )
-        parser.add_argument(
-            '-r',
-            '--range',
-            type=str,
-            dest='range',
-            help='IP range for reverse lookup brute force in formats (first-last) or in (range/bitmask).',
-        )
-        parser.add_argument(
-            '-D',
-            '--dictionary',
-            type=str,
-            dest='dictionary',
-            help='Dictionary file of subdomain and hostnames to use for brute force.',
-        )
-        parser.add_argument(
-            '-f',
-            help='Filter out of brute force domain lookup, records that resolve to the wildcard defined IP address when saving records.',
-            action='store_true',
-        )
-        parser.add_argument('-a', help='Perform AXFR with standard enumeration.', action='store_true')
-        parser.add_argument(
-            '-s',
-            help='Perform a reverse lookup of IPv4 ranges in the SPF record with standard enumeration.',
-            action='store_true',
-        )
-        parser.add_argument(
-            '-b',
-            help='Perform Bing enumeration with standard enumeration.',
-            action='store_true',
-        )
-        parser.add_argument(
-            '-y',
-            help='Perform Yandex enumeration with standard enumeration.',
-            action='store_true',
-        )
-        parser.add_argument(
-            '-k',
-            help='Perform crt.sh enumeration with standard enumeration.',
-            action='store_true',
-        )
-        parser.add_argument(
-            '-w',
-            help='Perform deep whois record analysis and reverse lookup of IP ranges found through Whois when doing a standard enumeration.',
-            action='store_true',
-        )
-        parser.add_argument(
-            '--shodan',
-            help='Use Shodan to query netblocks discovered via SPF (-s) and/or Whois (-w) during standard enumeration.',
-            action='store_true',
-        )
-        parser.add_argument(
-            '--shodan-active',
-            help='Actively validate Shodan-discovered names by resolving them and confirming they still match the queried netblock.',
-            action='store_true',
-        )
-        parser.add_argument(
-            '--shodan-key',
-            type=str,
-            dest='shodan_key',
-            help='Shodan API key. If omitted, SHODAN_API_KEY environment variable is used.',
-        )
-        parser.add_argument(
-            '-z',
-            help='Performs a DNSSEC zone walk with standard enumeration.',
-            action='store_true',
-        )
-        parser.add_argument(
-            '--threads',
-            type=int,
-            dest='threads',
-            help='Number of threads to use in reverse lookups, forward lookups, brute force and SRV record enumeration.',
-        )
-        parser.add_argument(
-            '--lifetime',
-            type=float,
-            dest='lifetime',
-            default=3.0,
-            help='Time to wait for a server to respond to a query. default is 3.0',
-        )
-
-        parser.add_argument(
-            '--loglevel',
-            type=str,
-            choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'],
-            default='INFO',
-            help='Log level to use. default is INFO',
-        )
-
-        parser.add_argument(
-            '--tcp',
-            dest='tcp',
-            help='Use TCP protocol to make queries.',
-            action='store_true',
-        )
-        parser.add_argument('--db', type=str, dest='db', help='SQLite 3 file to save found records.')
-        parser.add_argument('-x', '--xml', type=str, dest='xml', help='XML file to save found records.')
-        parser.add_argument(
-            '-c',
-            '--csv',
-            type=str,
-            dest='csv',
-            help='Save output to a comma separated value file.',
-        )
-        parser.add_argument('-j', '--json', type=str, dest='json', help='save output to a JSON file.')
-        parser.add_argument(
-            '--iw',
-            help='Continue brute forcing a domain even if a wildcard record is discovered.',
-            action='store_true',
-        )
-        parser.add_argument(
-            '--disable_check_nxdomain', help='Disables check for NXDOMAIN hijacking on name servers.', action='store_true'
-        )
-        parser.add_argument(
-            '--disable_check_recursion',
-            help='Disables check for recursion on name servers',
-            action='store_true',
-        )
-        parser.add_argument(
-            '--disable_recurs',
-            help='Disable recursion desired flag in queries.',
-            action='store_true',
-        )
-        parser.add_argument(
-            '--disable_check_bindversion',
-            help='Disables check for BIND version on name servers',
-            action='store_true',
-        )
-        parser.add_argument('-V', '--version', help='DNSrecon version', action='store_true')
-        parser.add_argument('-v', '--verbose', help='Enable verbosity', action='store_true')
-        parser.add_argument(
-            '-t',
-            '--type',
-            type=str,
-            dest='type',
-            help="""Type of enumeration to perform.
-Possible types:
-    std:      SOA, NS, A, AAAA, MX and SRV.
-    rvl:      Reverse lookup of a given CIDR or IP range.
-    brt:      Brute force domains and hosts using a given dictionary.
-    srv:      SRV records.
-    axfr:     Test all NS servers for a zone transfer.
-    bing:     Perform Bing search for subdomains and hosts.
-    yand:     Perform Yandex search for subdomains and hosts.
-    crt:      Perform crt.sh search for subdomains and hosts.
-    caa:      CAA records.
-    snoop:    Perform cache snooping against all NS servers for a given domain, testing
-              all with file containing the domains, file given with -D option.
-
-    tld:      Remove the TLD of given domain and test against all TLDs registered in IANA.
-    zonewalk: Perform a DNSSEC zone walk using NSEC records.""",
-        )
         arguments = parser.parse_args()
         logger.remove()
         logger.add(sys.stderr, format='{time} {level} {message}', level=arguments.loglevel)

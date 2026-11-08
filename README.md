@@ -54,6 +54,12 @@ To run tests:
 uv run pytest
 ```
 
+To regenerate the man page (`man/dnsrecon.1`) after changing CLI options:
+```bash
+uv run python tools/generate_manpage.py
+```
+CI also regenerates it automatically on release tags and on pushes to `master` that change the CLI.
+
 To run linting and formatting:
 ```bash
 uv run ruff check
