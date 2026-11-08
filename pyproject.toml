@@ -48,6 +48,11 @@ include = ["dnsrecon*"]
 [tool.setuptools.package-data]
 "*" = ["*.txt"]
 
+# Installs the man page to <prefix>/share/man/man1 so `man dnsrecon` works after install.
+# Regenerate with: uv run python tools/generate_manpage.py
+[tool.setuptools.data-files]
+"share/man/man1" = ["man/dnsrecon.1"]
+
 [build-system]
 requires = ["setuptools>=82.0.1"]
 build-backend = "setuptools.build_meta"

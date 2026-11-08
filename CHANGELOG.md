@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Added
+- Added a `dnsrecon(1)` man page (`man/dnsrecon.1`), based on the Debian package's page. Its synopsis and options are generated from the CLI parser by `tools/generate_manpage.py`, it is installed to `share/man/man1` with the package, and the `Man page` workflow regenerates it on release tags and CLI changes.
+
 ### Fixed
 - Preserved zone-transfer records in XML output by tagging returned rows with their zone. (2026-11-08)
 - Added missing `time` import so TLD brute force no longer raises `NameError` when estimating duration.
