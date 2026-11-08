@@ -984,4 +984,8 @@ class DnsHelper:
                 logger.error(f'Zone Transfer Failed ({e})')
                 zone_records.append({'type': 'info', 'zone_transfer': 'failed', 'ns_server': ns_srv})
 
+        # Tag rows with the zone so XML/CSV/DB output can group them by domain
+        for record in zone_records:
+            record['domain'] = self._domain
+
         return zone_records
