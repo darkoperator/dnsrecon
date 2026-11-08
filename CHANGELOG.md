@@ -3,6 +3,7 @@
 ## Unreleased
 
 ### Fixed
+- Preserved `type` on records rendered by `make_csv()`, so the JSON output written afterwards keeps the field for CAA and other uncommon types. (2026-11-08)
 - Added missing `time` import so TLD brute force no longer raises `NameError` when estimating duration.
 - Included AAAA answers in search-engine result processing (`se_result_process`), matching the documented A/AAAA resolution behavior.
 - Improved crt.sh enumeration to parse SAN `name_value` fields, accept the apex domain, and de-star wildcard names instead of discarding them.
