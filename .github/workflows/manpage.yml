@@ -1,0 +1,101 @@
+name: Man page
+
+# Regenerates man/dnsrecon.1 from the CLI argument parser and commits it to the
+# default branch when it changes.
+#
+# - Tag pushes (new releases) always run, so the page always matches the release.
+#   Note: GitHub does not evaluate `paths` filters for tag pushes.
+# - Pushes to the default branch that touch the CLI or the generator also run, so
+#   the page is normally already up to date before a release is tagged.
+on:
+  push:
+    tags:
+      - '*'
+    branches:
+      - master
+    paths:
+      - dnsrecon/cli.py
+      - tools/generate_manpage.py
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: manpage
+  cancel-in-progress: false
+
+jobs:
+  manpage:
+    name: Regenerate man page
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # pushes the regenerated man page to the default branch
+
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          # No cache: this runs on release tags and pushes to the default branch.
+          enable-cache: false
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: Generate man page
+        run: |
+          # Date the page by the commit that triggered the run (the tagged commit for
+          # releases) so it is reproducible and does not change on every run.
+          export SOURCE_DATE_EPOCH="$(git log -1 --format=%ct "$GITHUB_SHA")"
+          uv run --frozen python tools/generate_manpage.py
+
+      - name: Check version matches tag
+        if: github.ref_type == 'tag'
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          version="$(uv run --frozen python -c 'from dnsrecon.cli import __version__; print(__version__)')"
+          if [ "${TAG#v}" != "$version" ]; then
+            echo "::warning file=dnsrecon/cli.py::Tag $TAG does not match __version__ $version on the default branch; the man page reflects $version."
+          fi
+
+      - name: Commit and push if changed
+        env:
+          BRANCH: ${{ github.event.repository.default_branch }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if git diff --quiet -- man/dnsrecon.1 && [ -z "$(git ls-files --others --exclude-standard -- man/dnsrecon.1)" ]; then
+            echo "man/dnsrecon.1 is already up to date"
+            exit 0
+          fi
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add man/dnsrecon.1
+          git commit -m "docs: regenerate dnsrecon(1) man page"
+          # Credentials are not persisted by checkout, so pass the token only to these commands.
+          remote="https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          # Another workflow (e.g. the ruff auto-fix job) may push at the same time.
+          for attempt in 1 2 3; do
+            git push "$remote" "HEAD:$BRANCH" && exit 0
+            git pull --rebase "$remote" "$BRANCH"
+          done
+          echo "::error::Failed to push the regenerated man page"
+          exit 1
+
+      - name: Upload man page
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: dnsrecon-man-page
+          path: man/dnsrecon.1

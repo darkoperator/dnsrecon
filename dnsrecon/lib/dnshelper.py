@@ -168,14 +168,14 @@ class DnsHelper:
 
         result = []
         for answer in answers.response.answer:
+            name_ = strip_last_dot(answer.name.to_text())
             for rdata in answer:
                 if rdata.rdtype == 5:
                     target_ = strip_last_dot(rdata.target.to_text())
-                    result.append(['CNAME', host_trg, target_])
-                    host_trg = target_
+                    result.append(['CNAME', name_, target_])
 
                 else:
-                    result.append(['A', host_trg, rdata.address])
+                    result.append(['A', name_, rdata.address])
 
         return result
 
@@ -190,14 +190,14 @@ class DnsHelper:
 
         result = []
         for answer in answers.response.answer:
+            name_ = strip_last_dot(answer.name.to_text())
             for rdata in answer:
                 if rdata.rdtype == 5:
                     target_ = strip_last_dot(rdata.target.to_text())
-                    result.append(['CNAME', host_trg, target_])
-                    host_trg = target_
+                    result.append(['CNAME', name_, target_])
 
                 else:
-                    result.append(['AAAA', host_trg, rdata.address])
+                    result.append(['AAAA', name_, rdata.address])
 
         return result
 
@@ -983,5 +983,9 @@ class DnsHelper:
             except Exception as e:
                 logger.error(f'Zone Transfer Failed ({e})')
                 zone_records.append({'type': 'info', 'zone_transfer': 'failed', 'ns_server': ns_srv})
+
+        # Tag rows with the zone so XML/CSV/DB output can group them by domain
+        for record in zone_records:
+            record['domain'] = self._domain
 
         return zone_records
