@@ -1060,8 +1060,7 @@ def make_csv(data):
 
         else:
             # Handle not common records
-            del record['type']
-            s = '; '.join([f'{k}={v}' for k, v in record.items()])
+            s = '; '.join([f'{k}={v}' for k, v in record.items() if k != 'type'])
             csv_data += (',' * 4) + f"'{s}'\n"
 
     return csv_data
