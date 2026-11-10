@@ -1053,8 +1053,7 @@ def make_csv(data):
 
         elif type_ == 'CNAME':
             csv_data += record.get('name', '') + (',' * 2)
-            if 'target' in record:
-                csv_data += record['target']
+            csv_data += record.get('target', record.get('address', ''))
 
             csv_data += (',' * 2) + '\n'
 
@@ -1124,7 +1123,7 @@ def write_db(db, data):
 
         elif re.match(r'CNAME', record_type):
             query = 'insert into data( domain, type, name, target ) values( ?, ?, ?, ? )'
-            params = (domain, record_type, n.get('name', ''), n.get('target', ''))
+            params = (domain, record_type, n.get('name', ''), n.get('target', n.get('address', '')))
         elif re.match(r'CAA', record_type):
             # Preserve some of the previous behavior when writing CAA records to the database would fall into the else clause
             text = ','.join([f'{key}={value}' for key, value in n.items() if key != 'type'])
