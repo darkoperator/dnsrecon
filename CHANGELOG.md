@@ -6,6 +6,7 @@
 - Added a `dnsrecon(1)` man page (`man/dnsrecon.1`), based on the Debian package's page. Its synopsis and options are generated from the CLI parser by `tools/generate_manpage.py`, it is installed to `share/man/man1` with the package, and the `Man page` workflow regenerates it on release tags and CLI changes.
 
 ### Fixed
+- Preserved standalone SRV records in XML output and their domain in other reports by tagging results with the scanned domain.
 - Preserved zone-transfer records in XML output by tagging returned rows with their zone.
 - Added missing `time` import so TLD brute force no longer raises `NameError` when estimating duration.
 - Included AAAA answers in search-engine result processing (`se_result_process`), matching the documented A/AAAA resolution behavior.
