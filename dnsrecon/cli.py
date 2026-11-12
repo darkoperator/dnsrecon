@@ -622,6 +622,7 @@ def brute_srv(res, domain, verbose=False, thread_num=None):
                     returned_records.append(
                         {
                             'type': type_,
+                            'domain': domain,
                             'name': name_,
                             'target': target_,
                             'address': addr_,
