@@ -15,7 +15,7 @@ classifiers = [
 ]
 dynamic = ["version"]
 dependencies = [
-    "dnspython>=2.9.0",
+    "dnspython>=2.9.2",
     "netaddr",
     "httpx==0.28.1",
     "loguru",
